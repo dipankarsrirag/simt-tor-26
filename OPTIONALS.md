@@ -13,47 +13,91 @@ This document is ordered by paper impact, not by effort. Each item states the ch
 | **ACL/EMNLP main track** | No | Would need 8B replication + monolingual-multilingual span |
 | **ICLR** | No | Wrong shape — this is applied SiMT, not representation learning |
 
-## The trivial insight everyone missed
+## The trivial insight everyone missed — sharpened after PDF-depth verification
 
-Before diving into blockers and improvements, articulate what makes the core method novel — because the same argument shape recurs across every method improvement below, and it's the paper's narrative anchor.
+An earlier draft of this section claimed "every prior SiMT pipeline reaches outside the training loop for the annotation signal." **On verification against AlignAtt (Papi et al. ACL 2023), AlignAtt4LLM (Fuxa & Macháček IWSLT 2026), DOA (Papi & Bentivogli, arXiv 2605.31432), DaP-SiMT (Zheng et al. IJMLC 2025 / arXiv 2310.14853), DiG-SST, REINA, HMT (Zhang & Feng ICLR 2023), and the wait-if-diff / wait-if-worse family — that claim is too strong.** Multiple prior methods do use the model itself as the signal source. The correct, defensible version of the insight is more precise and, once stated correctly, actually stronger.
 
-**The observation is one line.** At SiMT data-construction time, three things are on the table:
+### The 2×2 of adaptive SiMT — where the gap is
 
-1. The full source
-2. The full target
-3. The model that will be fine-tuned
+|  | External-oracle signal | Model-native signal |
+|---|---|---|
+| **Runtime policy** | Wang et al. 2024 (`fast_align`), Agent-SiMT (Guo et al. 2024b) | AlignAtt, EDAtt, MMA, MoChA, MILk, AlignAtt4LLM, DOA, DaP-SiMT, DiG-SST, REINA, HMT, wait-if-diff, wait-if-worse |
+| **Data-construction annotation** | **EAST (Fu et al. 2025)** | **← we go here (the empty cell)** |
 
-Every prior data-construction approach for SiMT uses (1) and (2) but requires *something external* for the annotation signal. **EAST** (Fu et al., ACL Findings 2025) uses GPT-4. **Conversational SimulMT** (Wang et al., 2024) uses `fast_align` (~30% error rate per EAST's Appendix A). **Agent-SiMT** (Guo et al., 2024) uses a separately-trained SiMT model. Every one of them looked at the data-construction step, saw a hole, and reached for an outside oracle.
+Every prior "model-native" method (top-right, populated by two subcultures — attention-inspection and distributional-comparison) keeps the read/write decision as a **runtime component**: an attention-inspection routine (AlignAtt-family), a distributional comparison per step (wait-if-diff), a lightweight policy head trained on top of the translation model (DaP-SiMT, DiG-SST, REINA), or a marginalised hidden variable (HMT). Every prior "data-construction" method (bottom-left, populated by exactly one paper — EAST) uses an external oracle for the annotation.
 
-The trivial thing they all missed: **(3) is also available at data-construction time.** You already have the model that will consume the tags. Ask it, not GPT-4, when its own predictive distribution has converged to the full-source value. That's the whole method. The technical change from EAST is a single string swap:
+**Nobody has occupied the bottom-right.** That's our contribution.
 
+### The one-line technical delta, over each family
+
+**Over EAST (bottom-left → bottom-right):**
 ```python
 annotator = "gpt-4"     # EAST
 annotator = self.model  # us
 ```
 
-**Why it was missed.** Everyone thought the annotation signal had to come from outside the training loop because that's what "annotation" means in every other setting — human annotators, expert models, alignment tools. The SiMT literature imported that convention. Nobody stopped to notice that in SiMT specifically, the two-sided information asymmetry (full source at train time, streaming source at test time) means the model's own predictive distribution *is* the oracle you need — and it's free.
+**Over the model-native runtime-policy families (top-right → bottom-right):**
+```python
+# All prior model-native methods (attention-based OR distribution-based):
+def infer(source_stream, model, policy):        # <- policy component at inference
+    while streaming:
+        if policy(state) == WRITE: emit_next_token()
+        else: read_more_source()
 
-**Why the delta is disproportionately large.** A one-line change eliminates:
+# Us:
+def infer(source_stream, tagged_model):
+    for token in tagged_model.generate(source_stream):
+        yield token                             # <- tags emerge autoregressively
+```
 
-- The GPT-4 API dependency (cost, latency, terms-of-service, reproducibility).
-- The annotator-vs-backbone mismatch (EAST anointates with GPT-4, fine-tunes Llama-3-8B — different tokenisers, different biases, different confusions).
-- The monotonicity filter (EAST Appendix C drops unequal-chunk-count sentences because GPT-4's chunk counts are meaningful only when equal; ours produces per-token continuous convergence values that don't need that constraint).
-- The three-latency-level prompt engineering (`low`/`medium`/`high` in EAST is GPT-4 doing three separate segmentation passes; ours sweeps a continuous `tau`).
+**No policy function at inference.** Not lightweight, not trained, not present at all. The signal that prior work computes per-step at runtime, we compute once, offline, and freeze into training-data tags.
 
-Each of those is a paragraph in the paper. Together they're a section. The technical delta is a string swap; the paper-story delta is roughly a Findings submission.
+### Why the two-cell move was missed — two separate research subcultures
 
-## The same "trivial-but-missed" shape applies to every method improvement below
+- The **adaptive-policy subculture** (encoder-decoder tradition, MMA/AlignAtt lineage, ~2019 onwards) treated read/write as a runtime decision problem by architectural convention. Once you're committed to runtime, you're committed to keeping the signal available at runtime — which means either a policy module (DaP/DiG-SST/REINA style, or MMA's attention parameters) or an inference-inspection routine (AlignAtt/DOA style). Moving the decision to data-construction was never in scope.
 
-The improvements M1–M7 in §Method improvements all follow the same rhetorical pattern:
+- The **data-construction subculture** is essentially one paper (EAST, ACL Findings 2025). Their framing was "offline chunk-segmented SFT can match adaptive policies" — the annotator being external (GPT-4) was assumed because prompt engineering was the tool they were showcasing. They did not ask whether the annotator could be the model itself, because that question belongs to the *other* subculture.
+
+The two subcultures do not overlap much in cite graphs or reviewer pools. Our contribution is a two-cell diagonal move in a 2×2 that neither subculture had reason to survey.
+
+### What the two-cell move eliminates in the deployed system
+
+- **No attention-inspection machinery.** AlignAtt4LLM (Fuxa & Macháček 2026) explicitly notes their policy "cannot inspect a Python-visible attention matrix: self-attention is hidden inside fused kernels" when running on vLLM, forcing them to reconstruct query/key tensors via a bespoke `qk-fast-replay` mechanism. We don't touch attention.
+- **No policy-head forward pass per step.** DaP-SiMT, DiG-SST, REINA all pay this cost at every commit decision.
+- **No re-decoding across chunks.** Local-Agreement / hold-n / SP-n family pay this.
+- **No wait-k fallback ceiling.** DaP-SiMT extends a frozen wait-k model; DiG-SST hybridises with wait-k explicitly because "the divergence-based policy model is trained with the reference translation as history, [so] there is inherent exposure bias during inference." Neither can drop wait-k. We have no policy to hybridise with — the tags are the policy.
+- **No exposure-bias mismatch in a runtime component.** DiG-SST §Inference Policy admits this openly. It is a runtime problem for them because their policy runs at runtime; it is an offline problem for us and shows up (if at all) in tag placement, not in a component that error-accumulates over a stream.
+- **KV-cache reuse preserved.** Inherited from EAST — the interleaved-format autoregressive inference is intrinsically KV-cache-friendly. Attention-inspection methods often struggle to co-exist with fused-kernel KV caches.
+
+### "LLM-only" as defense — partially valid but not primary
+
+The framing "this is for LLMs only" would be defensible around 2023 (when attention-based methods were encoder-decoder speech) but **is no longer defensible in 2026:**
+
+- AlignAtt4LLM (IWSLT 2026) explicitly extends AlignAtt to decoder-only LLMs (Gemma-4 E4B-it — same family we are considering as our backbone).
+- DOA (Papi & Bentivogli, arXiv 2605.31432) targets decoder-only speech LLMs.
+- DaP-SiMT, DiG-SST, REINA, HMT are architecture-agnostic (they attach a policy head or hidden-variable to any autoregressive translation model, LLM included).
+
+**The primary defense is not "LLM-only" but "data-construction, not runtime policy."** That claim survives all the counter-examples above. LLM adaptability is a nice-to-have consequence, not the differentiator.
+
+### Restated: what is genuinely novel
+
+Not "use the model itself" — attention and distribution families both do that.
+
+Not "offline annotation" — EAST does that.
+
+**The specific combination: distributional-convergence signal computed offline at data-construction time, baked into training-data tags, with no runtime policy component of any kind.** This is the empty cell in the 2×2. It survives verification against every close published work I could find.
+
+## The same "textbook tools in a new domain" shape applies to the method improvements
+
+Once the two-cell move above is accepted, the improvements M1–M7 in §Method improvements are all instances of applying a standard tool from adjacent literature to the freshly-created data-construction surface:
 
 1. **The tool exists in adjacent literature for decades.** Scheduled sampling (Bengio 2015), dynamic programming for optimal segmentation (Viterbi 1967), sequential probability ratio testing (Wald 1947), Jensen-Shannon divergence (textbook), inverse-frequency loss weighting (also textbook).
 
-2. **SiMT literature never applied it to data construction** because SiMT data construction wasn't a research object. Everyone treated it as "get an external oracle to segment, then train." Only EAST 2025 made data construction its own contribution — and even they used an external oracle.
+2. **SiMT never applied it here** because SiMT never had a "data-construction with a continuous per-token oracle" surface until we constructed one. EAST's per-chunk discrete GPT-4 output doesn't admit these tools; our per-token continuous divergence does.
 
-3. **Once you accept "the model is the oracle" (the core insight above), sixty-plus years of standard tools drop in naturally.** Each M-item is one such drop-in.
+3. **Once the two-cell move is accepted, sixty-plus years of standard tools drop in naturally.** Each M-item is one such drop-in.
 
-That's the paper. The core claim is trivially small in code and disproportionately large in what it opens up. State it in the abstract, defend it in Related Work, illustrate it in the ablation grid.
+That's the paper. **The core claim is a two-cell move in a 2×2** — trivially small in code, disproportionately large in what it opens up, and missed for interpretable reasons (two disjoint research subcultures). State it in the abstract as a 2×2 diagram. Defend it in Related Work with the four-family taxonomy above. Illustrate it in the ablation grid with the M-items that only became applicable after the move.
 
 ## Blockers for ACL/EMNLP Findings
 
@@ -163,6 +207,31 @@ Recommendation: **DRIFT** — matches the mechanic (predictive distribution stop
 ## Closest-work distinctions (deep-read, for the Related Work section)
 
 These are the paragraphs to draft during Phase 4 writeup. Each is derived from reading the actual paper (not the abstract) so the technical distinction is precise.
+
+### AlignAtt family: AlignAtt (Papi et al. 2023), AlignAtt4LLM (Fuxa & Macháček 2026), DOA (Papi & Bentivogli 2026)
+
+**What they do.** *AlignAtt* (Interspeech 2023, Papi et al.) is the canonical model-native inference-time policy. On an offline-trained encoder-decoder speech translation model, at each inference step, inspect the cross-attention weights over the last `f` source frames — if the target token being decoded attends primarily to frames beyond the currently-consumed audio, wait; otherwise emit. No training modification. Wins IWSLT 2023 SimulST and remained SOTA through IWSLT 2025 (used by top-performing submission).
+
+*AlignAtt4LLM* (Fuxa & Macháček, IWSLT 2026 system description, arXiv 2606.03967) is the first application of AlignAtt to a decoder-only LLM. Because there is no encoder-decoder cross-attention in a decoder-only LLM, they (1) expose the source transcript as a labelled prompt span, (2) select translation-specific alignment heads offline via a small annotated set, (3) implement a `qk-fast-replay` mechanism to inspect attention scores despite vLLM's fused kernels, and (4) apply the same "attends past the frontier ⇒ wait" logic to that recovered attention signal. Uses Gemma-4 E4B-it as backbone.
+
+*DOA* (Papi & Bentivogli, arXiv 2605.31432) is the training-free decoder-only-attention counterpart for long-form SimulST with speech-LLMs.
+
+**Where we differ — same model, different signal, different pipeline stage.** AlignAtt uses **attention weights** at **inference**; we use **next-token distributions** at **data construction**. Attention weights encode "which source position is this target token looking at," which is an alignment-flavour signal. Next-token distributions encode "how much has my prediction changed given more source," which is a convergence-flavour signal. The two are complementary — one is about *who* the token depends on, one is about *whether* the dependency has settled. Additionally: AlignAtt has an inference-time inspection routine (which AlignAtt4LLM explicitly notes is expensive to implement on vLLM); we have none.
+
+**Rhetorical use.** Cite the AlignAtt family as the state-of-the-art model-native runtime-policy line. Position our contribution as the diagonal move: same-model-signal + move-to-data-construction. The AlignAtt4LLM paper's "we cannot inspect fused-kernel attention" complaint is direct evidence that inference-time model-inspection is a fragile deployment strategy on the LLM stack we all now use; data-construction tags do not have this fragility.
+
+### DaP-SiMT (Zheng et al., IJMLC 2025 / arXiv 2310.14853)
+
+**What they do.** Divergence-based adaptive policy: "statistical divergence between two conditional distributions for any prefix-to-prefix pair given a translation model as an informative criterion for making read/write decisions." Design decoupling the policy module from the translation model. They extend a **frozen wait-k translation model** with lightweight parameters that estimate the divergence at inference from partial input alone. Memory- and compute-efficient at inference by keeping the extension small.
+
+**Where we differ — nearly-identical signal, opposite pipeline stage.** DaP-SiMT is the closest published work to ours in criterion (their statistical divergence between prefix-to-prefix conditional distributions is essentially the same quantity we use). What differs entirely is *where the criterion lives*: DaP computes it at inference via a trained lightweight regressor that estimates the divergence from partial input alone. We compute it once, offline, using the *actual* full-source distribution as oracle, and freeze the decision into training-data tags. Consequences:
+
+- DaP inherits the exposure-bias problem of its regressor (predicts divergence from partial input; trained with reference-conditioning; DiG-SST explicitly names this in their §Inference Policy for the same architecture). We inherit the same problem in tag placement, but not in a runtime component that error-accumulates over the stream.
+- DaP requires wait-k as the underlying model — the divergence estimator is an add-on. We do not require wait-k anywhere in the pipeline.
+- DaP's lightweight parameters are a runtime overhead (small, but present per step). We have zero runtime policy overhead.
+- DaP is architecture-neutral (works on any translation model). So are we (works on any autoregressive LM). Not a differentiator.
+
+**Rhetorical use.** DaP-SiMT is the paper that has to be cited first, alongside REINA, in Related Work. Both use full-vs-partial distributional comparison as the criterion. Both keep it in a runtime component. Ours moves it offline. That is the paragraph.
 
 ### DiG-SST (Chen et al., AAAI 2024, arXiv PDF read)
 
@@ -390,15 +459,17 @@ where `y_j*` is the reference target token and `eta` is a small floor (say 0.1).
 
 **If the paper needs a big narrative anchor:** M1 (scheduled-sampling annotation). Transforms the exposure-bias admission from a §Discussion paragraph into a method contribution with its own subsection, its own ablation, and its own story arc.
 
-## The paper's contribution in one paragraph
+## The paper's contribution in one paragraph — after verification
 
-For the abstract / intro / rebuttal, this is the sentence to internalise:
+Earlier drafts pitched this as "we use the model itself as the annotation signal." Verification found that framing is unsafe — the AlignAtt family, DaP-SiMT, DiG-SST, REINA, HMT, and the wait-if-diff family all use the model itself in one form or another. The corrected pitch, for the abstract / intro / rebuttal, is a **2×2 diagonal-move claim**:
 
-> *Prior SiMT data-construction pipelines all reach outside the training loop for the annotation signal — GPT-4 (EAST), an alignment tool (Wang et al. 2024), a separately-trained SiMT model (Agent-SiMT). We show that for autoregressive SiMT specifically, the annotator is already inside the training loop: the model that will consume the tags has, at data-construction time, access to the full source and the full target, and can directly answer the only question that matters — "would I have committed to this token at this prefix length?" This one-line change (annotator = self.model) eliminates the GPT-4 dependency, the annotator-backbone mismatch, the monotonicity filter (which existed because GPT-4's chunks needed to align), the three-latency prompt engineering (a continuous `τ` replaces the discrete `low`/`medium`/`high`), and — once the annotator is inside the loop — makes seventy years of standard tools (scheduled sampling, dynamic programming, sequential probability ratio testing, jensen-shannon divergence, inverse-frequency loss weighting) drop into a research area that had never been positioned to use them.*
+> *Adaptive SiMT policies live on a 2×2: {external oracle, model-native signal} × {runtime policy, data-construction annotation}. The three populated cells are attention-based / distribution-based runtime policies (AlignAtt, EDAtt, MMA, DaP-SiMT, DiG-SST, REINA, HMT, wait-if-diff — all model-native, all runtime), fast-align / GPT-4-annotator data construction (Wang et al. 2024, Agent-SiMT — all external, all runtime; EAST — external, data-construction), and the empty fourth cell: model-native distributional-convergence signal, computed offline at data-construction time, baked into training-data tags, with no runtime policy component. We occupy the empty cell. Over EAST the change is a one-line annotator swap. Over the runtime-policy families the change eliminates the runtime policy entirely — the tags emerge autoregressively from the fine-tuned model with no attention inspection, no policy head, no re-decoding, no wait-k fallback. Consequences: no exposure-bias mismatch in a runtime component (DiG-SST §Inference Policy names this openly), no vLLM fused-kernel attention-inspection hack (AlignAtt4LLM's Deployment §), KV-cache reuse preserved, deploy footprint is a plain autoregressive LM. The empty cell was empty because the runtime-policy subculture and the data-construction subculture do not overlap — two disjoint research communities, and the diagonal move requires standing in both.*
 
-Every improvement in this document (blockers, strengthening, method) is either (a) the direct consequence of that one-line change (M0), (b) a standard tool from adjacent literature that becomes applicable once the annotator is inside the loop (M1–M7), or (c) a positioning fix so that reviewers see (a) and (b) for what they are (Blockers 1–3, Strengthening 4–7).
+**One-liner for the abstract:** *"We fill the empty cell in the 2×2 of adaptive SiMT: model-native signal × data-construction annotation."*
 
-The paper is a demonstration that a widely-cited 2025 SiMT pipeline missed a one-line simplification with disproportionate downstream implications. Frame it as such. Do not oversell — the empirics still need to land — but do not undersell either. **"Trivial change, disproportionate delta, missed for interpretable reasons"** is one of the cleanest paper stories a reviewer can encounter.
+Every improvement in this document is either (a) the direct consequence of the diagonal move (the M0 core method), (b) a textbook tool from an adjacent literature that becomes applicable only after the move (M1–M7 — scheduled sampling, DP, SPRT, JSD, confidence gating, reordering-weighted loss), or (c) a positioning fix so reviewers can see (a) and (b) for what they are (Blockers 1–3, Strengthening 4–7).
+
+The paper is a demonstration that two well-populated adjacent subcultures each solved half of a 2×2 and neither noticed the empty cell. Frame it as such. Do not oversell — the empirics still need to land — but do not undersell either. **"Two-cell diagonal move, missed because it required standing in both subcultures at once, quantifiably eliminates the runtime policy overhead the top-right cell was built around"** is one of the cleanest paper stories a Findings reviewer can encounter, and it is more precise and more defensible than the earlier "trivial change" pitch that verification broke.
 
 ## Rejected optionals (do not do these)
 
