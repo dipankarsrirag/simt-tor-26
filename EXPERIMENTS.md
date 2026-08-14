@@ -1,15 +1,25 @@
 # Experiments
 
+## Scope: Stage I is the paper
+
+EAST is a two-stage recipe (see `CLAUDE.md` §What EAST actually does): full-weight SFT on `SiMT-De-En-660K` (De→En, "Stage I"), then LoRA on `SiMT-Multi-90K` + `Off-Multi-120K` for multilingual generalisation ("Stage II"). **Our primary result is Stage I only.**
+
+Why: (1) the claim lives in the annotation criterion, and Stage I is where that criterion decides tag placement — Stage II inherits Stage I's tags and just adds LoRA. (2) EAST reports Stage I separately (EAST-Stage-I in their Figure 3), giving us a published matched-comparison target. (3) A 14-week student project on a 2B backbone (`HOUSEKEEPING.md` §5) has runway for Stage I plus ablations, not for a full Stage II sweep.
+
+Stage II is a stretch — see `TIMELINE.md`. Do not spend Phase 2 budget on it.
+
 ## Primary result
 
-**Matched comparison.** Same sentences, same count, same backbone, same hyperparameters. Only the tag source differs.
+**Matched comparison, Stage I.** Same sentences (`SiMT-De-En-660K`, De→En), same count, same backbone, same hyperparameters. Only the tag source differs.
 
 | Condition | Tags from |
 |---|---|
-| A (baseline) | GPT-4 — as released in `SiMT-De-En-660K` and `SiMT-Multi-90K`|
-| B (ours) | Backbone, per `METHOD.md` |
+| A (baseline) | GPT-4 chunks — the `source_chunks`/`target_chunks` fields shipped with `SiMT-De-En-660K`, wrapped with `<|eor|>`/`<|eow|>` and the `low`/`medium`/`high` latency indicator per EAST §3.2 |
+| B (ours) | Backbone, per `METHOD.md`. Same wrapping and indicators. |
 
-Report BLEU/COMET against AL, LAAL, and AL-CA. This is the headline; everything else supports it.
+Both conditions use EAST's loss recipe: cross-entropy on **source + target + special tokens** — not the target-only masking used by Wang et al. 2024. One epoch, full-weight tuning, matching EAST-Stage-I.
+
+Report BLEU/COMET/BLEURT against AL, LAAL, and AL-CA on WMT15 De→En newstest2015. This is the headline; everything else supports it.
 
 ## Two evaluations, not one
 
@@ -57,7 +67,10 @@ Reproducing EAST's exact curve is a sanity check, not a deliverable. If it does 
 
 AL-CA is the one that matters for us. All our expensive computation is offline, so we should land near EAST's ~49 ms/word rather than the ~977 ms/word of prompt-updating wait-k. If we do not, something is wrong with the inference loop, not the method.
 
-**Test set:** WMT15 De→En, matching EAST's primary setup. Extend to Ar-En and En-Zh only after De-En is complete — those are where the word-order claim lives, but they are extension, not entry.
+**Test sets.**
+- **Primary — WMT15 De→En newstest2015.** Matches EAST Figure 3. This is the entry point; everything before the extension section runs here.
+- **Stretch — WMT22 X↔En, 8 directions (De/Zh/Ru/Cs ↔ En).** Matches EAST Figure 4. Only touch after Gate 3 (`TIMELINE.md`) passes and only if Stage II is being attempted — sentence-level SiMT numbers here require a Stage-II-trained model. Zh↔En and Cs↔En are where the reordering-divergence claim lives (fronted objects, verb-final subordinate clauses); those are the interesting directions if we run this at all.
+- **Stretch — WMT22 De/Ru→En document-level.** EAST §4.3 zero-shot. Reuses the Figure-4 sentence data grouped by `docid`; no extra fetch. Only meaningful with a Stage-II model.
 
 ## Guardrails
 

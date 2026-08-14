@@ -6,11 +6,12 @@ Enough to position the project and stop us re-deriving things. Not a literature 
 
 **EAST** — Fu, Liao, Fan, Li, Zhang, Chen, Shi. *LLMs Can Achieve High-quality Simultaneous Machine Translation as Efficiently as Offline.* Findings of ACL 2025 (arXiv 2504.09570). Read Sections 3, Appendix A, Appendix C, Appendix E.4.
 
-Three things they do that matter to us:
+Four things they do that matter to us:
 
-1. **GPT-4 generates the training data** (§3.1, Figure 19). It segments into semantic chunks *and* produces the chunk translations at three latency levels. The WMT references appear only as a quality filter (BLEURT < 80 dropped). GPT-4 does not place `<|eor|>`/`<|eow|>` — the authors insert those when interleaving.
+1. **GPT-4 generates the training data** (§3.1, Figure 19). It segments into semantic chunks *and* produces the chunk translations at three latency levels (`low`/`medium`/`high` — ≈220K rows each in the 660K release). The WMT references appear only as a quality filter (BLEURT < 80 dropped). GPT-4 does not place `<|eor|>`/`<|eow|>` — the authors insert those when interleaving.
 2. **They filter out non-monotonic examples** (Appendix C): pairs with unequal source/target chunk counts are dropped, which they say "often result from non-monotonic translations." This is the weakness we target, stated in their own appendix.
-3. **Their inference reuses the KV cache**, giving ~49 ms/word against ~977 ms/word for prompt-updating wait-k. We inherit this and must not break it.
+3. **Two training stages** (§3.2). *Stage I:* full-weight SFT for one epoch on `SiMT-De-En-660K` (WMT15 De→En training) to activate adaptive read/write. *Stage II:* LoRA on `SiMT-Multi-90K` (8 directions) plus `Off-Multi-120K` (WMT17-21 test data as OMT training, à la ALMA) to generalise multilingually while preserving offline quality. Loss is cross-entropy on **source + target + special tokens** — an intentional break from Wang et al. 2024's target-only masking, so the read/write decision itself is trained. We inherit both stages' *shape*; we scope our project to Stage I (see `EXPERIMENTS.md` and `LOG.md`).
+4. **Their inference reuses the KV cache**, giving ~49 ms/word against ~977 ms/word for prompt-updating wait-k. We inherit this and must not break it.
 
 Same group published **EASiST** (AAAI 2026), the speech version. Still prompt-based curation. They ship on this line roughly annually.
 

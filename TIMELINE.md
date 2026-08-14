@@ -10,11 +10,11 @@ Weeks are indicative. Gates are not.
 
 Understand what exists before building anything.
 
-- [ ] Read EAST (arXiv 2504.09570) properly. Sections 3 and Appendices A, C, E.4 are load-bearing.
-- [ ] Pull `biaofu-xmu/SiMT-De-En-660K`. Inspect the format. Confirm it ships GPT-4 tags.
-- [ ] Reconstruct one training example by hand from raw parallel text to interleaved sequence. Confirm you can reproduce EAST's Figure 18 format exactly.
-- [ ] Confirm compute availability against `HOUSEKEEPING.md`. EAST used 8×A100 for full-weight tuning of Llama-3-8B. If that is not available, scope the backbone down now and drop the direct-comparison claim.
-- [ ] Get the RWTH De→En gold alignment data.
+- [ ] Read EAST (arXiv 2504.09570) properly. §3 (both training stages, loss recipe on source+target+special tokens) and Appendices A, C, E.4 are load-bearing.
+- [ ] Confirm `SiMT-De-En-660K` (~220K rows per latency level, De→En, WMT15-derived) and `SiMT-Multi-90K` (8 directions) — both fetched by `scripts/download_data.sh`. `Off-Multi-120K` is a stretch-only build (see `HOUSEKEEPING.md` §3).
+- [ ] Confirm the shipped `source_chunks`/`target_chunks` fields are the GPT-4 baseline. Reconstruct one training row by hand: interleave with `<|eor|>`/`<|eow|>`, prepend the `low`/`medium`/`high` latency indicator, verify against EAST's Figure 18 format.
+- [ ] Get the RWTH De→En gold alignment data (App. E.4). URL is a TODO in `scripts/download_data.sh` — confirm from the paper and re-run the copyq job.
+- [ ] **Fix Stage-I scope in `LOG.md`** as a decision entry — Stage II is stretch, see `EXPERIMENTS.md`.
 
 **Gate 0:** you can state, in two sentences, what EAST does and what we are changing. If not, re-read.
 
@@ -66,7 +66,22 @@ The cross-annotation ablation is not optional — it is the answer to the first 
 
 ---
 
-## Stretch: conversational SiMT
+## Stretch A: multilingual (EAST Stage II)
+
+**Only after Gate 3 passes.** Costs a second training stage on top of the Stage-I checkpoint plus multilingual eval — real time, real SU. Skip if Stage I hasn't landed a defensible result.
+
+Rationale if it happens: EAST's Stage II is LoRA on `SiMT-Multi-90K` (8 directions, GPT-4-chunked same way as Stage I) plus `Off-Multi-120K` (OMT training on WMT17-21 test data à la ALMA) to keep full-sentence quality. The `SiMT-Multi-90K` chunks were produced by the **same GPT-4 pipeline as SiMT-De-En-660K**, so re-annotating with our method extends the primary claim across De/Zh/Ru/Cs — where Zh and Cs sit on the reordering side of the divergence axis (`CLAUDE.md` §Separable prefix verb / Fronted object argue this in German; those constructions are more extreme in Zh and Cs).
+
+Two things to settle before running anything:
+
+- **Off-Multi-120K assembly.** Not published on HF. Rebuild from WMT17-21 test data following ALMA (Xu et al. 2024a). `HOUSEKEEPING.md` §3 flags this as a TODO — the assembly script is not written.
+- **Which directions actually get re-annotated.** All 8 is expensive. Pick a subset that supports the divergence-widens-with-reordering claim (De/Zh/Cs → En, maybe En→Zh). Argue the subset in `LOG.md` before running.
+
+## Stretch B: document-level SiMT (EAST §4.3)
+
+**Only if Stretch A lands.** Requires a Stage-II-trained model. Test set is WMT22 De/Ru→En grouped by `docid` — no extra data fetch (sacrebleu already ships it, see `scripts/download_data.sh`). EAST evaluates zero-shot; we do the same.
+
+## Stretch C: conversational SiMT
 
 **Only after Gate 3 passes.** Two half-finished halves are worse than one finished result.
 

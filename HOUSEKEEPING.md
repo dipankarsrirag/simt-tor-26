@@ -80,25 +80,33 @@ raw predictions go to `results/<run>/predictions.jsonl`.
 
 ## 3. Data
 
-Three assets, none of them live in the repo:
+All EAST datasets and test sets, none of them live in the repo. Fetched
+by `scripts/download_data.sh` running on `copyq`.
 
-| Asset | Where | How to get it |
-|---|---|---|
-| `SiMT-De-En-660K` (GPT-4-tagged parallel, WMT-derived) | `data/SiMT-De-En-660K/` | `hf download biaofu-xmu/SiMT-De-En-660K --local-dir ...` on `copyq` |
-| `WMT15 De→En` newstest2015 | `data/wmt15/` | via `sacrebleu -t wmt15 -l de-en --echo src ref` on `copyq` |
-| RWTH De→En gold alignments (intrinsic eval, EAST Appendix E.4) | `data/rwth-de-en/` | Chen & Ney's release — see EAST paper for the current URL; fetch on `copyq` |
+| Asset | Path under `data/` | Role (EAST paper) | Fetch |
+|---|---|---|---|
+| `SiMT-De-En-660K` | `SiMT-De-En-660K/` | **Stage I SFT** (De→En, GPT-4 chunks at 3 latency levels, WMT15-derived) | `hf download biaofu-xmu/SiMT-De-En-660K` |
+| `SiMT-Multi-90K` | `SiMT-Multi-90K/` | **Stage II LoRA** (8 directions De/Zh/Ru/Cs↔En, GPT-4 chunks) — stretch only | `hf download biaofu-xmu/SiMT-Multi-90K` |
+| `Off-Multi-120K` | `off-multi-120k/` | **Stage II LoRA** OMT co-training (WMT17-21 test data à la ALMA) — stretch only, **not on HF**, assembly script TODO | `scripts/build_off_multi.py` (unwritten) |
+| `WMT15 De→En` newstest2015 | `wmt15-de-en/` | Primary SiMT test (EAST Figure 3) | `sacrebleu -t wmt15 -l de-en` |
+| `WMT22 X↔En` 8 pairs | `wmt22/<pair>/` | Multilingual + document-level SiMT test (EAST Figure 4 + §4.3, stretch) | `sacrebleu -t wmt22 -l <pair>` |
+| RWTH De→En gold alignments | `rwth-de-en/` | Intrinsic annotation-quality eval (EAST Appendix E.4). URL TODO | curl → tar |
 
 Rules:
 
 - `data/` is a **symlink** to `/g/data/po67/dipankar/data/simt-tor-26/`.
   Never a real directory in the repo. Never `git add data/`.
-- Do not re-download `SiMT-De-En-660K` if you already have it — it is
-  large. Check `du -sh data/SiMT-De-En-660K` first.
-- **Do not touch WMT15 De→En during development.** It is the test set.
-  Threshold selection (`tau`) is done on WMT dev only. `EXPERIMENTS.md`
+- Downloads live behind `scripts/download_data.sh`. The script is
+  idempotent — already-present datasets are skipped. Add new fetches to
+  the script, not ad-hoc.
+- Do not re-download `SiMT-De-En-660K` if you already have it (~700 MB).
+  Check `du -sh data/SiMT-De-En-660K` first.
+- **Do not touch any test set during development.** WMT15 De→En is the
+  primary test set; WMT22 pairs are stretch test sets. Threshold
+  selection (`tau`) is done on WMT dev only. `EXPERIMENTS.md`
   §Guardrails is not a suggestion.
-- Any new dataset requires a `docs/data/<name>.md` note: source URL, date
-  fetched, checksum, license, and what preprocessing was applied.
+- Any new dataset requires a `docs/data/<name>.md` note: source URL,
+  date fetched, checksum, license, and what preprocessing was applied.
 
 ---
 

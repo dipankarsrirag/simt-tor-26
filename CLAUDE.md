@@ -52,10 +52,28 @@ Half a day's work, no training, and it's a good Phase 0 task for the student —
 | `LOG.md` | Running log: decisions made and why; runs and outcomes. Append, never rewrite. |
 | `HOUSEKEEPING.md` | Compute, paths, accounts, admin. Maintained by Dipankar. |
 
+## What EAST actually does with its data
+
+EAST is a **two-stage** recipe over **three datasets**. Ours mirrors the shape but scopes to Stage I.
+
+| Dataset | HF | Size | Role in EAST | Role in our project |
+|---|---|---|---|---|
+| `SiMT-De-En-660K` | `biaofu-xmu/SiMT-De-En-660K` | 660,876 rows (De→En only, split ≈220K per latency level) | **Stage I** — full-weight SFT, 1 epoch. Activates adaptive read/write. Derived from WMT15 De→En training. | **Primary run.** Both conditions (A = GPT-4 chunks, B = ours) are trained on this. |
+| `SiMT-Multi-90K` | `biaofu-xmu/SiMT-Multi-90K` | 90.7K rows across 8 directions (De/Zh/Ru/Cs ↔ En) | **Stage II** — LoRA on top of Stage I. Generalises to multilingual. | **Stretch** — only after Gate 3 passes (see `TIMELINE.md`). |
+| `Off-Multi-120K` | not on HF (assembled from WMT17-21 test data à la ALMA) | 120K, 8 directions | **Stage II** — LoRA on OMT task alongside Multi-90K to preserve full-sentence translation. | Only if we do Stage II. Assembly script is a TODO. |
+
+Chunks ship as `source_chunks`/`target_chunks` lists — EAST wraps them at load time with `<|end-of-read|>`/`<|end-of-write|>` and a latency indicator token (`low`/`medium`/`high`, ≈1/3 of the 660K each). Loss is computed on **source + target + special tokens** (unlike Wang et al. 2024, which masks source).
+
+### Test sets
+
+- **WMT15 De→En newstest2015** — primary SiMT evaluation, matches EAST Figure 3. Sacrebleu-shipped.
+- **WMT22 X↔En** (8 directions) — used for the multilingual stretch (EAST Figure 4) and the document-level zero-shot claim (EAST §4.3, De/Ru→En). Sacrebleu-shipped with `docid` for the document view.
+- **RWTH De→En manual alignments** — EAST Appendix E.4 intrinsic annotation-quality measure. Independent of both annotators — this is the cleanest evidence for the tag-quality claim, and it goes in Phase 1 (see `TIMELINE.md`), not Phase 2.
+
 ## Conventions
 
-- Data: `SiMT-De-En-660K` (HuggingFace `biaofu-xmu/SiMT-De-En-660K`). This ships GPT-4 tags — that is the baseline condition, do not discard it.
-- Backbone: same model for annotation and fine-tuning (see `METHOD.md` §5 for why, and the ablation that tests it).
+- Backbone: same model for annotation and fine-tuning (see `METHOD.md` §5 for why, and the ablation that tests it). We start at **2B** (`Qwen3.5-2B`) — EAST uses Llama-3-8B-Instruct in Table 2, but the matched comparison holds at any scale as long as both conditions use the same backbone.
+- The GPT-4 chunks shipped in `SiMT-De-En-660K` are the **baseline condition**, do not discard them.
 - Every experiment gets a `LOG.md` entry with config, command, and result before the next one starts.
 - Any deviation from `METHOD.md` or `EXPERIMENTS.md` gets logged as a decision, not made silently.
 
