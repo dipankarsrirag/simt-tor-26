@@ -156,6 +156,170 @@ See §Blocker 2 above. **The distinction is the paper.** If we get this wrong, t
 
 **Related literature to reference (do not deep-dive):** self-consistency (Wang et al. 2023), temperature calibration (Guo et al. 2017), semantic calibration in LLMs (Ye et al. 2025, arXiv 2511.04869). All support the general "LLMs know when they're ready" thesis. Cite for framing, not for method.
 
+## Method improvements — concrete algorithmic changes
+
+The blockers and strengthening items above are about framing, measurement, and positioning. This section is about the algorithm itself. Seven candidate changes, ordered by paper impact. Each has a concrete change to `METHOD.md`, a distinction from prior work read directly, and a specific "does the paper get stronger" test.
+
+**Reading `METHOD.md` §§2–4 as the baseline:** commit at `i*[j] = min { i : D(P_full[j], P_pre[i][j]) < tau }`, then enforce greedy monotonicity `i*[j] = max(i*[j], i*[j-1])`, then emit EAST's interleaved format. The improvements below sit on top.
+
+### M1. Scheduled-sampling annotation — fix exposure bias at the source
+
+**Current.** `P_pre[i][j] = p(y_j | S_≤i, T_<j)` teacher-forces the reference target prefix `T_<j`. Same for `P_full[j]`. The tags placed by comparing these two are therefore reference-conditioned. At inference the model sees its own outputs, not the reference — this is the exposure-bias gap `METHOD.md` §9 admits.
+
+**Change.** During annotation, replace `T_<j` with a mixed prefix that samples between the reference and the annotator's own greedy prediction. Concretely, use a Bengio-style scheduled-sampling schedule with mixing rate `ρ` that varies per sentence (not per token to avoid trace incoherence). At `ρ=0` we recover the current teacher-forced criterion. At `ρ=1` we get pure self-conditioning at annotation time — closing the gap but adding annotator variance.
+
+Sweep `ρ ∈ {0.0, 0.25, 0.5}` as an ablation axis. Report tag divergence between `ρ=0` and `ρ=0.5`, and the downstream BLEU/AL of models trained on each variant.
+
+**Closest prior work.** Bengio et al. (2015) scheduled sampling and Ranzato et al. (2016) MIXER apply the mismatch fix during *model training*, not data construction. Confidence-Aware Scheduled Sampling (Zhang et al. 2021, [arXiv 2107.10427](https://arxiv.org/abs/2107.10427)) uses model confidence to gate teacher-forcing at training. On-policy distillation (recent LLM literature) samples from the *student* during KD to remove exposure bias in distillation.
+
+**Distinction.** All prior work targets exposure bias inside a trained parametric model whose predictions will be consumed downstream. Our annotator runs *once, offline*, producing tags that are then baked into SFT data. We are the first (to our knowledge) to apply scheduled sampling to a one-shot data-construction pipeline for SiMT tag placement. The methodological argument is: if scheduled-sampling annotation *doesn't* change tags much, we have empirical support for the exposure-bias gap being small, which strengthens Blocker 3's measurement result. If it *does* change tags, `ρ` becomes a defensible ablation axis showing our design decision has semantic content.
+
+**Paper story.** Turns the exposure-bias limitation from a §Discussion paragraph into a method contribution. Real ACL/EMNLP win.
+
+**Effort.** One extra annotation pass per `ρ` value; each annotation pass is the compute-dominant step. ~2 extra `ρ` values × 10K sentences × one full-source + N prefix passes each = ~one weekend on gpuhopper.
+
+### M2. Horizon-averaged convergence criterion — commit on window stability, not per-token
+
+**Current.** `i*[j]` is set token-by-token: for each target token `j`, find the smallest `i` where `D(P_full[j], P_pre[i][j]) < tau`. This is per-token noisy; a single low-probability outlier at `j` can trigger a commit that would be reversed had we looked one token later.
+
+**Change.** Replace per-token criterion with a **horizon-averaged** one:
+
+```
+i*[j] = min { i : (1/h) Σ_{k=0}^{h-1} D(P_full[j+k], P_pre[i][j+k]) < tau }
+```
+
+for a small horizon `h ∈ {3, 5}`. A tag lands at `i` only when the *chunk* starting at `j` has collectively converged. This is closer to the semantic-unit intuition EAST invokes in their §3.1 prompt design.
+
+**Ablation:** `h ∈ {1, 3, 5}`. `h=1` recovers current method.
+
+**Closest prior work.** WhisperPipe (streaming ASR, IEEE 2024) uses a two-tier "some utterances converge quickly, others require additional confirmation" commit strategy — surface-string based. LEAP (diffusion LLM, arXiv 2605.10980) uses "early convergence" with "prediction invariance with respect to future context updates" — a related idea. Multi-criterion stopping-rule literature (Wald 1947 SPRT foundations, and modern LLM-consistency work like ConSol [arXiv 2503.17587](https://arxiv.org/abs/2503.17587)) proposes windowed convergence detection.
+
+**Distinction.** The windowed-stability idea is not novel per se. What is novel is (a) applying it to *distributional-convergence-based tag placement in SFT data*, and (b) using the same underlying full-source oracle to define both the per-token and the horizon-averaged variants, letting the ablation cleanly isolate the effect of the window.
+
+**Expected paper impact.** Likely a modest AL improvement at fixed BLEU (fewer noise-driven early commits) and a smoother BLEU-AL curve. Also the natural response to the reviewer question *"why the token, not the phrase?"*
+
+**Effort.** Trivial code change; no additional annotation compute (compute the horizon-average from the same per-token distances you already have).
+
+### M3. DP-based globally-optimal tag placement — replace greedy monotonicity
+
+**Current.** Tag placement is a two-step greedy procedure: (1) per-token `i*[j]`, then (2) greedy monotonicity enforcement `i*[j] = max(i*[j], i*[j-1])`. Step (2) can be far from optimal — it monotonises after the fact, which means a poorly-placed early commit forces all subsequent commits to be at least as late.
+
+**Change.** Formulate tag placement as **minimum-lag chunking under a convergence constraint**, solved by dynamic programming:
+
+```
+min  Σ_j (i*[j] - j)                    # total lag (proxy for AL)
+s.t. D(P_full[j], P_pre[i*[j]][j]) < tau  ∀j
+     i*[j] ≥ i*[j-1]                    # monotonicity
+     i*[j] ≤ n                          # source-bounded
+```
+
+The DP has state `(j, i)` and runs in `O(m·n)` — same order as the current criterion pass; the DP is on top of already-computed `D` values, so no extra model forwards. Optionally add a chunk-length regulariser to prevent 1-token chunks.
+
+**Ablation.** Greedy vs DP on the same criterion. Same tau. Report AL/BLEU delta.
+
+**Closest prior work.** HMT (Hidden Markov Transformer, Zhang & Feng, NeurIPS 2023) uses DP to marginalise the read/write timing as a latent variable during *training*. IEEE 2024 "Chunk Size Scheduling" (Chen et al.) does dynamic chunk-size scheduling during *inference* — greedy, not DP. The dynamic-sentence-boundary-detection literature (Lin et al., AutoSimTrans 2020) uses DP for boundary detection in streaming source, not for target-side tag placement.
+
+**Distinction.** DP for globally-optimal offline tag placement on the target side, given a per-token oracle convergence measure, is (to our knowledge) not standard in the SiMT data-construction literature. HMT solves a superficially similar DP but at the model-parameter learning level; ours is a data-preprocessing step with no gradient flow.
+
+**Expected paper impact.** Same tau, strictly ≤ AL under DP than under greedy (theorem-level: DP is optimal for the constrained min-lag problem, greedy is a lower bound). BLEU should not degrade if the DP respects the convergence constraint. Cleanest small algorithm improvement in the paper.
+
+**Risk.** If the constraint set has few feasible solutions, DP output ≈ greedy output. Worth measuring at three tau values before over-claiming.
+
+**Effort.** Half a day of code + one re-run of the primary comparison.
+
+### M4. Sequential-probability-ratio-test formalism for tau
+
+**Current.** `tau` is a scalar threshold on the divergence. Its selection is empirical — sweep on dev, pick where BLEU-AL trade-off looks best. The number has no principled statistical interpretation.
+
+**Change.** Frame the commit decision as a sequential hypothesis test. At each `i` for each target token `j`:
+
+- H_0: `P_pre[i][j] = P_full[j]` (converged, safe to commit)
+- H_1: `P_pre[i][j] ≠ P_full[j]` (not converged, must read more)
+
+SPRT (Wald 1947) accumulates log-likelihood ratio evidence across `i` and commits when the ratio crosses one of two thresholds `A`, `B` derived from user-specified false-alarm rate `α` and miss rate `β`. Setting `α = β = 0.05` gives calibrated Type-I / Type-II error rates that translate to a target commit-quality guarantee: "with 95% probability, a committed token's distribution matches the full-source distribution within test tolerance."
+
+**Ablation.** SPRT vs single-threshold tau. Same underlying divergence.
+
+**Closest prior work.** ConSol ([arXiv 2503.17587](https://arxiv.org/abs/2503.17587)) applies SPRT to LLM self-consistency reasoning to early-stop sampling. mSPRT (mixture SPRT) is standard in online A/B testing (Statsig, Optimizely). SPRT-inspired early-exit in classifier cascades is standard in fast-inference literature. **No prior SiMT / SFT-annotation work uses SPRT for commit decisions** — this is a clean transfer of a well-understood statistical tool into a new domain.
+
+**Distinction from ConSol.** ConSol uses SPRT to decide whether to *stop sampling more reasoning traces* — sequential stopping on i.i.d. samples. Our sequential structure is different: we accumulate evidence across *increasing prefix lengths*, which are not i.i.d. — later `P_pre[i][j]` are conditioned on strictly more information than earlier ones. Applying SPRT correctly here requires the mSPRT variant that handles nested-information filtrations. State this precisely; a reviewer familiar with SPRT will spot handwaving.
+
+**Expected paper impact.** Turns a knob-tuned threshold into a principled statistical criterion. Findings reviewers love this kind of formalism because it gives the "here's why we picked this value" answer that ad-hoc tau doesn't have. Downside: SPRT tau values won't align with EAST's `low`/`medium`/`high` prompt tokens as neatly, complicating comparison — mitigable by binning post-hoc.
+
+**Effort.** SPRT derivation is a paragraph; implementation is a few lines. Ablation is one extra annotation pass.
+
+### M5. JSD alongside OT and KL in the divergence ablation
+
+**Current.** `EXPERIMENTS.md` §Ablation grid tests OT / KL / entropy-only / random-at-matched-latency.
+
+**Change.** Add **JSD** as a fourth row. Same criterion pipeline, just swap `D`. JSD is symmetric, bounded in [0,1], and typically better-behaved numerically than KL. If KL is asymmetric-fragile, JSD will notice.
+
+**Closest prior work.** JSD is used in RLVR fine-tuning shift analysis (arXiv 2603.22446), decoding-step analysis (LLama3-70B on TofuEval), and policy distillation as the JSD-based teacher-student loss (JSDT-style methods). It is a *standard* choice in distributional-comparison contexts; leaving it out of the ablation is a paper-review liability.
+
+**Distinction.** None methodologically — JSD is a textbook variant. The distinction is empirical: does JSD's symmetry buy anything on our specific criterion pattern? If yes, argue the direction. If no, argue that both KL variants collapse to similar tag placement (bonus: cheaper).
+
+**Expected paper impact.** Removes the "why not JSD?" reviewer objection at essentially zero cost. Also gives us three distributional distances to plot, which is more visually credible than two.
+
+**Effort.** One line of code (`D = 0.5*KL(P||M) + 0.5*KL(Q||M)`), one annotation re-run.
+
+### M6. Confidence-gated commit — safety against low-probability commits
+
+**Current.** Commit at `i*[j]` whenever `D(P_full[j], P_pre[i][j]) < tau`. This can fire even when *both* `P_full[j]` and `P_pre[i][j]` are broadly diffuse — the distributions agree that "we don't know what token comes next." Committing under diffuse agreement is meaningless.
+
+**Change.** Add a **target-token confidence gate**: commit only when
+
+```
+D(P_full[j], P_pre[i][j]) < tau  AND  P_pre[i][j][y_j*] > eta
+```
+
+where `y_j*` is the reference target token and `eta` is a small floor (say 0.1). Prevents committing to tokens the model can't actually predict.
+
+**Ablation.** With / without gate. Report the fraction of would-be commits vetoed by the gate.
+
+**Closest prior work.** Confidence thresholding is universal in early-exit literature (Schwartz et al. 2020 "The Right Tool for the Job"; DeeBERT; PABEE). CCPS (arXiv 2505.21772) is the recent confidence-calibration counterpart. Confidence-Aware Scheduled Sampling (arXiv 2107.10427) uses confidence to gate teacher forcing.
+
+**Distinction.** Our gate is a *conjunction* with a distributional criterion, not a standalone confidence threshold. The distributional criterion tests convergence to full-source; the confidence gate tests that the converged distribution actually predicts *something*. Together, they distinguish "know the answer, know we know it" from "don't know the answer, know we don't know it." Prior work uses one or the other but not both in the tag-placement setting.
+
+**Expected paper impact.** Small AL improvement (fewer over-eager commits on diffuse tokens), potentially a BLEU improvement on low-frequency tokens. Removes a reviewer footgun where a critic constructs an example of "criterion committed to garbage."
+
+**Effort.** One extra condition in the criterion; no additional compute.
+
+### M7. Non-monotone loss upweighting — amplify the mechanism we claim to win on
+
+**Current.** All examples in SFT data are equally weighted. `CLAUDE.md` claims our win is disproportionately on the reordering-divergent sentences that EAST discards.
+
+**Change.** In the SFT loss, upweight examples by a reordering-severity score. Concrete scoring: **Kendall's τ on the awesome-align permutation between source and target chunks**, mapped to a weight `w ∈ [1, 3]` where τ near 1 (monotone) gets `w=1` and τ near 0 (heavily reordered) gets `w=3`. Cap the weight to prevent overfitting to outliers.
+
+**Ablation.** Weighted vs uniform loss on Stage-I SFT. Report BLEU/COMET stratified by reordering-severity bin.
+
+**Closest prior work.** "Monotonic Simultaneous Translation with Chunk-wise Reordering and Refinement" (Kano et al. 2021, arXiv 2110.09646) monotonises the *training corpus* to remove reordering — the opposite direction. REINA uses monotonicity regularisation on the *policy output*, not on the training-data weighting. Non-monotonic latent alignments (Shao & Feng, arXiv 2210.03953) address reordering in non-autoregressive MT via latent variables. **No SiMT work upweights the reordering-divergent examples in SFT loss** — everyone is trying to make them go away, we are trying to lean into them.
+
+**Distinction.** This is genuinely different in direction. If our tags are the tool that unlocks the reordering-divergent examples EAST discards, then the SFT loss should reward the model for learning them — and equal weighting under-invests in exactly the signal that drives our reported win.
+
+**Expected paper impact.** If it works, the stratified table shows the win concentrating on the reordering bins — direct empirical support for the mechanism claim. If it doesn't work, that's a *counterexample* to the mechanism story, which weakens the paper's motivation — so run this early (Phase 2), not late.
+
+**Risk.** Upweighting could over-fit to the small non-monotone tail and hurt the monotone majority. Set a cap and monitor validation loss per-bin.
+
+**Effort.** Alignment score assembly + weighting in the SFT loss = ~one day. Kendall's τ on awesome-align permutations reuses infra from Blocker 4 (Reordering Figure 1). Score once at data-prep time, cache.
+
+## Method-improvement priority summary
+
+| # | Change | Prior work | Delta over prior | Effort | Priority |
+|---|---|---|---|---|---|
+| M1 | Scheduled-sampling annotation (`ρ` sweep) | Bengio 2015 / MIXER 2016 / OPD (training-time) | First application at data-construction stage | Weekend of compute | **High** — turns Blocker 3 into method contribution |
+| M2 | Horizon-averaged criterion (`h`) | Multi-criterion stopping (Wald 1947, LEAP, WhisperPipe) | First to apply to SFT tag placement | Trivial code, free | **High** — cheap, defensible, natural |
+| M3 | DP-based tag placement | HMT (Zhang & Feng 2023) — training-time DP | First DP for offline tag placement | Half day + one re-run | **Medium-high** — provably ≤ greedy AL |
+| M4 | SPRT formalism for tau | ConSol (LLM self-consistency), Wald 1947 | First SPRT in SFT tag placement | Half day + one re-run | **Medium** — formalism win, reviewer safety |
+| M5 | JSD alongside OT/KL | Standard in distillation literature | Empirical robustness check | One line + one re-run | **Low but cheap — do it** |
+| M6 | Confidence-gated commit | Early-exit literature (Schwartz 2020, etc.) | Conjunction with distributional criterion | Trivial code | **Medium** — safety mechanism |
+| M7 | Non-monotone loss upweighting | Kano 2021 (opposite direction), REINA (monotonicity reg) | First upweighting for reordering-divergent SFT | 1 day + Phase 2 re-run | **Medium-high, run early** |
+
+**If all High-priority items get done:** M1 (scheduled-sampling annotation), M2 (horizon), M3 (DP), and M7 (loss upweighting) collectively give the paper four defensible method contributions on top of the core "backbone-derived tags" claim. That is more than enough new-method surface for Findings.
+
+**If only one High-priority item can be done:** M2 (horizon-averaged criterion). Trivial to implement, gives a natural response to the token-vs-phrase reviewer objection, and costs no additional annotation compute.
+
+**If the paper needs a big narrative anchor:** M1 (scheduled-sampling annotation). Transforms the exposure-bias admission from a §Discussion paragraph into a method contribution with its own subsection, its own ablation, and its own story arc.
+
 ## Rejected optionals (do not do these)
 
 - **ICLR reframing.** Wrong venue, wrong effort. Would require reframing as representation-learning / algorithmic-breadth. Don't.
