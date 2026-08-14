@@ -1,0 +1,55 @@
+# Data — never committed. `data/` is a symlink to
+# /g/data/po67/dipankar/data/simt-tor-26/.
+data/
+data
+*.arrow
+*.parquet
+*.jsonl.gz
+*.tsv.gz
+
+# Model weights and checkpoints.
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+checkpoints/
+runs/
+
+# Logs — PBS output, metrics jsonl, wandb offline dirs.
+logs/
+*.log
+*.o[0-9]*
+*.e[0-9]*
+wandb/
+
+# Python / venv.
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.venv-*/
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Editor / OS junk.
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets — never commit.
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# uv cache / lock artefacts we do not want checked in.
+.uv_cache/
+
+# Local scratch — do not commit half-baked notebooks or manuscript PDFs.
+*.ipynb_checkpoints/
+*.pdf
+scratch/
