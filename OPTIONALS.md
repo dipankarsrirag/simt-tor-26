@@ -13,6 +13,48 @@ This document is ordered by paper impact, not by effort. Each item states the ch
 | **ACL/EMNLP main track** | No | Would need 8B replication + monolingual-multilingual span |
 | **ICLR** | No | Wrong shape — this is applied SiMT, not representation learning |
 
+## The trivial insight everyone missed
+
+Before diving into blockers and improvements, articulate what makes the core method novel — because the same argument shape recurs across every method improvement below, and it's the paper's narrative anchor.
+
+**The observation is one line.** At SiMT data-construction time, three things are on the table:
+
+1. The full source
+2. The full target
+3. The model that will be fine-tuned
+
+Every prior data-construction approach for SiMT uses (1) and (2) but requires *something external* for the annotation signal. **EAST** (Fu et al., ACL Findings 2025) uses GPT-4. **Conversational SimulMT** (Wang et al., 2024) uses `fast_align` (~30% error rate per EAST's Appendix A). **Agent-SiMT** (Guo et al., 2024) uses a separately-trained SiMT model. Every one of them looked at the data-construction step, saw a hole, and reached for an outside oracle.
+
+The trivial thing they all missed: **(3) is also available at data-construction time.** You already have the model that will consume the tags. Ask it, not GPT-4, when its own predictive distribution has converged to the full-source value. That's the whole method. The technical change from EAST is a single string swap:
+
+```python
+annotator = "gpt-4"     # EAST
+annotator = self.model  # us
+```
+
+**Why it was missed.** Everyone thought the annotation signal had to come from outside the training loop because that's what "annotation" means in every other setting — human annotators, expert models, alignment tools. The SiMT literature imported that convention. Nobody stopped to notice that in SiMT specifically, the two-sided information asymmetry (full source at train time, streaming source at test time) means the model's own predictive distribution *is* the oracle you need — and it's free.
+
+**Why the delta is disproportionately large.** A one-line change eliminates:
+
+- The GPT-4 API dependency (cost, latency, terms-of-service, reproducibility).
+- The annotator-vs-backbone mismatch (EAST anointates with GPT-4, fine-tunes Llama-3-8B — different tokenisers, different biases, different confusions).
+- The monotonicity filter (EAST Appendix C drops unequal-chunk-count sentences because GPT-4's chunk counts are meaningful only when equal; ours produces per-token continuous convergence values that don't need that constraint).
+- The three-latency-level prompt engineering (`low`/`medium`/`high` in EAST is GPT-4 doing three separate segmentation passes; ours sweeps a continuous `tau`).
+
+Each of those is a paragraph in the paper. Together they're a section. The technical delta is a string swap; the paper-story delta is roughly a Findings submission.
+
+## The same "trivial-but-missed" shape applies to every method improvement below
+
+The improvements M1–M7 in §Method improvements all follow the same rhetorical pattern:
+
+1. **The tool exists in adjacent literature for decades.** Scheduled sampling (Bengio 2015), dynamic programming for optimal segmentation (Viterbi 1967), sequential probability ratio testing (Wald 1947), Jensen-Shannon divergence (textbook), inverse-frequency loss weighting (also textbook).
+
+2. **SiMT literature never applied it to data construction** because SiMT data construction wasn't a research object. Everyone treated it as "get an external oracle to segment, then train." Only EAST 2025 made data construction its own contribution — and even they used an external oracle.
+
+3. **Once you accept "the model is the oracle" (the core insight above), sixty-plus years of standard tools drop in naturally.** Each M-item is one such drop-in.
+
+That's the paper. The core claim is trivially small in code and disproportionately large in what it opens up. State it in the abstract, defend it in Related Work, illustrate it in the ablation grid.
+
 ## Blockers for ACL/EMNLP Findings
 
 ### 1. Scale framing — preregister "at 2B" or add an 8B replication
@@ -176,6 +218,10 @@ Sweep `ρ ∈ {0.0, 0.25, 0.5}` as an ablation axis. Report tag divergence betwe
 
 **Paper story.** Turns the exposure-bias limitation from a §Discussion paragraph into a method contribution. Real ACL/EMNLP win.
 
+**Δ prior work (technical vs paper).**
+- *Technical delta:* one hyperparameter, one line in the annotator loop (`prefix = T[:j] if random() > ρ else self.generate(T[:j])`).
+- *Story delta:* an entire subsection with an ablation axis. Every scheduled-sampling paper since 2015 fixes exposure bias *inside a model being trained*. Nobody applied it to a data-construction pipeline because until EAST 2025 there wasn't a data-construction pipeline where reference-conditioning was a *design choice*. **We are literally the first paper that could have this problem, and we solve it in the standard way.**
+
 **Effort.** One extra annotation pass per `ρ` value; each annotation pass is the compute-dominant step. ~2 extra `ρ` values × 10K sentences × one full-source + N prefix passes each = ~one weekend on gpuhopper.
 
 ### M2. Horizon-averaged convergence criterion — commit on window stability, not per-token
@@ -197,6 +243,10 @@ for a small horizon `h ∈ {3, 5}`. A tag lands at `i` only when the *chunk* sta
 **Distinction.** The windowed-stability idea is not novel per se. What is novel is (a) applying it to *distributional-convergence-based tag placement in SFT data*, and (b) using the same underlying full-source oracle to define both the per-token and the horizon-averaged variants, letting the ablation cleanly isolate the effect of the window.
 
 **Expected paper impact.** Likely a modest AL improvement at fixed BLEU (fewer noise-driven early commits) and a smoother BLEU-AL curve. Also the natural response to the reviewer question *"why the token, not the phrase?"*
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* `h=1` → `h=3` inside the criterion loop. Six characters of code.
+- *Story delta:* multi-criterion stopping rules go back to Wald's *Sequential Analysis* (1947). WhisperPipe uses two-tier stability for ASR. LEAP uses windowed early-convergence for diffusion LLMs. **Nobody applied windowed convergence to SFT tag placement because SFT tag placement has been a research object for less than 18 months** (EAST is Findings ACL 2025). We inherit Wald's insight into a domain where it hadn't landed yet.
 
 **Effort.** Trivial code change; no additional annotation compute (compute the horizon-average from the same per-token distances you already have).
 
@@ -225,6 +275,10 @@ The DP has state `(j, i)` and runs in `O(m·n)` — same order as the current cr
 
 **Risk.** If the constraint set has few feasible solutions, DP output ≈ greedy output. Worth measuring at three tau values before over-claiming.
 
+**Δ prior work (technical vs paper).**
+- *Technical delta:* replace two lines of greedy `for j: i*[j] = max(i*[j], i*[j-1])` with a standard `O(m·n)` DP table. This is a textbook Viterbi variant (1967).
+- *Story delta:* a **provable** guarantee. Greedy monotonisation is a lower bound; DP is the constrained optimum. Reviewers love provable statements even when the absolute number moves modestly. The reason nobody in SiMT does this: **every prior data-construction pipeline uses a black-box oracle (GPT-4, alignment tool) whose outputs are already discrete chunk boundaries — there's nothing continuous to optimise DP over.** Move the oracle inside (M0, our core insight) and DP is suddenly applicable. That's the entire delta from prior work: not the DP itself, but the fact that our criterion is continuous enough to admit it.
+
 **Effort.** Half a day of code + one re-run of the primary comparison.
 
 ### M4. Sequential-probability-ratio-test formalism for tau
@@ -246,6 +300,10 @@ SPRT (Wald 1947) accumulates log-likelihood ratio evidence across `i` and commit
 
 **Expected paper impact.** Turns a knob-tuned threshold into a principled statistical criterion. Findings reviewers love this kind of formalism because it gives the "here's why we picked this value" answer that ad-hoc tau doesn't have. Downside: SPRT tau values won't align with EAST's `low`/`medium`/`high` prompt tokens as neatly, complicating comparison — mitigable by binning post-hoc.
 
+**Δ prior work (technical vs paper).**
+- *Technical delta:* replace `if D < tau: commit` with `while running-log-likelihood-ratio inside (A, B): keep-reading`. SPRT is undergraduate statistics; the implementation is a running sum with two thresholds.
+- *Story delta:* seventy-eight years of established sequential-analysis theory annotating tag placements. **The SiMT literature has never touched SPRT**; the closest is ConSol (arXiv 2503.17587) which uses SPRT for LLM self-consistency early-stop, a very different sequential structure (i.i.d. samples vs nested-information filtrations — see distinction paragraph above). We are the first paper to use SPRT for a sequential-*prefix* decision in NLP. The framework was there, hasn't been picked up, and slots straight in.
+
 **Effort.** SPRT derivation is a paragraph; implementation is a few lines. Ablation is one extra annotation pass.
 
 ### M5. JSD alongside OT and KL in the divergence ablation
@@ -259,6 +317,10 @@ SPRT (Wald 1947) accumulates log-likelihood ratio evidence across `i` and commit
 **Distinction.** None methodologically — JSD is a textbook variant. The distinction is empirical: does JSD's symmetry buy anything on our specific criterion pattern? If yes, argue the direction. If no, argue that both KL variants collapse to similar tag placement (bonus: cheaper).
 
 **Expected paper impact.** Removes the "why not JSD?" reviewer objection at essentially zero cost. Also gives us three distributional distances to plot, which is more visually credible than two.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* one function definition (`D = 0.5*KL(P||M) + 0.5*KL(Q||M)` where `M = 0.5*(P+Q)`).
+- *Story delta:* small — this is a standard variant, not a novelty. But the *absence* of JSD in a divergence ablation is a defensive gap; adding it removes the gap. Cheap paper-hygiene, not paper-contribution.
 
 **Effort.** One line of code (`D = 0.5*KL(P||M) + 0.5*KL(Q||M)`), one annotation re-run.
 
@@ -282,6 +344,10 @@ where `y_j*` is the reference target token and `eta` is a small floor (say 0.1).
 
 **Expected paper impact.** Small AL improvement (fewer over-eager commits on diffuse tokens), potentially a BLEU improvement on low-frequency tokens. Removes a reviewer footgun where a critic constructs an example of "criterion committed to garbage."
 
+**Δ prior work (technical vs paper).**
+- *Technical delta:* an `AND` clause. Six characters.
+- *Story delta:* early-exit literature uses confidence *alone*; distributional-agreement work uses divergence *alone*. **We're the first to combine both** — and the argument for combining them is trivially clean ("committing to garbage requires low divergence *and* low target probability, which our gate forbids"). Nobody combined them before because the two literatures (early-exit, distributional decoding) don't cross-cite each other; ours sits at the intersection and inherits both.
+
 **Effort.** One extra condition in the criterion; no additional compute.
 
 ### M7. Non-monotone loss upweighting — amplify the mechanism we claim to win on
@@ -299,6 +365,10 @@ where `y_j*` is the reference target token and `eta` is a small floor (say 0.1).
 **Expected paper impact.** If it works, the stratified table shows the win concentrating on the reordering bins — direct empirical support for the mechanism claim. If it doesn't work, that's a *counterexample* to the mechanism story, which weakens the paper's motivation — so run this early (Phase 2), not late.
 
 **Risk.** Upweighting could over-fit to the small non-monotone tail and hurt the monotone majority. Set a cap and monitor validation loss per-bin.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* per-example loss weight from `1.0` to `1 + f(Kendall's τ)`. Textbook re-weighting; the code is a `.to(weights)` on the loss tensor.
+- *Story delta:* **direction-reversal from the entire SiMT literature.** Kano et al. 2021 (arXiv 2110.09646) monotonises the training corpus by *reordering targets*. EAST §3.1 filters non-monotone examples via the equal-chunk-count constraint. REINA regularises the policy *toward* monotonicity. Everyone else is trying to make the non-monotone examples go away because their pipelines can't handle them. **We're the only ones who want them because our tags do handle them** — and the loss-weighting is the direct empirical test that we win where the mechanism predicts. If the stratified BLEU-by-reordering-bin table shows the win concentrating on the reordering side, the paper's motivation stops being an assertion and becomes evidence.
 
 **Effort.** Alignment score assembly + weighting in the SFT loss = ~one day. Kendall's τ on awesome-align permutations reuses infra from Blocker 4 (Reordering Figure 1). Score once at data-prep time, cache.
 
@@ -319,6 +389,16 @@ where `y_j*` is the reference target token and `eta` is a small floor (say 0.1).
 **If only one High-priority item can be done:** M2 (horizon-averaged criterion). Trivial to implement, gives a natural response to the token-vs-phrase reviewer objection, and costs no additional annotation compute.
 
 **If the paper needs a big narrative anchor:** M1 (scheduled-sampling annotation). Transforms the exposure-bias admission from a §Discussion paragraph into a method contribution with its own subsection, its own ablation, and its own story arc.
+
+## The paper's contribution in one paragraph
+
+For the abstract / intro / rebuttal, this is the sentence to internalise:
+
+> *Prior SiMT data-construction pipelines all reach outside the training loop for the annotation signal — GPT-4 (EAST), an alignment tool (Wang et al. 2024), a separately-trained SiMT model (Agent-SiMT). We show that for autoregressive SiMT specifically, the annotator is already inside the training loop: the model that will consume the tags has, at data-construction time, access to the full source and the full target, and can directly answer the only question that matters — "would I have committed to this token at this prefix length?" This one-line change (annotator = self.model) eliminates the GPT-4 dependency, the annotator-backbone mismatch, the monotonicity filter (which existed because GPT-4's chunks needed to align), the three-latency prompt engineering (a continuous `τ` replaces the discrete `low`/`medium`/`high`), and — once the annotator is inside the loop — makes seventy years of standard tools (scheduled sampling, dynamic programming, sequential probability ratio testing, jensen-shannon divergence, inverse-frequency loss weighting) drop into a research area that had never been positioned to use them.*
+
+Every improvement in this document (blockers, strengthening, method) is either (a) the direct consequence of that one-line change (M0), (b) a standard tool from adjacent literature that becomes applicable once the annotator is inside the loop (M1–M7), or (c) a positioning fix so that reviewers see (a) and (b) for what they are (Blockers 1–3, Strengthening 4–7).
+
+The paper is a demonstration that a widely-cited 2025 SiMT pipeline missed a one-line simplification with disproportionate downstream implications. Frame it as such. Do not oversell — the empirics still need to land — but do not undersell either. **"Trivial change, disproportionate delta, missed for interpretable reasons"** is one of the cleanest paper stories a reviewer can encounter.
 
 ## Rejected optionals (do not do these)
 
