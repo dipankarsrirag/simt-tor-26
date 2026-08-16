@@ -1,0 +1,111 @@
+{
+  "config": {
+    "n_sentences_requested": 51,
+    "n_sentences_kept": 48,
+    "n_sentences_annotated": 48,
+    "criterion": "js",
+    "seed": 42,
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B-it",
+    "max_src_tokens": 80,
+    "taus": [
+      0.02,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.3
+    ]
+  },
+  "sweep": [
+    {
+      "tau": 0.02,
+      "fire_fraction": 0.08333333333333333,
+      "mean_committed_fraction": 0.022620899885392638,
+      "chunks_per_sentence_mean_ours": 1.1041666666666667,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 4,
+        "n_nan": 44,
+        "min": 0.2526455763199559,
+        "median": 0.3273268353539885,
+        "max": 0.8252801598402696
+      }
+    },
+    {
+      "tau": 0.05,
+      "fire_fraction": 0.22916666666666666,
+      "mean_committed_fraction": 0.10318629215155217,
+      "chunks_per_sentence_mean_ours": 1.6666666666666667,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 11,
+        "n_nan": 37,
+        "min": 0.28097574347450843,
+        "median": 0.5341068763102074,
+        "max": 0.9551424587434784
+      }
+    },
+    {
+      "tau": 0.1,
+      "fire_fraction": 0.5208333333333334,
+      "mean_committed_fraction": 0.39362346666358555,
+      "chunks_per_sentence_mean_ours": 3.3125,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 25,
+        "n_nan": 23,
+        "min": 0.2236067977499784,
+        "median": 0.8208781858855396,
+        "max": 0.9696930671032696
+      }
+    },
+    {
+      "tau": 0.15,
+      "fire_fraction": 0.6875,
+      "mean_committed_fraction": 0.57624455204715,
+      "chunks_per_sentence_mean_ours": 4.1875,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 33,
+        "n_nan": 15,
+        "min": 7.124833332382038e-17,
+        "median": 0.8608709319560034,
+        "max": 0.978545474297064
+      }
+    },
+    {
+      "tau": 0.2,
+      "fire_fraction": 0.7708333333333334,
+      "mean_committed_fraction": 0.7009695487830162,
+      "chunks_per_sentence_mean_ours": 5.916666666666667,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 37,
+        "n_nan": 11,
+        "min": 0.0,
+        "median": 0.9190890003649179,
+        "max": 0.9854471109194249
+      }
+    },
+    {
+      "tau": 0.3,
+      "fire_fraction": 0.9375,
+      "mean_committed_fraction": 0.8821374641687142,
+      "chunks_per_sentence_mean_ours": 8.583333333333334,
+      "chunks_per_sentence_mean_gpt4": 4.0625,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 45,
+        "n_nan": 3,
+        "min": 0.4194676139809673,
+        "median": 0.9598087069308455,
+        "max": 0.9940096938937419
+      }
+    }
+  ],
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "b3872992df618571af9058bcc487a7e83105d98e"
+  }
+}

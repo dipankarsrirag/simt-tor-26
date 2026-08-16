@@ -1,0 +1,83 @@
+{
+  "config": {
+    "matrices": "/g/data/ba39/dipankar/simt-tor-26/results/phase1_tau_sweep_ot_ext/matrices.jsonl",
+    "taus": "0.30,0.50,0.70,1.00",
+    "seed": 42,
+    "n_random_repeats": 100,
+    "output": "/g/data/ba39/dipankar/simt-tor-26/results/phase1_tau_sweep_ot_ext/random_floor.json"
+  },
+  "rows": [
+    {
+      "tau": 0.3,
+      "js": {
+        "n_defined": 42,
+        "n_nan": 6,
+        "min": -1.5172547682459053e-16,
+        "median": 0.8053872662568288,
+        "max": 0.9856475831286244
+      },
+      "random_at_matched_latency": {
+        "n_defined": 47,
+        "n_nan": 1,
+        "min": -3.089908065470168e-17,
+        "median": 0.8409733933920864,
+        "max": 0.9640933812162119
+      },
+      "js_beats_random_median": true
+    },
+    {
+      "tau": 0.5,
+      "js": {
+        "n_defined": 47,
+        "n_nan": 1,
+        "min": 0.6315580123521849,
+        "median": 0.9603130232852575,
+        "max": 0.9898425343107463
+      },
+      "random_at_matched_latency": {
+        "n_defined": 48,
+        "n_nan": 0,
+        "min": 4.7672297982734654e-17,
+        "median": 0.9420974835864285,
+        "max": 0.9709578229231473
+      },
+      "js_beats_random_median": false
+    },
+    {
+      "tau": 0.7,
+      "js": {
+        "n_defined": 48,
+        "n_nan": 0,
+        "min": 0.3396831102433789,
+        "median": 0.9344447100595649,
+        "max": 0.9850598306751585
+      },
+      "random_at_matched_latency": {
+        "n_defined": 48,
+        "n_nan": 0,
+        "min": 0.7005015923692791,
+        "median": 0.908057276193099,
+        "max": 0.9525840597252163
+      },
+      "js_beats_random_median": false
+    },
+    {
+      "tau": 1.0,
+      "js": {
+        "n_defined": 44,
+        "n_nan": 4,
+        "min": -5.175373278576943e-16,
+        "median": -1.554623190211945e-17,
+        "max": 0.4134681152796925
+      },
+      "random_at_matched_latency": {
+        "n_defined": 47,
+        "n_nan": 1,
+        "min": -1.1617402001918526e-16,
+        "median": -6.987070517806494e-19,
+        "max": 0.6794207446286608
+      },
+      "js_beats_random_median": true
+    }
+  ]
+}
