@@ -30,6 +30,236 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [SESSION HANDOFF] 2026-08-15 — end-of-session state (Phase 1 mostly landed)
+
+**Where we ended.** Phase 1 explored four annotator configurations and settled on **base gemma-4-E2B + raw concat + OT with extended τ grid** (Config D-ext) as the winning setup. Seven hypotheses (H1–H7) documented in `docs/hypotheses.md`; H1 rejected, H2 partial, H3 supported (aggregate) with per-sentence caveats, H4 provisional support (need finer sweep), H5 SUPPORTED (OT beats JS on beats-random range and per-sentence GPT-4 correlation), H6/H7 queued.
+
+**Best result so far:** Config D-ext (job 176318744): 100% fire coverage; chunk-count 3.98 vs GPT-4's 4.06 (mean_abs Δ = 0.62); 6/8 top-reordering-candidates catch (best of any config); lowest per-sentence Pearson observed = 0.34 on idx=537446. Per-sentence r(GPT-4, ours) = 0.222 (n=47).
+
+**No active jobs at handoff time.** All 6 GPU sweeps completed. Model gemma-4-E2B base downloaded to `MODEL_BASE/gemma-4-E2B` (9.6 GB). RWTH gold alignments extracted at `data/rwth-de-en/DeEn/` (509 sentence pairs, sha256 `5aea49f44a9da4cf575d2dd303a8e12ebe7ba8b615ede7c28e7f8b0a0eb95793` on `DeEnGoldAlignment.tar.gz`).
+
+**Uncommitted work at handoff:**
+- Modified: `CLAUDE.md` (slimmed → points at `docs/`), `LOG.md` (this entry + all Phase-1 run entries), `scripts/download_data.sh` (RWTH manual step encoded), `src/constants.py` (Gemma-4 base primary).
+- New: `docs/` (7 files: README, method_overview, hypotheses, experiments, random_floor_and_ot, data, next_steps), `results/phase1_*` (6 sweep-result dirs — JSONL matrices + JSON summaries), `jobs/phase1_*.pbs` + `jobs/download_gemma4_e2b.pbs` (7 new PBS scripts), `scripts/phase0_verify_east_format.py` + `scripts/phase1_*.py` (7 new analysis scripts) + `scripts/smoke_load_gemma4.py`, `src/annotator/{__init__, east_format, criterion, annotate}.py` (annotator library), `tests/test_annotator_cpu_tiny.py`, `.venv-freeze.txt` (post-layering freeze; 217 packages).
+
+**Next-session pick-up in one paragraph.** Read `docs/README.md` → `docs/hypotheses.md` → `docs/experiments.md`. The primary Phase-1 result (RWTH Eq. 4 A-score under Config D-ext vs a baseline) is unblocked but not yet computed — write `src/eval/rwth_intrinsic.py` per `docs/next_steps.md` §1. Open follow-ups: bump sample to ~200 (~30 min OT), cross-backbone Qwen3.5-2B (H6), OT sensitivity ablation on topk/eps. Do NOT scale to Gemma-4-E4B until RWTH result is defensible.
+
+**Files a new person should read in order.** `CLAUDE.md`, then `docs/README.md`, then `docs/hypotheses.md`, then `docs/experiments.md` (has all six config sweep tables side by side), then `docs/random_floor_and_ot.md` (intuition for the two concepts that keep coming up), then `docs/next_steps.md`. `LOG.md` is the primary chronological record; `docs/` is the curated summary.
+
+---
+
+### [DECISION] 2026-08-14 — RWTH gold alignments: URL confirmed, manual fetch step
+**Context:** `scripts/download_data.sh` step 5 was a TODO; Gate 1 (intrinsic annotation-quality eval, EAST §E.4) is blocked without the RWTH De→En manual alignments. Confirmed from the EAST PDF (arXiv 2504.09570, page 17–18): dataset is "Gold Alignment for Europarl German-English Dataset" v1.0 at `https://www-i6.informatik.rwth-aachen.de/goldAlignment/`, EAST metric is Eq. 4 — `A = (1/T) sum_i I[a_i <= g_i]`, following Zhang and Feng, 2022.
+**Options:** (a) script the download, (b) manual browser step, (c) skip and use a substitute alignment source.
+**Chose:** (b). The URL is a registration form: name/organisation/email plus a "non-commercial, no redistribution" licence acceptance. Not scriptable in `download_data.sh`. Encoded the manual instructions in the script (step 5) so the human at execution time has all the context in one place. Target directory `data/rwth-de-en/`. HOUSEKEEPING §3 requires a `docs/data/rwth-de-en.md` note post-fetch with filename, date, and sha256.
+**Revisit if:** the RWTH form or licence changes, or if a mirrored copy becomes available under redistributable terms.
+
+### [RUN] 2026-08-15 — phase1_tau_sweep_ot_ext 176318744.gadi-pbs — completed
+**Config:** same as prior OT run, τ grid extended to {0.30, 0.50, 0.70, 1.00, 1.30}. Reason: prior OT sweep (τ ≤ 0.50) left 4/8 reordering candidates as single-chunk collapses (OT distance stayed above 0.50 across all i,j on those sentences). ~27 min walltime.
+**Result:** 33s/sentence. Full sweep:
+
+| τ | fire% | ours_ch | Pearson med | Pearson min |
+|---|---|---|---|---|
+| 0.30 | 90% | 4.67 | 0.81 | 0.00 |
+| 0.50 | 98% | 9.04 | 0.96 | 0.63 |
+| **0.70** | 100% | 6.73 | 0.93 | **0.34** |
+| 1.00 | 100% | 1.02 | ~0 | 0.00 |
+| 1.30 | 100% | 1.00 | ~0 | 0.00 |
+
+Coverage now complete: τ=0.70 gives 100% fire with Pearson_min=0.34 (lowest per-sentence Pearson observed anywhere). τ ≥ 1.00 collapses to single-chunk (fires at i=1 for all target tokens).
+
+**Per-sentence GPT-4-vs-OT (matched-chunk-count tau, grid {0.30, ..., 1.00}):**
+- r(GPT-4, ours) = 0.222, n=47 (vs prior narrow-grid 0.306, n=37 — new sentences with imperfect matches lower r but honest).
+- Ours chunks_mean = 3.98 (vs GPT-4's 4.06 — essentially matched).
+- Chunk-count delta mean_abs = **0.62** (was 1.42 under narrow grid — dramatic improvement).
+
+**Reordering catches (top-8 lowest GPT-4 Pearson): 6 MATCH, 2 MISS.**
+- New matches unlocked by extended grid: idx=359904 (0.751), idx=537446 (**0.340** — lowest anywhere), idx=367208 (0.847).
+- Remaining MISS (0.87, 0.87) close to threshold — a threshold of 0.87 would flip both.
+
+**Read.** D-ext is the best configuration yet: 6/8 reordering catches, chunk-count matched to GPT-4, coverage complete. This is what goes into the RWTH Eq. 4 arbitration. Per-sentence r dropped slightly (0.306 → 0.222) — but the "6/8 MATCH" and "chunk-count delta 0.62" are stronger evidence for tag quality than r on a monotonic-dominated dataset.
+
+### [RUN] 2026-08-15 — phase1_tau_sweep_ot 176307323.gadi-pbs — completed
+**Config:** backbone gemma-4-E2B (base), same 48 sentences (seed 42, max_src_tokens=80), criterion **OT** (embedding-grounded optimal transport via `pot.bregman.sinkhorn_log`, topk=128, eps=0.05, 200 Sinkhorn iterations), tau grid {0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50}, prompt raw. Walltime 01:00:00 on 1×H200 gpuhopper.
+**Command:** `qsub jobs/phase1_tau_sweep_ot.pbs` (using `pot`'s `ot.bregman.sinkhorn_log` after user request; original hand-rolled Sinkhorn cancelled and replaced).
+**Result:** 25 min annotation (~31s/sentence — ~24× slower than JS due to Sinkhorn iterations on ~256×256 cost matrices). Full sweep:
+
+| τ | fire% | ours_ch | Pearson med | Pearson min |
+|---|---|---|---|---|
+| 0.02 | 0% | 1.00 | — | — |
+| 0.05 | 0% | 1.00 | — | — |
+| 0.10 | 10% | 1.15 | 0.30 | 0.00 |
+| 0.15 | 48% | 1.85 | 0.30 | 0.00 |
+| 0.20 | 71% | 2.69 | 0.63 | 0.00 |
+| **0.30** | 90% | **4.67 ≈ GPT-4** | 0.81 | 0.00 |
+| 0.50 | 98% | 9.04 | 0.96 | 0.63 |
+
+**Random-floor:** OT beats random-at-matched-chunks at τ=0.20 AND τ=0.30 (vs JS which beat random at only τ=0.15).
+
+**Per-sentence GPT-4-vs-OT (matched-chunk-count tau_ot per sentence):**
+- **r(GPT-4, OT) = 0.306**, n=37 defined. Up from JS's 0.175 (n=48). Nearly doubled.
+- Ours chunks_mean = 3.27 (vs GPT-4's 4.06). Delta mean_abs = 1.42.
+- Ours Pearson_med = 0.794.
+
+**Reordering candidates (top-8 lowest GPT-4 Pearson):** 3 MATCH, 5 MISS. But 4/5 MISS are single-chunk collapse (OT stays above τ=0.50 on those hard cases — coverage limit, not signal defect). Same idx=553850 catch as JS Config C, plus idx=493988 improves 0.81 → 0.66.
+
+**Read.** H5 SUPPORTED. OT beats JS on two independent metrics (broader beats-random range; per-sentence r(GPT-4, ours) 0.175 → 0.306). Embedding-grounded cost earns its keep. Follow-up: extend τ grid to {0.70, 1.0} to close the 4 single-chunk-collapse cases; run topk / eps sensitivity ablation. All follow-up outputs at `results/phase1_tau_sweep_ot/{random_floor, per_sentence_compare}.json`.
+
+### [DECISION] 2026-08-15 — Use `pot`'s `sinkhorn_log` for OT (was: hand-rolled log-Sinkhorn)
+**Context:** User pointed to `https://pythonot.github.io/` after OT criterion was first implemented with a hand-rolled log-domain Sinkhorn. `pot 0.9.7.post1` was already installed via `create-venv.sh`.
+**Options:** (a) keep hand-rolled; (b) switch to `pot.bregman.sinkhorn_log` (log-stabilised); (c) use `pot.sinkhorn2` with `method='sinkhorn_log'`.
+**Chose:** (b). Cleaner code, standard citation, log-stabilised for small `eps`, returns transport plan (cost is `(T*C).sum()`). Torch tensors on GPU work natively. Cancelled queued job 176307109 (before it started) and resubmitted as 176307323.
+**Verified:** OT values on the toy 3×3 test match hand-rolled to 4 decimal places on real data (0.6352 vs 0.6352; 0.0001 vs 0.0001). Correctness identical; library maintenance and citability better.
+**Revisit if:** OT sensitivity ablations (topk, eps) reveal a bug or convergence issue that `pot`'s default settings don't handle.
+
+### [RUN] 2026-08-15 — phase1_tau_sweep_base 176304944.gadi-pbs — completed
+**Config:** backbone gemma-4-E2B **(base, not -it)**, same 48 sentences (seed 42, max_src_tokens=80). Criterion JS. Tau grid {0.02, 0.05, 0.10, 0.15, 0.20, 0.30}. `--prompt_mode raw` (matches METHOD §1 spec — no chat template, base pretraining distribution). `--record_entropy`. Walltime 00:30:00 on 1×H200 gpuhopper.
+**Command:** `qsub jobs/phase1_tau_sweep_base.pbs` (staged and fired immediately after `download_gemma4_e2b` completed).
+**Result:** Ran on gadi-gpu-h200-0019; model load 28.3s, annotate 63.8s (~1.3s/sentence, 48/48 kept). Full sweep:
+
+| tau | fire% | commit% | ours_ch | gpt4_ch | Pearson med | Pearson min |
+|-----|-------|---------|---------|---------|-------------|-------------|
+| 0.02 | 6% | 2% | 1.12 | 4.06 | 0.39 | 0.30 |
+| 0.05 | 52% | 43% | 2.19 | 4.06 | 0.33 | 0.00 |
+| **0.10** | 79% | 79% | **3.46** | 4.06 | **0.73** | 0.00 |
+| 0.15 | 92% | 91% | 6.04 | 4.06 | 0.84 | 0.00 |
+| 0.20 | 94% | 94% | 7.62 | 4.06 | 0.94 | 0.00 |
+| 0.30 | 98% | 98% | 10.04 | 4.06 | 0.97 | 0.78 |
+
+**Random-floor on base matrices:**
+
+| tau | JS_med | RD_med | JS beats RD? |
+|-----|--------|--------|--------------|
+| 0.10 | 0.732 | 0.699 | no (barely loses) |
+| **0.15** | **0.842** | **0.881** | **YES** (first observation ever of JS beating random) |
+| 0.20 | 0.936 | 0.923 | no |
+
+**Per-sentence GPT-4-vs-ours comparison (at per-sentence matched-chunk-count tau):**
+- Ours chunks_mean = 2.96 (vs GPT-4 4.06). Chunk-count delta mean_abs = 1.44 (was 2.25 under -it+chat).
+- Ours Pearson_med = 0.778 (vs -it+chat 0.919). Less diagonal.
+- **Per-sentence r(GPT-4, ours) = 0.175** — barely improved from -it+chat's 0.149, but qualitative catch on reordering cases is real (see below).
+
+**Catch on the top reordering candidate — idx=553850 (verb-final case):**
+- GPT-4: 2 chunks, commit trace `[42×24, 53×6]`, Pearson=0.693. Reads almost the whole source before committing.
+- **Ours (base + raw, matched-count tau): 2 chunks, Pearson=0.311.** Matches GPT-4's late-commit pattern. Compare -it+chat which gave 7 chunks with Pearson=0.907 (a MISS).
+
+**Read:**
+- Hypothesis (prompt confound is (part of) the story) is **partially supported**. Base+raw materially changes behaviour on reordering sentences; JS beats random-at-matched-latency at τ=0.15 (first time observed); chunk counts closer to GPT-4 than under -it+chat.
+- Aggregate per-sentence r stays weak (0.175) because most sentences are monotonic and small commit-trace differences dominate the correlation. **The r-metric is not the right primary signal.** What matters is: on the sentences that GPT-4 identifies as non-monotonic, does ours also identify them as non-monotonic? Answer under base+raw: yes for idx=553850 (walked example). Need to walk the other reordering candidates to confirm.
+- The tau=0.15 sweet spot: 92% fire, 6 chunks (moderately finer than GPT-4's 4), Pearson_med=0.84, and beats random. This is the first configuration that clears the "JS has signal" floor.
+- **RWTH is still the arbiter** — Eq. 4 A-score is the primary metric we care about, and it cannot be computed on WMT training data. The manual RWTH fetch is now the top-priority external blocker.
+- Do not yet claim "backbone-derived tags match GPT-4" — that needs RWTH. But we now have defensible tags to test against RWTH when the data lands.
+
+### [DECISION] 2026-08-15 — Switch primary backbone from -it to base (gemma-4-E2B)
+**Context:** Phase-1 tau sweeps under gemma-4-E2B-it exposed a prompt confound: raw-concat `{src}\n{tgt}` made JS *anti-signal* (worse than random-at-matched-latency) because the -it model treats raw concat as document continuation, not translation. Chat template fixed the fire-rate (22%→100%) but per-sentence r(GPT-4, ours)=0.15 — we catch different structure than GPT-4. Dipankar's suggestion: use the base pretrained model, where raw next-token prediction IS the natural task.
+**Options:** (a) stick with -it + chat template; (b) switch to base + raw concat.
+**Chose:** (b). Rationale: (1) matches METHOD §1's spec (P_pre / P_full are raw pretraining distributions, no task prompt); (2) removes the instruction-tuning confound at its root rather than papering over with prompt engineering; (3) same-model principle still holds — annotate with base, SFT with base; (4) cleaner story in the paper — no need to defend a chat-template choice.
+**Trade-off:** Phase 2 SFT will start from a base checkpoint, so achieving translation quality will need more training epochs than starting from -it. Acceptable — Gate 1 (annotator quality) is upstream of Gate 3 (SFT quality) and doesn't depend on translation absolute quality.
+**Verified before deciding:** `google/gemma-4-E2B` exists on HF, is the pretrained base (2.3B effective params, ~5GB safetensors), same architecture as the -it variant. Download job 176304709 fired on copyq.
+**Revisit if:** base + raw concat's per-sentence r(GPT-4, ours) is no better than -it + chat (i.e., ~0.15), which would push us to blame the criterion (JS) rather than the prompt/backbone axis — trigger OT.
+
+### [ANALYSIS] 2026-08-15 — Per-sentence GPT-4-vs-ours comparison on chat matrices
+**Input:** `results/phase1_tau_sweep_chat/matrices.jsonl` (48 sentences under Gemma chat template).
+**Scripts:** `scripts/phase1_gpt4_pearson.py` (GPT-4 baseline from shipped chunks); `scripts/phase1_per_sentence_compare.py` (per-sentence matched-tau comparison, r-of-Pearsons across sentences).
+
+**Discriminating result — GPT-4 baseline:**
+- GPT-4 Pearson_med **= 0.943** on same 48 sentences. min=0.693, max=0.984. Mean chunks/sentence = 4.06.
+- WMT De→En at 30-50 tokens (after EAST App. C filter) is inherently monotonic. "Our criterion is diagonal" was NOT degeneracy — the ground-truth data is diagonal.
+
+**Aggregate on ours (chat + JS at per-sentence matched-chunk-count tau):**
+- Pearson_med **= 0.919**, min=0.313, max=0.982. Mean chunks = 5.98 (vs GPT-4's 4.06 — even strictest tau=0.01 produces finer chunks than GPT-4 on some sentences).
+- Aggregate matches GPT-4 within noise.
+
+**Per-sentence result — the key finding:**
+- **Pearson-of-Pearsons across the 48 sentences: r = 0.149.** Our per-sentence Pearson does NOT track GPT-4's per-sentence Pearson.
+- On the 8 lowest-GPT-4-Pearson sentences (reordering candidates): 5 MATCH (ours also < 0.85), 3 MISS.
+
+**MISS case walked (idx=553850, high latency):**
+- GPT-4: 2 chunks. Commit trace `[42×24, 53×6]` — reads 42 of 53 source tokens before committing anything, then translates 24 target tokens; reads remaining 11 tokens, translates 6. Very late, very safe.
+- Reason: German subject `Ausnahmen für Emittenten ... bieten` splits subject and verb across positions 1-42; GPT-4 waits for the verb `bieten` before knowing the sentence structure.
+- Ours (JS, tau=0.01): 7 chunks, first commit at i=9 (`Ausnahmen für Emittenten` → "Exemption for issuers" — Gemma is confident on cognates). Then i=14, 29, 39, 48, 52, 52.
+- Two different policies: GPT-4 conservative-late, ours fast-early. **Without RWTH, neither is provably wrong.** The MISS case is exactly the German verb-final construction CLAUDE.md predicts should distinguish us — GPT-4 catches it here, ours doesn't.
+
+**Read:**
+- Aggregate Pearson matching GPT-4's is a weak positive. Per-sentence r=0.149 says we're catching *different* structure, not the same structure.
+- **RWTH is now genuinely necessary** — the intrinsic Eq. 4 metric is the only arbiter that can decide whether our early commits are unfaithful (a_i > g_i violations) or whether GPT-4 is over-conservative. Without ground alignment, the extrinsic Pearson comparison is inconclusive.
+- **OT is now the natural next criterion.** METHOD.md §3 hypothesis: uncertainty among semantically-nearby candidates is committable; uncertainty among semantically-distant candidates isn't. On idx=553850 the model is confident about "Exemption" but not the sentence structure — an embedding-aware ground cost should distinguish. Whether it delivers on Gemma-4-E2B is empirical.
+- The entropy-vs-JS chunk-count matched comparison still not clean; skipping until OT is in place — the ordering question (does the oracle help?) is worth revisiting with three criteria in the CRITERIA registry, not two.
+
+**What this does NOT resolve:**
+- Sample is 48 sentences; per-sentence r=0.149 with n=48 has wide CI. Bump to ~200 before drawing firm conclusions.
+- Backbone choice not tested — Qwen3.5-2B may produce different per-sentence structure.
+
+### [RUN] 2026-08-15 — phase1_tau_sweep_chat 176272966.gadi-pbs — completed
+**Config:** as prior entry.
+**Command:** as prior entry.
+**Result:** Ran on gadi-gpu-h200-0006; model load 51.8s, annotate 66.0s (~1.4s/sentence for 48 kept). Full sweep:
+
+| tau | fire% | commit% | ours_ch | gpt4_ch | Pearson med | Pearson min |
+|-----|-------|---------|---------|---------|-------------|-------------|
+| 0.02 | 100% | 95% | 7.19 | 4.06 | 0.93 | 0.49 |
+| 0.05 | 100% | 100% | 8.02 | 4.06 | 0.94 | 0.56 |
+| 0.10 | 100% | 100% | 9.10 | 4.06 | 0.95 | 0.60 |
+| 0.15 | 100% | 100% | 9.60 | 4.06 | 0.96 | 0.55 |
+| 0.20 | 100% | 100% | 9.73 | 4.06 | 0.96 | 0.55 |
+| 0.30 | 100% | 100% | 10.02 | 4.06 | 0.97 | 0.78 |
+
+Random floor on chat matrices: JS still barely loses to random (2pp gap, was 15pp under raw). Entropy-only sweep at H_tau=2.0 (matched chunk count ≈ 4.4): Pearson_med=0.90 — comparable to JS but chunk counts don't match cleanly for a direct verdict on "oracle doing work."
+**Read:** Chat template fixed the fire-rate (0% → 100%) but Pearson stayed high because the data itself is diagonal (see GPT-4 baseline entry above). All follow-ups landed in `results/phase1_tau_sweep_chat/{random_floor.json, entropy_sweep.json, gpt4_pearson.json, per_sentence_compare.json}`.
+
+### [ANALYSIS] 2026-08-14 — Random-at-matched-latency floor on raw-concat matrices
+**Input:** `results/phase1_tau_sweep/matrices.jsonl` (48 sentences, JS matrices under raw-concat prompt).
+**Script:** `scripts/phase1_random_floor.py` — for each tau, samples 100 monotone random commit traces per sentence with the exact chunk-count JS produced at that tau, computes per-sentence mean Pearson(i*/n, j/m), then aggregates across sentences.
+**Result:** JS Pearson_median > random Pearson_median at EVERY tau in the grid:
+
+| tau | JS_med | JS_min | RD_med | RD_min | JS beats random? |
+|-----|--------|--------|--------|--------|------------------|
+| 0.02 | 0.33 | 0.25 | 0.00 | 0.00 | no |
+| 0.05 | 0.53 | 0.28 | 0.00 | 0.00 | no |
+| 0.10 | 0.82 | 0.22 | 0.69 | 0.00 | no |
+| 0.15 | 0.86 | 0.00 | 0.79 | 0.00 | no |
+| 0.20 | 0.92 | 0.00 | 0.89 | 0.00 | no |
+| 0.30 | 0.96 | 0.42 | 0.93 | 0.00 | no |
+
+**Read:** JS-derived commit points on Gemma-4-E2B (raw-concat prompt) are systematically **more diagonal** than uniform-random with matched chunk count — the criterion is *anti-signal* under this prompt. Consistent with the advisor's confound diagnosis: the model isn't doing translation on `{src}\n{tgt}`, so JS(P_pre, P_full) is tracking source-length accumulation, not translation committability. Do not conclude "JS is degenerate on Gemma-4-E2B" until the chat-template re-run lands. Note also that some sentences produce Pearson=0 (rows commit at nearly one position) — those are the outliers worth eyeballing regardless of aggregate.
+
+### [RUN] 2026-08-14 — phase1_tau_sweep 176267898.gadi-pbs — completed
+**Config:** backbone Gemma-4-E2B-it, data SiMT-De-En-660K (51 sentences balanced across latency, max_src_tokens=80, seed 42). Criterion JS (Jensen-Shannon, nats). Tau grid {0.02, 0.05, 0.10, 0.15, 0.20, 0.30} — evaluated offline from a single per-sentence full divergence matrix. Prompt mode raw-concat (`{src}\n{tgt}`). Walltime 00:30:00 on 1×H200 gpuhopper.
+**Command:** as prior entry.
+**Result:** Ran on gadi-gpu-h200-0017; model load 41.5s, annotate 62.1s (~1.3s/sentence, 48/51 kept). Full sweep:
+
+| tau | fire% | commit% | ours_ch | gpt4_ch | Pearson med | Pearson min | #NaN |
+|-----|-------|---------|---------|---------|-------------|-------------|------|
+| 0.02 | 8% | 2% | 1.10 | 4.06 | 0.33 | 0.25 | 44 |
+| 0.05 | 23% | 10% | 1.67 | 4.06 | 0.53 | 0.28 | 37 |
+| 0.10 | 52% | 39% | 3.31 | 4.06 | 0.82 | 0.22 | 23 |
+| 0.15 | 69% | 58% | 4.19 | 4.06 | 0.86 | 0.00 | 15 |
+| 0.20 | 77% | 70% | 5.92 | 4.06 | 0.92 | 0.00 | 11 |
+| 0.30 | 94% | 88% | 8.58 | 4.06 | 0.96 | 0.42 | 3 |
+
+**Read:** Pearson_median rises monotonically with tau; getting fire coverage costs diagonal-bias. Chunk-count parity with GPT-4 (~4.1) lands at tau≈0.15 but Pearson_med there is 0.86. Combined with the random-floor analysis above (JS is beaten by uniform-random-at-matched-latency at every tau), the raw-concat prompt is confounded — the criterion is measuring "source-language token accumulation" more than "translation committability." Fix and re-run before drawing method-level conclusions. See the follow-up entry (phase1_tau_sweep_chat 176272966).
+
+### [RUN] 2026-08-14 — phase1_smoke_js 176261302.gadi-pbs — completed
+**Config:** backbone Gemma-4-E2B-it, data SiMT-De-En-660K (51 sentences balanced across latency, max_src_tokens=80, seed 42). Criterion JS (Jensen-Shannon, nats). Tau grid {0.02, 0.05, 0.10, 0.15, 0.20, 0.30} — evaluated offline from a single per-sentence full divergence matrix (annotator extended with `return_full_matrix=True`). Walltime 00:30:00 on 1×H200 gpuhopper.
+**Command:** `python scripts/make_job.py --name phase1_tau_sweep --queue gpuhopper --ngpus 1 --walltime 00:30:00 --script "python scripts/phase1_tau_sweep.py --n_sentences 51 --criterion js --taus 0.02,0.05,0.10,0.15,0.20,0.30 --max_src_tokens 80" --output jobs/phase1_tau_sweep.pbs && qsub jobs/phase1_tau_sweep.pbs`
+**Result:** QUEUED — awaiting run.
+**Read:** Motivated by the previous smoke (tau=0.05 fired on only 22% of sentences). This sweep locates a tau range where the criterion actually fires across most sentences, and simultaneously flags positional-degeneracy at each tau by tracking Pearson(i*/n, j/m). The recorded matrices persist under `results/phase1_tau_sweep/matrices.jsonl` — future criterion swaps (KL, OT) and finer sweeps re-use the same forward passes.
+
+### [RUN] 2026-08-14 — phase1_smoke_js 176261302.gadi-pbs — completed
+**Config:** as above (21 requested → 18 kept after max_src_tokens=80 filter). JS, tau=0.05.
+**Command:** as above.
+**Result:** Ran on gadi-gpu-h200-0016; model load 30.6s, annotate 35.7s (~2.0s/sentence). **Fire fraction: 22% (4/18 sentences).** Of those four, Pearson(i*/n, j/m) values were 0.281, 0.955, 0.884, 0.534 — mean chunks_ours=1.72 vs chunks_gpt4=3.89. Fourteen of eighteen sentences collapsed to a single chunk because JS never dropped below 0.05.
+**Read:** The mechanism works (structural checks all green; commit points where they fire are non-trivial). Threshold is the issue: JS ∈ [0, 0.693] and 0.05 is very strict for Gemma-4-E2B's predictive-distribution shifts on typical WMT De-En sentences. Sweep tau to find where fire fraction is well above 0 and Pearson isn't near 1 — that's the follow-on tau-sweep run (176267898). Do NOT scale to E4B yet — Gate 1 signal is not decidable from a threshold this tight.
+
+### [DECISION] 2026-08-14 — RWTH gold alignments: URL confirmed, manual fetch step
+
+### [DECISION] 2026-08-14 — Primary backbone switched: Gemma-4-E2B-it (was Qwen3.5-2B)
+**Context:** Second session. User request: run the experimental programme on the Gemma-4 family, starting small and scaling. Both Gemma-4 sizes (`gemma-4-E2B-it`, `gemma-4-E4B-it`) are already on `MODEL_BASE` (see HOUSEKEEPING §5). This overrides the earlier same-day entry ("Primary backbone: `Qwen3.5-2B`") and HOUSEKEEPING §5 "Primary backbone" row.
+**Options:** (a) keep Qwen3.5-2B as primary and Gemma-4 as ablation partner (unchanged); (b) swap — Gemma-4-E2B primary, Qwen3.5-2B ablation partner; (c) run both families as co-primaries.
+**Chose:** (b). METHOD §5 same-model principle stays intact: annotate with Gemma-4-E2B → SFT Gemma-4-E2B. Ladder is E2B first, E4B only after Gate 1 passes on E2B (matches user's "start small, then scale"). Cross-family annotator-ablation partner becomes Qwen3.5-2B, matched at ~2B so the ablation still isolates family rather than scale. (c) rejected: doubles compute for a 14-week project and the primary claim only needs one backbone.
+**Revisit if:** Gemma-4-E2B's `i*[j]` traces are degenerate under the METHOD §8 sanity checks (commit points cluster at sentence end, or `i*[j]/n ≈ j/m`). Fall back to Qwen3.5-2B and log the switch. Also revisit if Gemma-4's forward-pass path in the shared venv (`torch 2.11 + transformers 5.14`) turns out unstable — that would trigger a version-bump conversation with the `first-impressions-last` owner rather than a silent bump.
+**Verified before deciding:** `AutoConfig.from_pretrained` + `AutoTokenizer.from_pretrained` both succeed on `gemma-4-E2B-it` under the shared venv (model_type=`gemma4`, text_vocab=262144, 35 text layers). End-to-end forward-pass load is the next smoke — see task list.
+
 ### [SESSION HANDOFF] 2026-08-14 — end-of-session state
 
 **Repo:** clean, on `main` at `9e120cb`, synced with `github.com/dipankarsrirag/simt-tor-26`.
