@@ -8,7 +8,7 @@ All data lives under `/g/data/po67/dipankar/data/simt-tor-26/`, accessed via the
 | `SiMT-Multi-90K` | `SiMT-Multi-90K/` | 90,700 | Stretch — Stage II multilingual. | `scripts/download_data.sh` (HF) |
 | WMT15 De→En `newstest2015` | `wmt15-de-en/newstest2015.{de,en}` | 2,169 | Primary SiMT test (EAST Fig. 3). | `sacrebleu -t wmt15 -l de-en` |
 | WMT22 8 pairs | `wmt22/*/newstest2022.*` | ~2K each | Stretch multilingual + document-level test. | `sacrebleu -t wmt22` |
-| **RWTH De→En gold alignments** | `rwth-de-en/DeEn/` | **509** | **Gate 1 intrinsic annotation-quality eval (EAST App. E.4).** | **Manual browser step, see below.** |
+| **RWTH De→En gold alignments** | `rwth-de-en/DeEn/` | **509** | **Phase 3 appendix eval (EAST App. E.4). Deferred from Gate 1 per 2026-08-16 decision.** | **Manual browser step, see below.** |
 
 ## SiMT-De-En-660K format
 
@@ -30,7 +30,9 @@ Chunk counts always match between source and target (EAST App. C discards mismat
 
 Latency distribution: low=230,902 / medium=227,131 / high=202,843.
 
-## RWTH gold alignments — the Gate-1 arbiter
+## RWTH gold alignments — Phase 3 appendix eval (deferred from Gate 1)
+
+The 2026-08-16 decision (`LOG.md`) redefined Gate 1 to a stratified-by-reordering aggregate on 200 SiMT-660K sentences and moved RWTH-A to the Phase 3 appendix, mirroring EAST's App. E.4 positioning. The dataset below is unchanged; only when it runs is different.
 
 **URL:** `https://www-i6.informatik.rwth-aachen.de/goldAlignment/`
 **Dataset:** "Gold Alignment for Europarl German-English Dataset", v1.0.

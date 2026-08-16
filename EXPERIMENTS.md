@@ -23,11 +23,13 @@ Report BLEU/COMET/BLEURT against AL, LAAL, and AL-CA on WMT15 De→En newstest20
 
 ## Two evaluations, not one
 
-**Extrinsic** — translation quality vs latency, as above. What reviewers look at first.
+**Extrinsic** — translation quality vs latency, as above. What reviewers look at first. **This is the paper's headline** (matches EAST Fig. 3's positioning).
 
-**Intrinsic** — annotation quality directly, no routing through translation. EAST's Appendix E.4 supplies the tool: the RWTH De→En manually aligned corpus, scoring the proportion of gold-aligned source tokens read before each target token is generated (their Eq. 4). Human alignments, independent of both annotators.
+**Intrinsic — Gate 1 (during Phase 1).** Stratified-by-reordering aggregate on 200 SiMT-660K sentences, using GPT-4's own per-sentence Pearson as the reordering-severity proxy (bins: ≥0.90 monotone, 0.70–0.90 mild, <0.70 reordering). Measures whether our tags track GPT-4 on monotone majority and catch the reordering minority. This is a **greenlight for Phase 2**, not a paper result — without gold alignment it measures agreement-with-GPT-4, not annotation quality.
 
-Score condition A's tags and condition B's tags on the same measure. This isolates annotation quality from everything downstream and is the cleanest evidence we have. Do not skip it because the extrinsic result looks good.
+**Intrinsic — Phase 3 appendix.** RWTH De→En manually aligned corpus (509 sentences, EAST App. E.4), scoring the proportion of gold-aligned source tokens read before each target token under Eq. 4. This is the human-aligned independent gold that condition-A and condition-B tags are both scored on. Lands in the paper's App. E, mirroring EAST's positioning.
+
+Score condition A's tags and condition B's tags on both measures at their respective phases. Neither is optional. Do not skip Phase 3 RWTH because the extrinsic result looks good — a positive extrinsic without a positive intrinsic is a footgun at Findings review.
 
 ## Ablation grid
 

@@ -30,11 +30,18 @@ This is the project. Everything else is plumbing.
 - [ ] Annotate 200 sentences. Run every sanity check in `METHOD.md` §8.
 - [ ] Score our tags and GPT-4's tags on the RWTH intrinsic measure.
 
-**Gate 1 (week 5) — the important one.** Do our tags beat GPT-4's on gold-alignment coverage, and is `i*[j]` non-degenerate?
+**Gate 1 (week 5) — the important one.** Redefined 2026-08-16 (see `LOG.md`): a **stratified-by-reordering aggregate on 200 SiMT-660K sentences**, using GPT-4's own per-sentence Pearson as the reordering-severity proxy. Sentences binned monotone (Pearson ≥ 0.90), mild (0.70–0.90), reordering (< 0.70). Per bin report chunk-count delta vs GPT-4, per-sentence Pearson (ours at matched-count tau), and MATCH rate under threshold 0.85. RWTH-A moves to Phase 3 as an appendix result mirroring EAST §E.4's positioning.
+
+Pass criteria (report both conditional and effective MATCH rate — the latter treats single-chunk collapse as MISS and is the honest metric for the mechanism claim):
+- **Monotone bin** — tie GPT-4 on chunk-count delta and per-sentence Pearson; coverage ≥ 80%.
+- **Reordering bin** — effective MATCH rate strictly higher than the monotone bin (mechanism claim: our tags concentrate wins on reordering). Coverage on the reordering bin ≥ 70% (or the metric is dominated by single-chunk collapses and the criterion isn't producing usable tags).
+- `i*[j]` non-degenerate under METHOD §8 sanity checks.
 
 - Pass → Phase 2.
 - Degenerate (commit points track position, not content) → diagnose before proceeding. Do not train on tags you cannot defend.
-- Tags fine but OT ≈ KL → proceed with KL, drop the OT framing, tell Dipankar. Still a paper.
+- Tags fine but OT ≈ KL/JS → proceed with the cheaper criterion, drop the OT framing, tell Dipankar. Still a paper.
+
+**What this gate does not do.** Without gold alignment, agreement-with-GPT-4 is not tag *quality*. Gate 1 is a green light for Phase 2, not a paper result. The paper's intrinsic story requires the RWTH-A eval in Phase 3.
 
 ---
 
@@ -50,11 +57,13 @@ This is the project. Everything else is plumbing.
 
 ---
 
-## Phase 3 — Ablations (weeks 11–12)
+## Phase 3 — Ablations + RWTH intrinsic appendix (weeks 11–12)
 
 Run in the order given in `EXPERIMENTS.md`. Divergence, then annotator model, then monotonicity, then the rest.
 
 The cross-annotation ablation is not optional — it is the answer to the first question any reviewer asks about self-annotation.
+
+**RWTH intrinsic eval** (deferred from Gate 1 per 2026-08-16 decision). Write `src/eval/rwth_intrinsic.py`, score condition-A (GPT-4 tags) and condition-B (ours) tags against the 509 De→En gold alignments under EAST Eq. 4. This becomes the paper's App. E result, mirroring EAST's own positioning. Baseline decision (fast_align / GPT-4-API re-annotation of the 509 / monotonic wait-k floor) to be logged before the run.
 
 ---
 

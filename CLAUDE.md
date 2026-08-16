@@ -12,7 +12,7 @@ Undergraduate research project. Supervisor: Dipankar Srirag (UNSW). Target venue
 
 **Motivating construction (fuller argument in the original CLAUDE.md thread).** German verb-final and fronted-object cases (e.g., separable-prefix `ankündigen ... an`) force EAST into three bad options: one giant chunk (right, but high latency), commit the wrong verb (semantic error), or defer to a later chunk (chunk counts mismatch and the row is dropped). Ours lets *announced* commit at the final source token without any chunk-count constraint to violate.
 
-**Empirical status.** See `docs/experiments.md` for the current Phase-1 findings. Short version as of Aug 2026: end-to-end pipeline works, base-model + raw-concat + JS matches GPT-4 chunk counts and catches the walked reordering case (idx=553850) that -it + chat missed; OT sweep in flight; RWTH intrinsic eval (Gate 1 arbiter) unblocked.
+**Empirical status.** See `docs/experiments.md` for the current Phase-1 findings. Short version as of Aug 2026: end-to-end pipeline works on 48 sentences across 5 configs; winner is base + raw + OT with extended tau grid (config D-ext), catching 6/8 reordering candidates including the walked verb-final case (idx=553850). Gate-1 redefined 2026-08-16 (see `LOG.md`): the arbiter is now a stratified-by-reordering aggregate on 200 SiMT-660K sentences using GPT-4's own per-sentence Pearson as the reordering-severity proxy. RWTH intrinsic A-score is deferred to Phase 3 as an appendix result, matching EAST's App. E.4 positioning.
 
 ## Non-negotiable invariants
 
@@ -59,7 +59,7 @@ Chunks ship as `source_chunks`/`target_chunks` lists — EAST wraps them at load
 
 - **WMT15 De→En newstest2015** — primary SiMT evaluation, matches EAST Fig. 3.
 - **WMT22 X↔En** (8 directions) — multilingual stretch (EAST Fig. 4) + doc-level (EAST §4.3, De/Ru→En).
-- **RWTH De→En manual alignments** — EAST App. E.4 intrinsic annotation-quality measure (Gate 1). See `docs/data.md`.
+- **RWTH De→En manual alignments** — EAST App. E.4 intrinsic annotation-quality measure. Deferred to Phase 3 appendix eval (see `LOG.md` 2026-08-16 decision). Data landed at `data/rwth-de-en/DeEn/`; see `docs/data.md`.
 
 ## Conventions
 

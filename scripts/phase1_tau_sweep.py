@@ -114,6 +114,11 @@ def main():
     ap.add_argument("--record_entropy", action="store_true",
                     help="Also record H(P_pre[i][j]) matrix and H(P_full[j]) — "
                          "enables the entropy-only ablation criterion offline.")
+    ap.add_argument("--indices_file", type=Path, default=None,
+                    help="Path to a JSON file with an 'indices' list — use these "
+                         "corpus indices exactly (overrides --n_sentences balanced-"
+                         "latency sampling). Used by Gate-1 stratified-by-reordering "
+                         "runs (see phase1_precompute_gpt4_pearson.py).")
     args = ap.parse_args()
 
     taus = [float(x) for x in args.taus.split(",")]
@@ -137,7 +142,15 @@ def main():
         rows = json.load(f)
     print(f"Corpus: {len(rows):,} rows")
 
-    picks = pick_sentences(rows, args.n_sentences, args.seed)
+    if args.indices_file is not None:
+        idx_spec = json.loads(args.indices_file.read_text())
+        wanted = set(idx_spec["indices"])
+        by_idx = {r["index"]: r for r in rows}
+        picks = [by_idx[i] for i in sorted(wanted) if i in by_idx]
+        print(f"Using {len(picks)} indices from {args.indices_file} "
+              f"(bin thresholds: {idx_spec.get('thresholds', {})})")
+    else:
+        picks = pick_sentences(rows, args.n_sentences, args.seed)
     kept = []
     for r in picks:
         n_src = len(tokenizer(r["source"], add_special_tokens=False)["input_ids"])
@@ -262,6 +275,7 @@ def main():
             "taus": taus,
             "prompt_mode": args.prompt_mode,
             "record_entropy": args.record_entropy,
+            "indices_file": str(args.indices_file) if args.indices_file else None,
         },
         "sweep": sweep,
         "env": {

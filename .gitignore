@@ -53,3 +53,11 @@ credentials.json
 *.ipynb_checkpoints/
 *.pdf
 scratch/
+
+# Large regeneratable intermediate — GPT-4 per-sentence Pearson on 660K rows.
+# Rebuild in ~2 min via scripts/phase1_precompute_gpt4_pearson.py.
+# 99 MB — HOUSEKEEPING §7.1 <10 MB rule.
+results/gate1/gpt4_pearson_full.json
+
+# Ad-hoc dry-runs — not part of the durable Gate-1 record.
+results/gate1/*_dryrun.json

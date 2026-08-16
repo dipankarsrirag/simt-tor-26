@@ -1,0 +1,114 @@
+{
+  "config": {
+    "n_sentences_requested": 50,
+    "n_sentences_kept": 210,
+    "n_sentences_annotated": 210,
+    "criterion": "js",
+    "seed": 42,
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B",
+    "max_src_tokens": 80,
+    "taus": [
+      0.02,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.3
+    ],
+    "prompt_mode": "raw",
+    "record_entropy": false,
+    "indices_file": "results/gate1/gate1_indices.json"
+  },
+  "sweep": [
+    {
+      "tau": 0.02,
+      "fire_fraction": 0.05714285714285714,
+      "mean_committed_fraction": 0.03816378198228714,
+      "chunks_per_sentence_mean_ours": 1.0809523809523809,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 12,
+        "n_nan": 198,
+        "min": 2.187845245962441e-16,
+        "median": 0.2927700218845599,
+        "max": 0.9301503632486161
+      }
+    },
+    {
+      "tau": 0.05,
+      "fire_fraction": 0.3619047619047619,
+      "mean_committed_fraction": 0.326444612208859,
+      "chunks_per_sentence_mean_ours": 1.7333333333333334,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 73,
+        "n_nan": 137,
+        "min": -2.2876020916215177e-16,
+        "median": 0.29704426289300223,
+        "max": 0.9749559142928013
+      }
+    },
+    {
+      "tau": 0.1,
+      "fire_fraction": 0.7333333333333333,
+      "mean_committed_fraction": 0.7145782047116388,
+      "chunks_per_sentence_mean_ours": 3.619047619047619,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 144,
+        "n_nan": 66,
+        "min": -3.1639635525640463e-16,
+        "median": 0.7128644902079443,
+        "max": 0.9928322175430436
+      }
+    },
+    {
+      "tau": 0.15,
+      "fire_fraction": 0.8857142857142857,
+      "mean_committed_fraction": 0.8800737419533257,
+      "chunks_per_sentence_mean_ours": 5.542857142857143,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 179,
+        "n_nan": 31,
+        "min": -4.546358846038623e-16,
+        "median": 0.8359110872813024,
+        "max": 0.9943134151278752
+      }
+    },
+    {
+      "tau": 0.2,
+      "fire_fraction": 0.9571428571428572,
+      "mean_committed_fraction": 0.9541389227076404,
+      "chunks_per_sentence_mean_ours": 7.390476190476191,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 196,
+        "n_nan": 14,
+        "min": -4.546358846038623e-16,
+        "median": 0.8971924528441118,
+        "max": 0.996195509640805
+      }
+    },
+    {
+      "tau": 0.3,
+      "fire_fraction": 0.9809523809523809,
+      "mean_committed_fraction": 0.9802630154279679,
+      "chunks_per_sentence_mean_ours": 9.39047619047619,
+      "chunks_per_sentence_mean_gpt4": 3.033333333333333,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 203,
+        "n_nan": 7,
+        "min": -2.4184261199752067e-16,
+        "median": 0.9561948679944059,
+        "max": 0.997969730591032
+      }
+    }
+  ],
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "27182aaf7cfc9808ada68dc5ab2ce6fc7b069e1f"
+  }
+}

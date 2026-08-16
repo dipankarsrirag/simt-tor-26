@@ -30,6 +30,89 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-16 — precompute GPT-4 Pearson on 660K + stratified sample (login node, no GPU)
+**Config:** `scripts/phase1_precompute_gpt4_pearson.py` (batched tokenizer, `BATCH_SIZE=5000`), tokenizer `MODEL_BASE/gemma-4-E2B`, max_src_tokens=80 (matches sweep filter), bin thresholds monotone ≥ 0.90 / reordering < 0.70, n_per_bin=70, seed=42.
+**Command:** `python -u scripts/phase1_precompute_gpt4_pearson.py`
+**Result:** 660,876 rows processed in 113.9s (≈5,800 rows/s on login node). Kept 631,915 after 80-token filter (28,961 skipped, 0 failed). **Bin distribution: monotone 74.3% (469,332) / mild 24.4% (154,133) / reordering 0.7% (4,272) / undefined 0.7% (4,178).** Stratified-sampled 210 indices (70 per bin) → `results/gate1/gate1_indices.json`. Full per-sentence table → `results/gate1/gpt4_pearson_full.json`.
+**Read:** Reordering bin is genuinely rare (0.7%) because EAST's App. C monotonicity filter already dropped many of the worst reordering cases at data-release time — consistent with the paper's own admission that non-monotonic pairs are excluded. Enough remain (4,272) to sample a defensible 70. Threshold approximation caveat (chunk-independent tokenisation ~1-2 tok slop per chunk) documented in the JSON config.
+
+### [RUN] 2026-08-16 — Gate 1 landed: OT PASSES, JS FAILS. Phase 2 unblocked.
+**Jobs:** OT `176387597.gadi-pbs` (cput 01:38:50, walltime 01:38:53, Exit 0). JS `176387598.gadi-pbs` (cput 00:04:42, walltime 00:06:16, Exit 0). Full report: `results/gate1/gate1_report.md`.
+
+**Analysis command:**
+- `python scripts/phase1_reordering_bin.py --matrices results/phase1_tau_sweep_ot_n200/matrices.jsonl --gpt4_pearson_full results/gate1/gpt4_pearson_full.json --tau_grid 0.30,0.40,0.50,0.60,0.70,0.80,0.90 --output results/gate1/reordering_bin_ot_n200.json`
+- `python scripts/phase1_reordering_bin.py --matrices results/phase1_tau_sweep_js_n200/matrices.jsonl --gpt4_pearson_full results/gate1/gpt4_pearson_full.json --tau_grid 0.02,0.05,0.08,0.10,0.15,0.20,0.30 --output results/gate1/reordering_bin_js_n200.json`
+
+**Result (effective MATCH% = the honest metric — single-chunk collapse counts as MISS):**
+
+| Criterion | monotone | mild | reordering | Verdict |
+|---|---|---|---|---|
+| OT (winning) | 38.6% (cov 100%) | 60.0% (cov 77%) | **54.3% (cov 77%)** | PASS |
+| JS (ablation) | 55.7% (cov 80%) | 44.3% (cov 49%) | 44.3% (cov 46%) | FAIL |
+
+- **OT PASSES both Gate-1 criteria.** Reordering-bin effective MATCH (54.3%) strictly beats monotone-bin (38.6%) by 15.7 pp — mechanism claim ("margin widens on word-order-divergent pairs") confirmed at n=210 stratified. Coverage 77% above the 70% threshold in TIMELINE Gate 1. Monotone-bin chunk-count Δ = 0.67 (tight, ours 4.66 vs GPT-4 4.59). METHOD §8 sanity checks pass (positional Pearson median 0.78 across all bins; zero identity-like traces; 5.7% terminal-degenerate — non-degenerate criterion).
+- **Bin-ordering caveat.** Actual bin ordering is `monotone ≪ {reordering ≈ mild}` (38.6 < 54.3 < 60.0), not the strictly-widening `monotone < mild < reordering` the `CLAUDE.md` claim predicts. Conditional MATCH is nearly-monotone (mono 38.6 < reord 70.4 ≈ mild 77.8); the mild-vs-reordering effective gap opens because 16% of the reordering bin remains single-chunk-collapse even under OT (the true late-commit-required tail — see 2 walked examples in `results/gate1/gate1_report.md` §Walked reordering-bin examples). Paper framing should be "bimodal-vs-monotone", not "monotonically widening margin".
+- **JS FAILS as a headline criterion.** No mechanism concentration — effective MATCH tied across bins. Root cause is coverage: JS collapses to single-chunk on 54% of reordering / 51% of mild sentences at strict tau because JS doesn't fire when P_pre and P_full concentrate on different-but-semantically-similar tokens. JS remains valid as a cheap ablation for demonstrating OT's advantage; not a viable "ship shorter method section" fallback.
+
+**Interim metric refinement (this session).** Two rounds of correction to `phase1_reordering_bin.py`:
+- (1) After JS results, added `MATCH_eff` (treats single-chunk collapse as MISS) alongside `MATCH_cond` — because the initial conditional-only metric was misleadingly high on the reordering bin (single-chunk collapses were being dropped rather than counted as MISS). Pass criteria in `TIMELINE.md` Gate 1 updated to reference effective MATCH and coverage floor 70%.
+- (2) After OT results, caught a floating-point corner case: when the matched-count τ produced a commit trace with all identical values, per-sentence Pearson denominator was mathematically zero but computed to ~1e-16 due to FP roundoff in `sum(xs)/m` — yielding a defined Pearson < 0.85 which counted as MATCH. Fixed by requiring `ours_chunks > 1` explicitly in the match predicate. Affected 5 OT-reord + 10 OT-mild sentences. Corrected MATCH_eff dropped from initial reads of 61.4% (reord) / 74.3% (mild) to 54.3% / 60.0%. Verdict unchanged.
+
+**Unlocks:** Phase 2 SFT per `TIMELINE.md`. Annotate 10K then 50K with the OT winning config; matched-condition SFT (A = GPT-4 tags, B = ours) on Gemma-4-E2B; extrinsic eval on WMT15 newstest2015 with BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
+
+**Reservations (all logged; none blocking).**
+- Gate 1 measures agreement-with-GPT-4, not gold-alignment tag quality. RWTH-A eval (EAST App. E.4 mirror) runs in Phase 3.
+- 16% of the reordering bin (12/70 sentences) is single-chunk collapse even under OT. Expected tail — the true late-commit reorder cases where even OT waits until end. Worth walking examples during writeup.
+- Chunk-length whitespace-slop in the precomputed GPT-4 Pearson (~1-2 tok/chunk, documented in `gpt4_pearson_full.json`'s config) is unlikely to move sentences across the 0.90/0.70 thresholds but should be noted if any reviewer asks about bin boundary sensitivity.
+
+---
+
+### [RUN] 2026-08-16 — Gate 1 sweeps submitted, jobs 176387597 (OT) and 176387598 (JS)
+**Config:** Gemma-4-E2B base + raw concat, sampled indices from `results/gate1/gate1_indices.json` (210 sentences, ~70 per reordering bin). Two conditions:
+- **OT** (winning per Config D-ext): tau grid `{0.30, 0.50, 0.70, 1.00}`. 2:30 walltime (200 × 31s/sentence + overhead).
+- **JS** (cheap ablation): tau grid `{0.02, 0.05, 0.10, 0.15, 0.20, 0.30}`. 0:30 walltime (200 × 1.3s + overhead).
+**Command:**
+- `python scripts/make_job.py --name phase1_tau_sweep_ot_n200 --queue gpuhopper --ngpus 1 --walltime 02:30:00 --script "python scripts/phase1_tau_sweep.py --criterion ot --taus 0.30,0.50,0.70,1.00 --max_src_tokens 80 --prompt_mode raw --model_path /g/data/po67/dipankar/models/gemma-4-E2B --output_dir results/phase1_tau_sweep_ot_n200 --indices_file results/gate1/gate1_indices.json" --output jobs/phase1_tau_sweep_ot_n200.pbs && qsub jobs/phase1_tau_sweep_ot_n200.pbs`
+- `python scripts/make_job.py --name phase1_tau_sweep_js_n200 --queue gpuhopper --ngpus 1 --walltime 00:30:00 --script "python scripts/phase1_tau_sweep.py --criterion js --taus 0.02,0.05,0.10,0.15,0.20,0.30 --max_src_tokens 80 --prompt_mode raw --model_path /g/data/po67/dipankar/models/gemma-4-E2B --output_dir results/phase1_tau_sweep_js_n200 --indices_file results/gate1/gate1_indices.json" --output jobs/phase1_tau_sweep_js_n200.pbs && qsub jobs/phase1_tau_sweep_js_n200.pbs`
+**Result:** QUEUED — awaiting run. Both jobs land per `docs/next_steps.md` §1; `scripts/phase1_reordering_bin.py` runs on `matrices.jsonl` outputs and produces the Gate-1 stratified table.
+**Read:** Pre-flight dry-run of `phase1_reordering_bin.py` against existing n=48 OT-ext matrices (`results/phase1_tau_sweep_ot_ext/matrices.jsonl`) succeeded: 38 monotone / 10 mild / 0 reordering (as expected — n=48 was balanced-latency, not balanced-reordering). MATCH% (ours_pearson < 0.85) was 54% monotone / 78% mild — pattern consistent with mechanism claim (higher agreement on non-monotonic sentences), waiting on n=210 stratified for the reordering-bin verdict.
+
+### [DECISION] 2026-08-16 — Gate 1 redefined: stratified-by-reordering on 200 SiMT-660K sentences; RWTH-A deferred to Phase 3 appendix
+
+**Context.** Prior Gate 1 (per original `TIMELINE.md`) required scoring both ours' and GPT-4's tags on the RWTH De→En manually aligned corpus under EAST Eq. 4 (`A = (1/T) Σ I[a_i ≤ g_i]`). RWTH data has landed; script not yet written. Writing it was blocked on one open choice: what baseline to compare against, since GPT-4 chunks do not exist for the RWTH sentences (RWTH ≠ WMT15-derived SiMT-660K). Additionally: EAST itself put RWTH in App. E.4, not in the main body — the intrinsic result was supporting evidence, not the headline. Session with the user surfaced that the original gate framing may be doing too much work — it was trying to be both a "greenlight for Phase 2" gate and a "paper-headline intrinsic result", and neither role is well-served by that setup.
+
+**Options.**
+- (a) Keep Gate 1 as RWTH-A. Write `src/eval/rwth_intrinsic.py`; decide baseline (fast_align / GPT-4-API / wait-k floor); run. Compute-cheap but adds ~1 week of engineering + 1 open baseline decision, and produces a metric on a dataset that EAST relegated to appendix.
+- (b) Redefine Gate 1 as a stratified-by-reordering aggregate on 200 SiMT-660K sentences, using GPT-4's own per-sentence Pearson as the reordering-severity proxy. Report per bin (monotone ≥0.90, mild 0.70–0.90, reordering <0.70): chunk-count delta vs GPT-4, per-sentence Pearson, MATCH rate under threshold 0.85. RWTH-A moves to Phase 3 as the paper's App. E result, mirroring EAST's positioning.
+- (c) Skip Gate 1 entirely, take the SU risk on Phase 2.
+
+**Chose:** (b). Rationale:
+1. Mirrors EAST's own positioning (headline extrinsic, appendix intrinsic).
+2. Directly tests the mechanism claim ("margin widens on reordering pairs") in a way RWTH-A does not — RWTH-A gives a single number, this gives a stratified table.
+3. Reuses infrastructure we already have — GPT-4 per-sentence Pearson is already computed in `phase1_gpt4_pearson.py`; no new dependency (no awesome-align, no fast_align).
+4. Avoids the RWTH-baseline ambiguity — comparing against GPT-4 on the SAME sentences is unambiguous.
+5. Compute-cheap: bumps existing n=48 sweep to n=200 (OT ~2h, JS ~15 min). No additional engineering beyond a bin-analysis script.
+
+**Explicit caveat (must survive into any paper draft):** without gold alignment, agreement-with-GPT-4 is *not* tag quality. Gate 1 is a greenlight for Phase 2, not a paper result. The paper's intrinsic story still requires the RWTH-A eval in Phase 3. This caveat is stated in `TIMELINE.md` Gate 1 and `EXPERIMENTS.md` §Two-evaluations-not-one.
+
+**Bin thresholds (fixed absolute, not sample-dependent quintiles — advisor point):**
+- `monotone`: GPT-4 per-sentence Pearson(i/n, j/m) ≥ 0.90
+- `mild reordering`: 0.70 ≤ Pearson < 0.90
+- `reordering`: Pearson < 0.70
+
+Fixed thresholds mean the bins mean the same thing at n=200, n=509 (Phase 3), and any future re-run. Chosen to align with the n=48 top-8 reordering candidates (which had GPT-4 Pearson 0.693 to 0.863 — mostly in the middle bin, one in the reordering bin).
+
+**Pass criteria (Gate 1):**
+- Monotone bin: tie GPT-4 on chunk-count delta and per-sentence Pearson.
+- Reordering bin: strictly higher MATCH rate (Pearson < 0.85) than the config would produce if it were degenerate (positional or single-chunk).
+- METHOD §8 sanity checks all green on the winning tau.
+
+**Additional advisor-recommended step (adopted):** Precompute GPT-4 per-sentence Pearson on the *full* 660K first (~5 min on login node, pure chunk arithmetic — no GPU), then stratified-sample 200 (~70 per bin). Prevents the reordering bin from being sample-noise-dominated at 200 with a balanced-latency (not balanced-reordering) sample. Alternative would be to keep the balanced-latency sample and report CIs — chose to precompute for cleaner numbers.
+
+**Files modified this decision.** `CLAUDE.md` (empirical-status line + dataset table), `TIMELINE.md` (Gate 1 + Phase 3), `EXPERIMENTS.md` (§Two evaluations), `docs/next_steps.md` (reordered §1 = new Gate 1), `docs/data.md` (RWTH note).
+
+**Revisit if:** Gate 1 fails on the n=200 stratified analysis but the winning config was correct at n=48. Would suggest either the bin thresholds are wrong (too strict on reordering) or that the n=48 result was sample-noise. In either case, log the diagnosis and either loosen the pass criteria or investigate the mechanism.
+
 ### [SESSION HANDOFF] 2026-08-15 — end-of-session state (Phase 1 mostly landed)
 
 **Where we ended.** Phase 1 explored four annotator configurations and settled on **base gemma-4-E2B + raw concat + OT with extended τ grid** (Config D-ext) as the winning setup. Seven hypotheses (H1–H7) documented in `docs/hypotheses.md`; H1 rejected, H2 partial, H3 supported (aggregate) with per-sentence caveats, H4 provisional support (need finer sweep), H5 SUPPORTED (OT beats JS on beats-random range and per-sentence GPT-4 correlation), H6/H7 queued.

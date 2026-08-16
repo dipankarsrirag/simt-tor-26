@@ -2,61 +2,45 @@
 
 Ordered by priority. Each item states what it does, why now, and what unlocks after.
 
-## 1. RWTH intrinsic evaluation (unblocked)
+## 1. Gate 1 — stratified-by-reordering aggregate on 200 SiMT-660K sentences (redefined 2026-08-16)
 
-RWTH data landed at `data/rwth-de-en/DeEn/`. All we need is the eval script. **This is the Gate-1 arbiter and the primary Phase-1 result.**
+Replaces the prior RWTH-based Gate 1 (see `LOG.md` 2026-08-16 decision). This is a *gate*, not a paper result — passing greenlights Phase 2; RWTH intrinsic A-score runs in Phase 3 as the paper's App. E result.
 
-- Write `src/eval/rwth_intrinsic.py`.
-  - Loads the 509 De/En sentences (handle Latin-1 encoding for `de`).
-  - Parses `alignmentDeEn.talp` into per-sentence `(src_word_pos, tgt_word_pos)` alignment lists.
-  - Runs the annotator on each De/En pair producing a per-target-*token* commit trace.
-  - Maps word-level gold alignment → token-level `a_i` (per target token, the max source *token* position it aligns to, following word→token bijection under `GemmaTokenizer`).
-  - Computes `A = (1/T) Σ I[a_i ≤ g_i]` per sentence and averaged over the 509.
-- Also compute the same `A` for **GPT-4's tags** on the same 509 — this needs re-annotating those 509 with GPT-4's segmentation, or an alternative: use GPT-4's chunk-based commit trace derived from `source_chunks`/`target_chunks` if we can obtain GPT-4 chunks for these RWTH sentences (we cannot — RWTH is a separate corpus from EAST's WMT-derived training set). Alternative: use another automated baseline like fast-align commits at chunk granularity, and compare our tags against fast-align derived commits. Log the decision.
-- Report: mean A, distribution over 509, per-sentence differences between ours (base+raw+JS at τ=0.10 and τ=0.15) and the chosen baseline.
+- **Precompute GPT-4 per-sentence Pearson on the full 660K** (`scripts/phase1_precompute_gpt4_pearson.py`). Pure chunk arithmetic on already-tokenised text — ~5 min on a login node, no GPU. Outputs `results/gpt4_pearson_full.json` (index → Pearson, chunks, latency).
+- **Stratified-sample 200 sentences** by fixed absolute Pearson bins (`monotone ≥ 0.90`, `mild 0.70–0.90`, `reordering < 0.70`), ~70 per bin. Outputs `results/phase1_gate1_indices.json`.
+- **Submit two jobs in parallel:**
+  - `phase1_tau_sweep_ot_n200.pbs` — Gemma-4-E2B base + raw + OT + extended tau grid `{0.30, 0.50, 0.70, 1.00}`, 200 sentences, 02:30:00 walltime.
+  - `phase1_tau_sweep_js_n200.pbs` — same but JS criterion, 00:30:00 walltime. Cheap ablation.
+- **Run `scripts/phase1_reordering_bin.py`** on both `matrices.jsonl` outputs. Reports per bin: mean chunk-count delta vs GPT-4, per-sentence Pearson (ours at matched-count tau), MATCH rate under threshold 0.85.
 
-**Unlocks:** the primary Phase-1 conclusion. If ours beats the baseline on A, the project's central claim holds at 2B scale. If not, iterate on criterion / prompt / backbone before scaling.
+**Pass criteria (see `TIMELINE.md` Gate 1):**
+- Monotone bin: tie GPT-4 on chunk-count delta and Pearson.
+- Reordering bin: strictly higher MATCH rate than degenerate baseline.
+- METHOD §8 sanity checks all green on the winning tau.
 
-## 2. Wait for and interpret the OT sweep (already running)
+**Unlocks:** Phase 2 SFT (10K annotation → matched-condition training → WMT15 newstest2015 extrinsic eval).
 
-Job `176307323`. When it lands (~1 hour walltime):
+## 2. Cross-backbone sanity: Qwen3.5-2B (H6)
 
-- Same offline analyses as Config C: `phase1_random_floor.py`, `phase1_entropy_sweep.py` (not applicable — matrices are OT, not entropy), `phase1_gpt4_pearson.py`, `phase1_per_sentence_compare.py`.
-- Compare OT vs JS at matched chunk count: does OT dislodge the diagonal-tracking? Does per-sentence r(GPT-4, ours) rise above 0.175?
-- Walk the 8 reordering candidates under OT (do more of them MATCH than under JS?).
-- Update `experiments.md` with Config D's full table.
+Same recipe as winning config, tests family-robustness. Do this after Gate 1 lands — need the Gemma anchor.
 
-**Unlocks:** verdict on H5 (OT vs JS). If OT is materially better, it's the paper's headline. If OT ≈ JS, drop OT framing, ship JS with a shorter method section — still a paper.
-
-## 3. Extend to ~200 sentences on the winning config (Config C or D)
-
-Current n = 48 gives wide CIs on per-sentence r. Cost: ~5 min GPU for JS, ~15 min for OT.
-
-- Adjust `--n_sentences 201 --max_src_tokens 80` in `phase1_tau_sweep.py`; submit.
-- Re-run all offline analyses.
-
-**Unlocks:** aggregate stats defensible for a paper. r-of-Pearsons with n=200 has meaningful CI.
-
-## 4. Cross-backbone sanity: Qwen3.5-2B (base if we can find one)
-
-Tests H6. If Qwen shows the same qualitative behaviour on the same 48 sentences (JS beats random at some tau; catches reordering candidates; RWTH A comparable to Gemma), the finding is family-robust.
-
-- Check if `Qwen3.5-2B` on disk is base or -it. On HF Qwen usually publishes both; the on-disk name doesn't disambiguate. If -it, may need to fetch base — 4 GB copyq job.
-- Repeat Config C recipe. Compare against Gemma-4-E2B on the same 48 (matrix per-sentence Pearsons, per-sentence r vs GPT-4).
+- Check on-disk Qwen3.5-2B: base or -it? If -it, fetch base via copyq.
+- Repeat the winning config (base + raw + OT, extended tau) on the same 200 stratified indices.
+- Compare per-bin stats to Gemma.
 
 **Unlocks:** "cross-family robust" claim in the paper.
 
-## 5. Scale-up to gemma-4-E4B (only if Gate 1 passes on E2B)
+## 3. Scale-up to gemma-4-E4B (only if Gate 1 passes on E2B)
 
 Tests H7. Gated per HOUSEKEEPING §1 SU-spend rule.
 
 - Download `google/gemma-4-E4B` — ~10 GB copyq job.
-- Repeat winning config on same 48 (compare) and then 200 sentences.
-- If E4B produces higher RWTH A than E2B, mention as scale-consistency evidence in the paper; don't over-claim.
+- Repeat winning config on same 200 stratified indices; compare per-bin stats.
+- If E4B produces higher per-bin performance than E2B, mention as scale-consistency evidence in the paper; don't over-claim.
 
 **Unlocks:** scale ablation in the paper's Table.
 
-## 6. Onwards to Phase 2 (SFT)
+## 4. Onwards to Phase 2 (SFT)
 
 Only after Phase 1 conclusion is defensible.
 
@@ -74,8 +58,8 @@ Timeline weeks 6–10; see `../TIMELINE.md` Phase 2.
 **Blockers on the primary result:**
 - Phase-2 SFT is downstream of Gate 1. Ordering matters.
 
-**Blockers on next work but not the primary result:**
-- Choice of RWTH baseline (compare our tags against what, since GPT-4 chunks are not available for RWTH's sentences)? Options: fast-align commits, monotonic-wait-k floor, an independent LLM annotator like GPT-4 API. Decide before writing `src/eval/rwth_intrinsic.py`.
+**Blockers on Phase 3 (RWTH appendix) but not on Gate 1 or Phase 2:**
+- Choice of RWTH baseline (compare our tags against what, since GPT-4 chunks are not available for RWTH's sentences)? Options: fast_align commits, monotonic wait-k floor, GPT-4 API re-annotation of the 509. Recommend GPT-4 API re-annotation (most direct comparison, ~$5-20 API cost). Decide before writing `src/eval/rwth_intrinsic.py`.
 
 **Not blockers (deferrable):**
 - Off-Multi-120K assembly (only Stretch A).

@@ -199,3 +199,35 @@ Matched to each config's most-informative τ (chunk-count closest to GPT-4's 4.0
 | B | -it, chat, JS | 0.10 | 100% | 9.10 | 0.95 | no | 0.149 |
 | C | base, raw, JS | 0.10 | 79% | 3.46 | 0.73 | (yes @ 0.15) | 0.175 |
 | **D ★★** | **base, raw, OT** | **0.30** | **90%** | **4.67** | **0.81** | **yes @ 0.20 & 0.30** | **0.306** |
+
+## Config F ★★★ (Gate 1) — n=210 stratified-by-reordering, base + raw + {OT, JS}
+
+**Jobs:** `176387597` (OT, walltime 1:38:53), `176387598` (JS, walltime 0:06:16). Full report: `results/gate1/gate1_report.md`.
+
+**Sample.** 210 sentences stratified by GPT-4 per-sentence Pearson using fixed absolute thresholds (`monotone ≥ 0.90`, `mild 0.70-0.90`, `reordering < 0.70`), 70 per bin, seed 42. Precomputed on the full 660K corpus (631,915 rows after 80-tok filter) — bin distribution across the corpus is 74.3% / 24.4% / 0.7% / 0.7% undefined, so the reordering bin is genuinely rare and worth stratifying explicitly.
+
+**Metric.** Per-sentence matched-chunk-count τ. Coverage = fraction of bin where trace has > 1 chunk. **Effective MATCH%** = (covered ∧ ours_pearson < 0.85) / bin_n — the honest number for the mechanism claim, treating single-chunk collapse as MISS.
+
+| Criterion | Bin | n | Coverage | Δ chunks | GPT-4 pear | Ours pear | **MATCH_eff** |
+|---|---|---|---|---|---|---|---|
+| **OT (winning)** | monotone | 70 | 100% | 0.67 | 0.949 | 0.827 | **38.6%** |
+| **OT** | mild | 70 | 77.1% | 0.43 | 0.846 | 0.605 | **60.0%** |
+| **OT** | reordering | 70 | 77.1% | 0.46 | 0.645 | 0.640 | **54.3%** |
+| JS (ablation) | monotone | 70 | 80.0% | 1.60 | 0.949 | 0.701 | 55.7% |
+| JS | mild | 70 | 48.6% | 0.80 | 0.846 | 0.553 | 44.3% |
+| JS | reordering | 70 | 45.7% | 0.64 | 0.645 | 0.408 | 44.3% |
+
+**Read — Gate 1 PASSES for OT.**
+
+- **Monotone bin:** OT matches GPT-4 chunk-count tightly (Δ = 0.67) at 100% coverage. Pass.
+- **Reordering bin:** OT effective MATCH 54.3% strictly beats monotone 38.6% by 15.7 pp — the mechanism claim (margin widens on reordering-divergent pairs) confirmed at n=210. Coverage 77.1% above the 70% threshold in `TIMELINE.md` Gate 1. Pass.
+- **Mild bin:** effective MATCH 60.0% — the highest of any bin, with the tightest chunk-count Δ. The middle-ground non-monotone sentences where OT's embedding-grounded ground cost has the most to bite on.
+- METHOD §8 sanity: positional Pearson median 0.78 (mono 0.88, mild 0.73, reord 0.73); zero identity-like traces; 5.7% terminal-degenerate. Criterion is non-degenerate. See `results/gate1/gate1_report.md`.
+
+**Bin ordering caveat.** The `CLAUDE.md` mechanism claim predicts `monotone < mild < reordering`. Actual is `monotone ≪ {reordering ≈ mild}` (38.6 < 54.3 < 60.0). Conditional MATCH is nearly-monotone across bins (mono 38.6 < reord 70.4 ≈ mild 77.8); the mild-vs-reordering gap opens because 16% of reordering-bin sentences remain single-chunk-collapse even under OT — the true late-commit-required tail (see walked examples in `gate1_report.md`). The paper's framing should be "bimodal-vs-monotone", not "monotonically widening margin".
+
+**Read — Gate 1 FAILS for JS.** No mechanism concentration — effective MATCH is 56% monotone / 44% mild / 44% reordering, no lift on the reordering bins. JS collapses to single-chunk on 54% of the reordering bin because at strict τ it does not fire when P_pre and P_full concentrate on different (but semantically similar) tokens. **This rules out the "ship JS with a shorter method section" branch** — the paper's headline criterion is OT.
+
+**Caveat.** Without gold alignment, agreement-with-GPT-4 is *not* tag quality — this is a gate, not a paper result. The RWTH-A intrinsic (EAST App. E.4 mirror) runs in Phase 3 and is not skipped.
+
+**Unlocks:** Phase 2 SFT. Annotate 10K/50K with OT-winning config, matched-condition training (A = GPT-4 tags, B = ours), WMT15 newstest2015 extrinsic eval with BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
