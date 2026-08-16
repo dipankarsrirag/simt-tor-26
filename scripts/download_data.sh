@@ -82,7 +82,33 @@ done
 
 echo
 echo "=== [5/6] RWTH De->En gold alignments (intrinsic eval, EAST App. E.4) ==="
-echo "TODO — confirm URL from EAST paper before adding. See LOG.md."
+# Source (confirmed from EAST paper §E.4, PDF page 17-18):
+#   https://www-i6.informatik.rwth-aachen.de/goldAlignment/
+# Dataset: "Gold Alignment for Europarl German-English Dataset" (v1.0).
+# EAST Eq. 4 (following Zhang and Feng, 2022):
+#     A = (1/T) sum_{i=1..T} I[a_i <= g_i]
+#   — fraction of target tokens y_i for which the number of source tokens
+#     read at generation time (g_i) meets or exceeds the ground-truth
+#     aligned source position (a_i).
+# LICENCE: "free for non-commercial use; may not be redistributed."
+#          Access is gated by a registration form (name / organisation /
+#          email). We cannot script-fetch it. Manual step required:
+#            1. Open the URL above in a browser.
+#            2. Fill the form with your NCI-affiliated details.
+#            3. Accept the licence.
+#            4. Download the archive and place its contents in:
+#               $DATA_ROOT/rwth-de-en/
+#            5. Add a docs/data/rwth-de-en.md note (HOUSEKEEPING §3 rule)
+#               recording the exact filename, download date, and sha256.
+#            6. Do NOT `git add` any of the files — data/ is a symlink.
+if [[ -d "$DATA_ROOT/rwth-de-en" && -n "$(ls -A "$DATA_ROOT/rwth-de-en" 2>/dev/null)" ]]; then
+    echo "already present:"
+    ls -la "$DATA_ROOT/rwth-de-en"
+else
+    echo "MANUAL STEP REQUIRED — see comment above."
+    echo "  URL: https://www-i6.informatik.rwth-aachen.de/goldAlignment/"
+    echo "  Target dir: $DATA_ROOT/rwth-de-en/"
+fi
 
 # --- Off-Multi-120K (only needed if we do Stage II) --------------------------
 # Reconstructed from WMT17-21 test data following ALMA (Xu et al. 2024a),
