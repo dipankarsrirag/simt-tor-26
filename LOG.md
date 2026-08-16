@@ -30,6 +30,77 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-16 — Phase 2 Gate 2 PASSES on cond-A after embedding-init bug fix + hand-off state
+**Summary:** Extended tokenizer + trl.SFTTrainer wrapper + full cond-A 2K×3-epoch training + verify/smoke jobs all landed; cond-B OT annotation set up as self-resubmitting 2h shards and left running for the overnight.
+
+**Bug diagnosed and fixed (load-bearing, would have poisoned every A-vs-B comparison).**
+Initial cond-A SFT on 2K/1e (job 176399546, walltime 8:31) had loss going 4.45 → 2.72 and embeddings moving 0.02–0.04 L2 — but 0/30 streaming probes emitted `<|eor|>`/`<|eow|>`. Diagnostic `scripts/phase2_verify_loss.py` (job 176401727) showed special-token loss median 11.81 nats vs content-token median 0.94 — model was essentially uniform-random on special tokens; top-1 at 0/11 special positions.
+Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding init with a plain `in_emb[orig_vocab:] = mean_in`, collapsing all 5 EAST tokens to the identical starting point. Removed the override; the transformers default (multivariate-normal with old rows' mean and covariance) gives distinct random starts. Fix committed as part of this session.
+
+**Fixed cond-A 2K×3e (job 176402113, walltime ~23min).**
+- Loss: 4.45 → 2.72 over first 119 steps (same as buggy), continues → 2.10 by step 357.
+- Special-token embedding movement L2: 0.10–0.15 (vs 0.02–0.04 buggy).
+- Special-token loss (verify job 176406443): mean 8.77, median 9.14 (vs 11.87 / 11.81 buggy). Top-1 at 10/11 special positions correct (vs 0/11 buggy). Only pos 0 (predict `<|low-latency|>` after BOS) still wrong — not a generation problem because we always feed the latency token in the prompt.
+- Content-token loss (verify): mean 1.25 / median 0.21 (vs 2.24 / 0.94).
+- Streaming smoke (job 176406444, `scripts/phase2_inference_smoke.py`, 30 probes at 3-word prefix + latency): **30/30 emitted both `<|eor|>` AND `<|eow|>`, all in correct EOR-before-EOW alternation, median EOR position 8 tokens into generation.**
+
+**Gate 2 verdict: PASSES.** Training pipeline validated end-to-end. Ready for cond-B on matched indices, then A-vs-B extrinsic.
+
+**Cond-B OT annotation kicked off (job 176408506, first shard).**
+20h monolithic job (176400901) killed in favour of self-resubmitting 2h shards via `jobs/phase2_annot_ot_condB_n2k_shard.pbs`. Same 1894 indices as cond-A (`results/phase2/phase2_n2k_indices.json`), OT criterion, extended τ grid `{0.30, 0.50, 0.70, 1.00}`. `phase1_tau_sweep.py --resume`: reads existing matrices.jsonl on start, skips processed indices, appends new rows with per-row flush+fsync (mid-sentence kill loses ≤1 row). Writes DONE marker when all indices in; NEEDS_RESUME otherwise, triggering the wrapper to `qsub` itself again. Cap `MAX_SHARDS=15`. Expected: ~260 sentences per 2h shard, ~8 shards total for 1894 indices.
+
+**Files landed this session.**
+- Scripts: `phase2_prepare_tokenizer.py`, `phase2_inference_smoke.py`, `phase2_verify_loss.py`, `phase2_build_condB_dataset.py`.
+- Infrastructure: `src/train/{__init__,sft.py}`, `results/phase2/tokenizer-extended/` (versioned 5-EAST-tokens tokenizer at ids 262144–262148), `results/phase2/phase2_n2k_indices.json` (deterministic 1894-index sample).
+- Jobs: `phase2_{toy_sft, sft_condA_n2k, sft_condA_n2k_e5, sft_condA_n2k_fixed, verify_loss, verify_loss_fixed, smoke_condA_n2k, smoke_condA_fixed, annot_ot_condB_n2k, annot_ot_condB_n2k_shard}.pbs`.
+- Results (committed): `sft_condA_n2k_fixed/{sft_summary,train_indices}.json`, `smoke_condA_n2k{,_fixed}.json`.
+
+**Pick-up-tomorrow state.**
+1. Check `results/phase2/annot_ot_condB_n2k/{DONE,NEEDS_RESUME,matrices.jsonl}` — if DONE present, all 1894 sentences annotated.
+2. Run `python scripts/phase2_build_condB_dataset.py --tau 0.30` → `results/phase2/condB_n2k_dataset.json`.
+3. Submit cond-B SFT: same recipe as cond-A/fixed but `--corpus_file results/phase2/condB_n2k_dataset.json --output_dir results/phase2/sft_condB_n2k` (n=2000, 3 epochs, lr 2e-5, effective batch 16).
+4. Run inference smoke on cond-B; matched A-vs-B qualitative comparison.
+5. Scaffold `src/eval/extrinsic.py` for Gate-3 (streaming inference + BLEU + AL on WMT15 newstest2015).
+
+### [RUN] 2026-08-16 — Phase 2 toy SFT job 176399349 — completed
+**Config:** `src/train/sft.py` with `--n_sentences 100 --max_steps 20 --per_device_batch_size 2 --grad_accum_steps 2 --warmup_steps 2 --logging_steps 1 --sample_generations 3`. Gemma-4-E2B base with extended tokenizer (`results/phase2/tokenizer-extended/`, vocab 262,149). Condition A (shipped GPT-4 chunks). bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`. Walltime 00:05:45 (cput 00:09:10). One H200.
+**Command:** `qsub jobs/phase2_toy_sft.pbs`
+**Result:** Exit 0. Kept 95/100 sentences after 80-tok filter. Loss 4.39 → 2.73 over 20 steps (noisy, expected at this sample size / step count). Mean token accuracy 0.51 → 0.59. Model saved to `results/phase2/toy_sft/final/`.
+- **Special-token embedding movement (L2 Δ over 20 steps):** `<|end-of-read|>` 0.0035, `<|end-of-write|>` 0.0037, `<|low-latency|>` 0.0024, `<|medium-latency|>` 0.0022, `<|high-latency|>` 0.0020. All nonzero → not loss-masked out.
+- **Post-train greedy generations (3 samples):** none emitted `<|eor|>`/`<|eow|>`. Expected — 20 steps on 100 samples is smoke, not real training. Also my generation prompt fed the whole source instead of streaming a prefix (needs fix in the extrinsic-eval harness — noted for Gate 3, not blocking Gate 2).
+- **Verification post-hoc (`python -c ...`):** training strings for idx=190712 interleave 5 `<|eor|>` + 5 `<|eow|>` + 1 `<|low-latency|>` correctly. Each token tokenizes to a single id (262144-262148). No multi-piece garbage.
+
+**Read.** Toy SFT smoke passes. trl.SFTTrainer + Gemma-4-E2B + extended tokenizer + EAST interleave format run end-to-end without errors. Special tokens are seen by the model and their embeddings train. Ready to scale to condition-A on 2K (Gate 2 proper).
+
+### [DECISION] 2026-08-16 — Phase 2 kickoff sequencing: SFT scaffold first, annotation second
+**Context.** Gate 1 landed (OT PASSES, JS FAILS — Phase 2 unblocked per `TIMELINE.md`). Naive "start Phase 2" reading was "submit 10K OT annotation." But OT costs 28s/sentence × 10K = 78h — over the 48h walltime cap, forcing a sharded submission with no validated downstream. Condition A (GPT-4 tags) needs zero annotation — the tags ship with SiMT-660K.
+**Options.**
+- (a) Submit 10K OT annotation (sharded 5×15h) NOW, scaffold SFT during the wait.
+- (b) Scaffold SFT wrapper first (no GPU), validate on shipped condition-A tags via toy SFT (~15 min GPU), then annotate condition-B on a small subset (2K) to close the pipeline end-to-end. Scale to 10K once the 2K loop lands.
+**Chose:** (b). Rationale (from advisor):
+1. If trl.SFTTrainer has a special-token gotcha and we've already burned 78 GPU-hours on OT annotation, we lose a week.
+2. Condition-A SFT is fully compute-decoupled from annotation — should be validated first.
+3. 2K matches EAST Fig. 6's smallest data-size point — the 2K → 10K → 50K trajectory is a paper-relevant ablation for free.
+4. Sequenced-small-first mirrors the same "start small, then scale" rule that governed Gemma-4-E2B primary selection in the 2026-08-14 backbone-switch decision.
+
+**Concrete sequence:**
+1. **Now, no GPU:** `scripts/phase2_prepare_tokenizer.py` — add 5 EAST special tokens to Gemma-4-E2B tokenizer, save to `results/phase2/tokenizer-extended/`. Versioned once; used consistently by SFT and inference (advisor blocker: tokenizer drift between annotate/train/infer breaks every downstream metric).
+2. **Now, no GPU:** `src/train/sft.py` — trl.SFTTrainer wrapper. Loads extended tokenizer + resized model. Builds EAST-interleaved strings from `source_chunks`/`target_chunks`. **Full-sequence CE loss (not completion-only)** per EAST §3.2 — see RELATEDWORKS.md §EAST-#3 note that this is an intentional break from Wang et al. 2024.
+3. **~15 min GPU:** toy SFT — 100 rows of shipped GPT-4-chunked SiMT-660K, condition A, 20 steps. Verify (i) special-token embeddings move, (ii) trl loop completes, (iii) a post-train generation places `<|end-of-read|>`/`<|end-of-write|>` markers plausibly.
+4. **After (3) works:** condition-A SFT on 2K subset (latency-balanced, seed 42, ≤80 tok filter — matches EAST Fig. 6). ~1-2h GPU. **This is Gate 2.**
+5. **Parallel to (4):** OT annotation on the SAME 2K indices. Either sharded (5×~3h) or batched (~2h with M10 speedup). Deferred until after (3) — no point burning SU before pipeline is validated.
+6. **After (4) and (5):** condition-B SFT on the 2K OT-annotated rows. Matched A-vs-B extrinsic on WMT15 newstest2015 (BLEU/COMET/BLEURT vs AL/LAAL/AL-CA).
+7. **Scale gate:** if 2K matched A-vs-B looks defensible, scale annotation + SFT to 10K, then 50K.
+
+**Blockers to preempt (advisor):**
+- **Tokenizer consistency.** Annotate/train/infer must use the same extended tokenizer.
+- **Loss recipe.** EAST §3.2 computes CE on source + target + special tokens. NOT `DataCollatorForCompletionOnlyLM`.
+- **KV-cache preservation at inference.** EAST inherits ~49 ms/word from interleaved-format autoregressive inference. Critical for AL-CA reporting at Gate 3.
+
+**Sample selection.** Do NOT reuse the Gate-1 stratified 210 for training (would make the intrinsic claim circular). Fresh latency-balanced sample, seed 42, ≤80 tok filter, sizes 2K → 10K → 50K matching EAST Fig. 6.
+
+**Revisit if:** toy SFT fails at (3) — diagnose before running (4). Or if the OT annotation walltime remains prohibitive after batching (M10) is done — fall back to sharded submission (5×3h).
+
 ### [RUN] 2026-08-16 — precompute GPT-4 Pearson on 660K + stratified sample (login node, no GPU)
 **Config:** `scripts/phase1_precompute_gpt4_pearson.py` (batched tokenizer, `BATCH_SIZE=5000`), tokenizer `MODEL_BASE/gemma-4-E2B`, max_src_tokens=80 (matches sweep filter), bin thresholds monotone ≥ 0.90 / reordering < 0.70, n_per_bin=70, seed=42.
 **Command:** `python -u scripts/phase1_precompute_gpt4_pearson.py`

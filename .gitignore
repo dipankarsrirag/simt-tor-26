@@ -11,9 +11,21 @@ data
 *.safetensors
 *.bin
 *.pt
+*.pth
 *.ckpt
 checkpoints/
 runs/
+# Phase-2 trained-model output dirs — regeneratable via src/train/sft.py.
+# Keep only sft_summary.json / train_indices.json per run (staged explicitly).
+results/phase2/**/checkpoint-*/
+results/phase2/**/final/
+# Phase-2 in-progress annotation — commit after all shards complete.
+results/phase2/annot_ot_condB_n2k/matrices.jsonl
+results/phase2/annot_ot_condB_n2k/shard_counter
+# Ad-hoc / superseded / diagnostic SFT dirs — not durable.
+results/phase2/toy_sft/
+results/phase2/sft_condA_n2k/
+results/phase2/sft_condA_n2k_e5/
 
 # Logs — PBS output, metrics jsonl, wandb offline dirs.
 logs/

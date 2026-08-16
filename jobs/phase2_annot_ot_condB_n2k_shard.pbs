@@ -1,0 +1,96 @@
+#!/bin/bash
+#PBS -N phase2_annot_ot_condB_n2k_shard
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_annot_ot_condB_n2k_shard.log
+
+# Queue: gpuhopper | GPU: H200-141GB x1
+# Auto-calibrated: 12 CPUs, 240GB RAM, 120GB jobfs
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+# Shared po67 cache — persists across scratch purges, shared with sibling projects.
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+# gpuhopper has no internet — force HF offline mode.
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+# Bind thread counts to the allocated CPU slice.
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+# Self-resubmitting shard for cond-B OT annotation. Each shard runs for its
+# walltime; phase1_tau_sweep.py --resume reads matrices.jsonl on start, skips
+# already-processed indices, appends new ones with per-row flush+fsync. On
+# clean loop exit it writes DONE (all indices in) or NEEDS_RESUME (some
+# outstanding). This wrapper reads that marker and qsubs itself again if
+# needed, up to MAX_SHARDS.
+
+OUTPUT_DIR=results/phase2/annot_ot_condB_n2k
+mkdir -p "$OUTPUT_DIR"
+SHARD_COUNTER_FILE="$OUTPUT_DIR/shard_counter"
+SHARD_N=$(cat "$SHARD_COUNTER_FILE" 2>/dev/null || echo 0)
+SHARD_N=$((SHARD_N + 1))
+echo "$SHARD_N" > "$SHARD_COUNTER_FILE"
+MAX_SHARDS=15
+
+echo "======================================================"
+echo "Running shard $SHARD_N of at most $MAX_SHARDS"
+echo "======================================================"
+
+# The annotation itself. --resume is the load-bearing flag: skips indices
+# already in matrices.jsonl; opens the file in append mode; flushes per row.
+# When the PBS walltime kills us mid-sentence, at most one row is lost.
+python -u scripts/phase1_tau_sweep.py \
+    --criterion ot \
+    --taus 0.30,0.50,0.70,1.00 \
+    --max_src_tokens 80 \
+    --prompt_mode raw \
+    --model_path /g/data/po67/dipankar/models/gemma-4-E2B \
+    --output_dir "$OUTPUT_DIR" \
+    --indices_file results/phase2/phase2_n2k_indices.json \
+    --resume || echo "python exited non-zero (possibly killed by PBS walltime — that's OK, --resume will pick up next shard)"
+
+if [ -f "$OUTPUT_DIR/DONE" ]; then
+    echo "======================================================"
+    echo "DONE marker present after shard $SHARD_N — annotation complete."
+    echo "======================================================"
+elif [ "$SHARD_N" -lt "$MAX_SHARDS" ]; then
+    echo "======================================================"
+    echo "NEEDS_RESUME after shard $SHARD_N; resubmitting shard $((SHARD_N + 1))"
+    echo "======================================================"
+    cd /g/data/ba39/dipankar/simt-tor-26
+    qsub jobs/phase2_annot_ot_condB_n2k_shard.pbs
+else
+    echo "======================================================"
+    echo "Shard cap $MAX_SHARDS reached without DONE — bailing. Investigate."
+    echo "======================================================"
+fi

@@ -119,6 +119,11 @@ def main():
                          "corpus indices exactly (overrides --n_sentences balanced-"
                          "latency sampling). Used by Gate-1 stratified-by-reordering "
                          "runs (see phase1_precompute_gpt4_pearson.py).")
+    ap.add_argument("--resume", action="store_true",
+                    help="Read output_dir/matrices.jsonl if it exists, skip already-"
+                         "processed indices, append to the same file. Enables sharded "
+                         "annotation across multiple PBS submissions. Line-flushes per "
+                         "sentence so a mid-sentence kill loses at most one row.")
     args = ap.parse_args()
 
     taus = [float(x) for x in args.taus.split(",")]
@@ -159,48 +164,110 @@ def main():
     print(f"Kept {len(kept)}/{len(picks)} sentences after max_src_tokens={args.max_src_tokens}")
 
     matrices_path = args.output_dir / "matrices.jsonl"
-    per_sentence = []
-    t_annot = time.time()
-    with open(matrices_path, "w") as f:
-        for k, r in enumerate(kept):
-            t0 = time.time()
-            try:
-                # tau=0 forces the criterion never to fire in the search loop
-                # itself; we set return_full_matrix and derive commits offline.
-                ann = annotate_pair(
-                    model=model, tokenizer=tokenizer,
-                    source=r["source"], target=r["target"],
-                    src_lang=r["src_lang"], tgt_lang=r["tgt_lang"],
-                    latency=r["latency"],
-                    tau=0.0, criterion_name=args.criterion,
-                    return_full_matrix=True,
-                    record_entropy=args.record_entropy,
-                    prompt_mode=args.prompt_mode,
-                )
-            except Exception as e:
-                print(f"  [{k+1}/{len(kept)}] idx={r['index']} FAILED: {type(e).__name__}: {e}")
-                continue
-            dt = time.time() - t0
-            rec = {
-                "index": r["index"],
-                "latency": r["latency"],
-                "n_src_tok": ann.n_src_tok,
-                "n_tgt_tok": ann.n_tgt_tok,
-                "gpt4_source_chunks": r["source_chunks"],
-                "gpt4_target_chunks": r["target_chunks"],
-                "matrix": ann.divergence_matrix,
-                "dt_sec": dt,
-            }
-            if args.record_entropy:
-                rec["entropy_matrix"] = ann.entropy_matrix
-                rec["entropy_full"] = ann.entropy_full
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-            per_sentence.append(rec)
-            if k < 5 or (k + 1) % 10 == 0:
-                print(f"  [{k+1}/{len(kept)}] idx={r['index']} lat={r['latency']} "
-                      f"n={ann.n_src_tok} m={ann.n_tgt_tok} dt={dt:.1f}s")
+    done_marker = args.output_dir / "DONE"
+    resume_marker = args.output_dir / "NEEDS_RESUME"
 
-    total_dt = time.time() - t_annot
+    # Resume mode: read existing matrices.jsonl, get processed indices, skip those.
+    processed = set()
+    if args.resume and matrices_path.exists():
+        with open(matrices_path) as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                    processed.add(rec["index"])
+                except Exception:
+                    pass
+        print(f"Resume mode: {len(processed)} indices already in matrices.jsonl; skipping")
+    remaining = [r for r in kept if r["index"] not in processed]
+    print(f"To process this shard: {len(remaining)} sentences")
+
+    if not remaining:
+        # Fully done — write DONE and load per_sentence for summary.
+        print("All indices already processed — writing DONE marker and computing summary.")
+        done_marker.write_text("done\n")
+        if resume_marker.exists():
+            resume_marker.unlink()
+        # Reload for summary.
+        per_sentence = []
+        with open(matrices_path) as f:
+            for line in f:
+                per_sentence.append(json.loads(line))
+    else:
+        per_sentence = []
+        # Load previous rows (for summary later) — cheap given they're already on disk.
+        if args.resume and matrices_path.exists():
+            with open(matrices_path) as f:
+                for line in f:
+                    per_sentence.append(json.loads(line))
+        t_annot = time.time()
+        mode = "a" if args.resume else "w"
+        with open(matrices_path, mode, buffering=1) as f:
+            for k, r in enumerate(remaining):
+                t0 = time.time()
+                try:
+                    # tau=0 forces the criterion never to fire in the search loop
+                    # itself; we set return_full_matrix and derive commits offline.
+                    ann = annotate_pair(
+                        model=model, tokenizer=tokenizer,
+                        source=r["source"], target=r["target"],
+                        src_lang=r["src_lang"], tgt_lang=r["tgt_lang"],
+                        latency=r["latency"],
+                        tau=0.0, criterion_name=args.criterion,
+                        return_full_matrix=True,
+                        record_entropy=args.record_entropy,
+                        prompt_mode=args.prompt_mode,
+                    )
+                except Exception as e:
+                    print(f"  [{k+1}/{len(remaining)}] idx={r['index']} FAILED: "
+                          f"{type(e).__name__}: {e}", flush=True)
+                    continue
+                dt = time.time() - t0
+                rec = {
+                    "index": r["index"],
+                    "latency": r["latency"],
+                    "n_src_tok": ann.n_src_tok,
+                    "n_tgt_tok": ann.n_tgt_tok,
+                    "gpt4_source_chunks": r["source_chunks"],
+                    "gpt4_target_chunks": r["target_chunks"],
+                    "matrix": ann.divergence_matrix,
+                    "dt_sec": dt,
+                }
+                if args.record_entropy:
+                    rec["entropy_matrix"] = ann.entropy_matrix
+                    rec["entropy_full"] = ann.entropy_full
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                f.flush()
+                import os as _os; _os.fsync(f.fileno())
+                per_sentence.append(rec)
+                if k < 5 or (k + 1) % 10 == 0:
+                    print(f"  [{k+1}/{len(remaining)}] idx={r['index']} lat={r['latency']} "
+                          f"n={ann.n_src_tok} m={ann.n_tgt_tok} dt={dt:.1f}s", flush=True)
+
+        # After the loop: check if we've caught up to `kept`. If yes, DONE; if
+        # not (killed by walltime), NEEDS_RESUME.
+        processed_now = set()
+        with open(matrices_path) as f:
+            for line in f:
+                try:
+                    processed_now.add(json.loads(line)["index"])
+                except Exception:
+                    pass
+        kept_indices = {r["index"] for r in kept}
+        if kept_indices - processed_now:
+            outstanding = len(kept_indices - processed_now)
+            resume_marker.write_text(f"outstanding={outstanding}\n")
+            if done_marker.exists():
+                done_marker.unlink()
+            print(f"\n{outstanding} sentences remain — wrote NEEDS_RESUME marker.",
+                  flush=True)
+        else:
+            done_marker.write_text("done\n")
+            if resume_marker.exists():
+                resume_marker.unlink()
+            print(f"\nAll {len(kept_indices)} sentences processed — wrote DONE marker.",
+                  flush=True)
+
+    total_dt = time.time() - t_annot if remaining else 0
     print(f"\nAnnotated {len(per_sentence)}/{len(kept)} in {total_dt:.1f}s "
           f"({total_dt/max(len(per_sentence),1):.1f}s/sentence)")
 
