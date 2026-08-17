@@ -473,6 +473,7 @@ def run(cfg: RunConfig) -> Dict:
             "n_write_cap_hits": stream_stats["n_write_cap_hits"],
             "chunks_per_sent_mean": s.mean(stream_stats["chunk_counts"]),
             "chunks_per_sent_median": s.median(stream_stats["chunk_counts"]),
+            "per_sent": stream_stats.get("per_sent", []),
         }
         print(f"[extrinsic] AL mean={result['al_mean']:.2f}  median={result['al_median']:.2f}  n_defined={result['al_n_defined']}/{len(pairs)}", flush=True)
         print(f"[extrinsic] chunks/sent mean={result['stream_stats']['chunks_per_sent_mean']:.2f}  median={result['stream_stats']['chunks_per_sent_median']:.1f}", flush=True)
