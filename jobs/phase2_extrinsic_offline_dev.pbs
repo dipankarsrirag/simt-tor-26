@@ -6,7 +6,7 @@
 #PBS -l ngpus=1
 #PBS -l mem=240GB
 #PBS -l jobfs=120GB
-#PBS -l walltime=01:00:00
+#PBS -l walltime=03:00:00
 #PBS -l storage=gdata/ba39+gdata/po67
 #PBS -l wd
 #PBS -j oe
@@ -51,16 +51,8 @@ export MKL_NUM_THREADS=${PBS_NCPUS:-12}
 
 DEV_DIR=/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en
 
-# First: 100-sentence smoke to catch pipeline errors before burning 30min.
-echo "===== SMOKE (100 sents, cond-A n=10K) ====="
-python -u src/eval/extrinsic.py \
-    --model_dir results/phase2/sft_condA_n10k/final \
-    --dev_src "$DEV_DIR/newstest2013.de" \
-    --dev_ref "$DEV_DIR/newstest2013.en" \
-    --latency medium \
-    --n_sentences 100 \
-    --mode offline \
-    --output results/phase2/extrinsic/smoke100_condA_n10k_newstest2013.json
+# Smoke skipped — pipeline validated on prior run (176476991 BLEU 17.53 on n=100).
+# Bump walltime to 3h: 3000 sents × ~1.3s/sent × 2 models = ~2h.
 
 echo "===== FULL (3000 sents, cond-A n=10K) ====="
 python -u src/eval/extrinsic.py \
@@ -71,11 +63,7 @@ python -u src/eval/extrinsic.py \
     --mode offline \
     --output results/phase2/extrinsic/offline_condA_n10k_newstest2013.json
 
-echo "===== FULL (3000 sents, cond-B n=2K) ====="
-python -u src/eval/extrinsic.py \
-    --model_dir results/phase2/sft_condB_n2k/final \
-    --dev_src "$DEV_DIR/newstest2013.de" \
-    --dev_ref "$DEV_DIR/newstest2013.en" \
-    --latency medium \
-    --mode offline \
-    --output results/phase2/extrinsic/offline_condB_n2k_newstest2013.json
+# cond-B n=10K is being re-trained (job 176508925) after the --corpus_file
+# n_sentences-cap bug fix. Once that lands, add a matched cond-B/n=10K run
+# here for the apples-to-apples comparison. cond-B/n=2K (5× data disparity)
+# would be misleading and is skipped.
