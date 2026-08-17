@@ -71,11 +71,21 @@ def generate_offline(
     max_new_tokens: int,
     device: str,
 ) -> str:
-    """Full-source greedy generation. Prompt is `<|latency|> src`.
-    Returns the raw decoded string (special tokens stripped) — plain
-    translation, no streaming, no chunks.
+    """Full-source greedy generation as the degenerate "one giant chunk" case
+    of the streaming protocol. Prompt closes the READ phase explicitly with
+    <|end-of-read|> so the model sees a valid EAST training shape:
+
+        <|latency|> src_1 ... src_n <|end-of-read|>  → generate target tokens
+
+    (Without the trailing EOR, the input `<|latency|> src` is not a shape the
+    model ever saw during SFT — behaviour there is undefined and BLEU is not
+    interpretable. cond-B in particular has real single-chunk training rows
+    where the whole source is one READ.)
+
+    Returns the raw decoded string with all EAST special tokens + BOS/EOS
+    stripped by `skip_special_tokens=True`.
     """
-    prompt = f"{LATENCY_TOKENS[latency]} {src}"
+    prompt = f"{LATENCY_TOKENS[latency]} {src} {END_OF_READ}"
     inp = tok(prompt, return_tensors="pt", add_special_tokens=True).input_ids.to(device)
     prompt_len = inp.shape[1]
     out = model.generate(
@@ -85,8 +95,6 @@ def generate_offline(
         pad_token_id=tok.pad_token_id or tok.eos_token_id,
     )
     gen_ids = out[0][prompt_len:].tolist()
-    # Strip EAST specials + BOS/EOS. skip_special_tokens=True handles both
-    # (Gemma's built-ins and our added tokens, which were added as special).
     return tok.decode(gen_ids, skip_special_tokens=True).strip()
 
 
