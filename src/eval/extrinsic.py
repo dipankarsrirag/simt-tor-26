@@ -291,11 +291,14 @@ def stream_translate(
             if hit_cap:
                 trace.write_cap_hits += 1
 
-    # Source exhausted. If no chunk emitted yet OR model still has target left,
-    # force a final EOR and drain.
-    if trace.chunks_committed == 0 or True:
-        # Always force a final EOR to drain the remaining target — matches EAST
-        # inference (source exhaust → one last WRITE covers the tail).
+    # Source exhausted. Force a final EOR ONLY if the last committed chunk
+    # was at an earlier src position — otherwise `<eow><eor>` back-to-back
+    # is a pattern the model NEVER saw in training (training format is
+    # `<eow> src <eor>` with source in between) and it hallucinates a
+    # German source chunk in the drain output.
+    last_commit_at = chunk_g_words[-1] if chunk_g_words else -1
+    need_drain = (trace.chunks_committed == 0) or (last_commit_at < src_words_read)
+    if need_drain:
         if trace.chunks_committed == 0:
             trace.source_exhausted_without_eor = True
         tgt_chunk_start_indices.append(len(tgt_ids_all))
