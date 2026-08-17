@@ -50,7 +50,7 @@ SHARD_COUNTER_FILE="$OUTPUT_DIR/shard_counter"
 SHARD_N=$(cat "$SHARD_COUNTER_FILE" 2>/dev/null || echo 0)
 SHARD_N=$((SHARD_N + 1))
 echo "$SHARD_N" > "$SHARD_COUNTER_FILE"
-MAX_SHARDS=15
+MAX_SHARDS=40  # E4B annotation is ~4-5s/row × 9,567 rows ≈ 12h wall total; 2h shards × 40 = 80h ceiling.
 
 if [ ! -f "$OUTPUT_DIR/DONE" ] && [ "$SHARD_N" -lt "$MAX_SHARDS" ]; then
     NEXT_JOB=$(qsub -W depend=afterany:$PBS_JOBID jobs/phase2_annot_ot_condB_e4b_n10k_shard.pbs)
