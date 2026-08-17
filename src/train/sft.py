@@ -110,6 +110,12 @@ def load_corpus_subset(
         by_idx = {r["index"]: r for r in rows}
         picks = [by_idx[i] for i in sorted(wanted) if i in by_idx]
         print(f"Using {len(picks)} indices from {indices_file}", flush=True)
+    elif corpus_file is not None:
+        # corpus_file is pre-filtered (e.g. by phase2_build_condB_dataset.py),
+        # already-latency-balanced by construction. Use every row — capping to
+        # --n_sentences here would silently drop 80% of a 10K cond-B dataset.
+        picks = rows
+        print(f"Using ALL {len(picks)} rows from corpus_file {corpus_file}", flush=True)
     else:
         picks = pick_latency_balanced(
             rows, n_sentences, seed, max_src_tokens, tokenizer
