@@ -88,11 +88,20 @@ def generate_offline(
     prompt = f"{LATENCY_TOKENS[latency]} {src} {END_OF_READ}"
     inp = tok(prompt, return_tensors="pt", add_special_tokens=True).input_ids.to(device)
     prompt_len = inp.shape[1]
+    # Stop at the first <|end-of-write|> — cond-A NEVER saw a one-giant-chunk
+    # training row (all GPT-4 chunks are 3-6 words), so after emitting a full
+    # target chunk the model keeps producing `src_i+1 <eor> tgt_i+1 <eow> …`,
+    # matching the multi-chunk pattern it was trained on. Left uncontrolled,
+    # BLEU is depressed by 2× over-generation (hyp/ref length ratio ≈ 2 on the
+    # prior run). Truncating at the first <eow> gives the intended offline
+    # translation.
+    eow_id = tok(END_OF_WRITE, add_special_tokens=False).input_ids[0]
     out = model.generate(
         input_ids=inp,
         max_new_tokens=max_new_tokens,
         do_sample=False,
         pad_token_id=tok.pad_token_id or tok.eos_token_id,
+        eos_token_id=[tok.eos_token_id, eow_id],
     )
     gen_ids = out[0][prompt_len:].tolist()
     return tok.decode(gen_ids, skip_special_tokens=True).strip()
