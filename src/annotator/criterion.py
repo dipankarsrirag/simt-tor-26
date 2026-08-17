@@ -90,11 +90,8 @@ def ot_divergence_row(
     eps: float = 0.05,
     sinkhorn_iters: int = 100,
 ) -> torch.Tensor:
-    """Vectorise ot_divergence_pair over the target-position axis.
-
-    p_full_row: (m, V), p_pre_row: (m, V).
-    Returns: (m,) OT distances.
-    """
+    """Vectorise ot_divergence_pair over the target-position axis (naive
+    Python loop; used as reference impl for the batched version below)."""
     m = p_full_row.shape[0]
     out = torch.zeros(m, device=p_full_row.device, dtype=torch.float32)
     for j in range(m):
@@ -106,13 +103,102 @@ def ot_divergence_row(
     return out
 
 
+@torch.no_grad()
+def ot_divergence_row_batched(
+    p_full_row: torch.Tensor,
+    p_pre_row: torch.Tensor,
+    *,
+    embedding_matrix: torch.Tensor,
+    topk: int = 128,
+    eps: float = 0.05,
+    sinkhorn_iters: int = 100,
+) -> torch.Tensor:
+    """Batched-across-target-tokens OT: one GPU-saturating log-domain Sinkhorn
+    call for all m target tokens at this source-prefix length.
+
+    Same math as ot_divergence_pair but with an added leading (m) batch
+    dimension. POT's `sinkhorn_log` batched mode requires a shared cost
+    matrix, which we don't have (support varies per j). Custom torch impl.
+
+    Support handling: each j has support = topk(p_full[j]) ∪ topk(p_pre[j]).
+    Sizes vary per j once duplicates are collapsed. We pad to a fixed size
+    S = 2*topk *including duplicates*: keep both topk lists as-is (possible
+    duplicates), which is a valid support (mass is just split across the
+    duplicates, and the Sinkhorn cost is the same regardless of how the
+    unified support is partitioned). Verified against the per-pair impl in
+    scripts/phase2_batched_ot_smoke.py.
+
+    p_full_row: (m, V), p_pre_row: (m, V).
+    Returns: (m,) OT distances.
+    """
+    m, V = p_full_row.shape
+    device = p_full_row.device
+    S = 2 * topk
+
+    # Per-j topk support — keep duplicates for a fixed padding size.
+    _, tk_f = p_full_row.topk(topk, dim=-1)   # (m, topk) int
+    _, tk_p = p_pre_row.topk(topk, dim=-1)    # (m, topk) int
+    support = torch.cat([tk_f, tk_p], dim=-1)  # (m, S) int — MAY contain duplicates
+
+    # Dedup within each row: mark first-occurrence positions per row (True),
+    # duplicates (False). Zeroing duplicate probability mass then re-
+    # normalising gives Sinkhorn a sparse support with unique tokens only —
+    # matches the per-pair impl's `torch.unique(cat(...))` semantics without
+    # requiring variable-length supports.
+    sorted_support, sort_idx = support.sort(dim=-1)          # (m, S)
+    is_first_sorted = torch.ones_like(sorted_support, dtype=torch.bool)
+    is_first_sorted[:, 1:] = sorted_support[:, 1:] != sorted_support[:, :-1]
+    # Unsort back to the original support order.
+    _, inv_idx = sort_idx.sort(dim=-1)
+    is_first = is_first_sorted.gather(1, inv_idx)             # (m, S) bool
+
+    # Gather probabilities on each row's support; zero out duplicate positions
+    # so they have no mass and Sinkhorn ignores them; then renormalise.
+    a = p_full_row.gather(1, support).float()      # (m, S)
+    b = p_pre_row.gather(1, support).float()       # (m, S)
+    a = a * is_first
+    b = b * is_first
+    a = a / a.sum(dim=-1, keepdim=True).clamp_min(1e-30)
+    b = b / b.sum(dim=-1, keepdim=True).clamp_min(1e-30)
+
+    # Ground cost: 1 - cosine similarity between input embeddings.
+    E = embedding_matrix[support].float()          # (m, S, D)
+    E_norm = E / E.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+    # (m, S, S) — element (b, i, j) = 1 - cos(E[b,i], E[b,j])
+    cost = (1.0 - torch.bmm(E_norm, E_norm.transpose(1, 2))).clamp_min(0.0)
+
+    # Log-domain Sinkhorn. K = exp(-C/eps). Updates:
+    #   log_v[b,j] = log_b[b,j] - logsumexp_i(log_K[b,i,j] + log_u[b,i])
+    #   log_u[b,i] = log_a[b,i] - logsumexp_j(log_K[b,i,j] + log_v[b,j])
+    log_K = -cost / eps                             # (m, S, S)
+    log_a = a.clamp_min(1e-30).log()                # (m, S)
+    log_b = b.clamp_min(1e-30).log()                # (m, S)
+    log_u = torch.zeros(m, S, device=device, dtype=torch.float32)
+    log_v = torch.zeros(m, S, device=device, dtype=torch.float32)
+    for _ in range(sinkhorn_iters):
+        # v update: sum over source axis (dim=1). Broadcast log_u (m, S) as (m, S, 1).
+        log_v = log_b - torch.logsumexp(log_K + log_u.unsqueeze(-1), dim=1)
+        # u update: sum over target axis (dim=2). Broadcast log_v (m, S) as (m, 1, S).
+        log_u = log_a - torch.logsumexp(log_K + log_v.unsqueeze(1), dim=2)
+
+    # Transport plan T = exp(log_u + log_K + log_v). Reconstruct and inner-product with cost.
+    log_T = log_u.unsqueeze(-1) + log_K + log_v.unsqueeze(1)  # (m, S, S)
+    T = log_T.exp()
+    return (T * cost).sum(dim=(1, 2))                          # (m,)
+
+
 def make_ot(embedding_matrix: torch.Tensor, topk: int = 128, eps: float = 0.05,
-            sinkhorn_iters: int = 100):
-    """Return a criterion callable `(p_full_row, p_pre_row) -> (m,)` with
-    the embedding matrix and hyperparameters pre-bound. Register in CRITERIA
-    at annotate-time when the model is loaded."""
+            sinkhorn_iters: int = 100, batched: bool = True):
+    """Return a criterion callable `(p_full_row, p_pre_row) -> (m,)`.
+
+    `batched=True` (default) selects the ~10× faster batched-Sinkhorn path;
+    `batched=False` selects the per-pair reference impl (used for
+    correctness verification). Numerical outputs should agree within ~1e-3
+    L∞ on the same (p_full, p_pre) input.
+    """
+    fn = ot_divergence_row_batched if batched else ot_divergence_row
     return partial(
-        ot_divergence_row,
+        fn,
         embedding_matrix=embedding_matrix,
         topk=topk,
         eps=eps,

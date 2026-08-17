@@ -2,70 +2,62 @@
 
 Ordered by priority. Each item states what it does, why now, and what unlocks after.
 
-## 1. Gate 1 — stratified-by-reordering aggregate on 200 SiMT-660K sentences (redefined 2026-08-16)
+## 1. Extrinsic eval harness — Layer 1 offline BLEU on newstest2013 dev (in flight)
 
-Replaces the prior RWTH-based Gate 1 (see `LOG.md` 2026-08-16 decision). This is a *gate*, not a paper result — passing greenlights Phase 2; RWTH intrinsic A-score runs in Phase 3 as the paper's App. E result.
+`src/eval/extrinsic.py --mode offline` scaffolded. Runs full-source greedy decode
+under `<|latency|>` prompt, sacrebleu against the reference. First job:
+`jobs/phase2_extrinsic_offline_dev.pbs` scores cond-A/n=10K and cond-B/n=2K on
+newstest2013 (3000 sents). This is the "does the base translator work at all"
+sanity — advisor threshold is offline BLEU > 10 before streaming is meaningful.
 
-- **Precompute GPT-4 per-sentence Pearson on the full 660K** (`scripts/phase1_precompute_gpt4_pearson.py`). Pure chunk arithmetic on already-tokenised text — ~5 min on a login node, no GPU. Outputs `results/gpt4_pearson_full.json` (index → Pearson, chunks, latency).
-- **Stratified-sample 200 sentences** by fixed absolute Pearson bins (`monotone ≥ 0.90`, `mild 0.70–0.90`, `reordering < 0.70`), ~70 per bin. Outputs `results/phase1_gate1_indices.json`.
-- **Submit two jobs in parallel:**
-  - `phase1_tau_sweep_ot_n200.pbs` — Gemma-4-E2B base + raw + OT + extended tau grid `{0.30, 0.50, 0.70, 1.00}`, 200 sentences, 02:30:00 walltime.
-  - `phase1_tau_sweep_js_n200.pbs` — same but JS criterion, 00:30:00 walltime. Cheap ablation.
-- **Run `scripts/phase1_reordering_bin.py`** on both `matrices.jsonl` outputs. Reports per bin: mean chunk-count delta vs GPT-4, per-sentence Pearson (ours at matched-count tau), MATCH rate under threshold 0.85.
+- Submit `jobs/phase2_extrinsic_offline_dev.pbs`; expect ~30 min wall (100-sent
+  smoke inside the same job catches pipeline errors early).
+- If both models > 10 BLEU: proceed to Layer 2 streaming.
+- If either < 10: diagnose (tokenizer drift, checkpoint choice, latency-prompt
+  mismatch) before building the state machine.
 
-**Pass criteria (see `TIMELINE.md` Gate 1):**
-- Monotone bin: tie GPT-4 on chunk-count delta and Pearson.
-- Reordering bin: strictly higher MATCH rate than degenerate baseline.
-- METHOD §8 sanity checks all green on the winning tau.
+**Unlocks:** Layer 2 (streaming state machine, AL word units) and Layer 3
+(AL-CA via `torch.cuda.Event`). Only after Layers 1–2 land on dev do we touch
+newstest2015 (the test set — reported once, no re-tuning).
 
-**Unlocks:** Phase 2 SFT (10K annotation → matched-condition training → WMT15 newstest2015 extrinsic eval).
+## 2. cond-B n=10K SFT (blocked on annotation)
 
-## 2. Cross-backbone sanity: Qwen3.5-2B (H6)
+Cond-B n=10K annotation is in flight (`jobs/phase2_annot_ot_condB_n10k_shard.pbs`,
+job 176455997 → chained 176459737, ~76% done). Once `matrices.jsonl` reaches
+9,567 rows + `DONE` marker:
 
-Same recipe as winning config, tests family-robustness. Do this after Gate 1 lands — need the Gemma anchor.
+- `python scripts/phase2_build_condB_dataset.py --tau 0.30 --matrices results/phase2/annot_ot_condB_n10k/matrices.jsonl --output results/phase2/condB_n10k_dataset.json`
+- Submit cond-B n=10K SFT with the same recipe as cond-A n=10K (early-stopping,
+  3 epoch cap, lr 2e-5, effective batch 16, val_frac 0.05).
+- Verify + streaming smoke (`scripts/phase2_inference_smoke.py`).
 
-- Check on-disk Qwen3.5-2B: base or -it? If -it, fetch base via copyq.
-- Repeat the winning config (base + raw + OT, extended tau) on the same 200 stratified indices.
-- Compare per-bin stats to Gemma.
+**Unlocks:** the matched A-vs-B pair at n=10K — the row that carries the paper.
 
-**Unlocks:** "cross-family robust" claim in the paper.
+## 3. Matched A-vs-B extrinsic on newstest2013 dev
 
-## 3. Scale-up to gemma-4-E4B (only if Gate 1 passes on E2B)
+Once cond-B n=10K is trained AND Layer-2 streaming is working:
+- Run both models under `--mode streaming` on newstest2013.
+- Report BLEU + AL per condition, per latency prompt (low/med/high).
+- Look for A-vs-B delta on: BLEU tie or B >, AL delta small.
 
-Tests H7. Gated per HOUSEKEEPING §1 SU-spend rule.
+**Unlocks:** newstest2015 (test) reporting.
 
-- Download `google/gemma-4-E4B` — ~10 GB copyq job.
-- Repeat winning config on same 200 stratified indices; compare per-bin stats.
-- If E4B produces higher per-bin performance than E2B, mention as scale-consistency evidence in the paper; don't over-claim.
+## 4. Deferred (post-Gate-3)
 
-**Unlocks:** scale ablation in the paper's Table.
+- **Cross-backbone Qwen3.5-2B (H6).** Same recipe on 200 stratified indices, then n=10K.
+- **Scale-up gemma-4-E4B (H7).** Only after n=10K result is defensible.
+- **RWTH intrinsic A-score (Phase 3 appendix per 2026-08-16 decision).** Needs a
+  baseline decision (GPT-4-API re-annotation of the 509 sents recommended).
+- **Off-Multi-120K assembly** (Stretch A only).
+- **Stage-II LoRA** (Stretch, only if Gate 3 passes).
+- **BLEURT-20 fetch.** Add to Phase 2 metrics once COMET-DA baseline is on paper.
+- **Doc-level and conversational SiMT** (Stretches B, C).
 
-## 4. Onwards to Phase 2 (SFT)
+## Blockers, right now
 
-Only after Phase 1 conclusion is defensible.
-
-- Annotate 10K then 50K sentences with the winning criterion (matches EAST Fig. 6's data-size trajectory).
-- Build the SFT wrapper (trl.SFTTrainer per HOUSEKEEPING §4, not LLaMA-Factory).
-- Fine-tune both conditions A (GPT-4 tags) and B (ours) on the same base backbone.
-- Extrinsic eval on WMT15 newstest2015: BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
-- **Gate 2:** an SFT run completes and emits tags in sensible places.
-- **Gate 3:** the primary comparison exists.
-
-Timeline weeks 6–10; see `../TIMELINE.md` Phase 2.
-
-## Blockers and non-blockers, right now
-
-**Blockers on the primary result:**
-- Phase-2 SFT is downstream of Gate 1. Ordering matters.
-
-**Blockers on Phase 3 (RWTH appendix) but not on Gate 1 or Phase 2:**
-- Choice of RWTH baseline (compare our tags against what, since GPT-4 chunks are not available for RWTH's sentences)? Options: fast_align commits, monotonic wait-k floor, GPT-4 API re-annotation of the 509. Recommend GPT-4 API re-annotation (most direct comparison, ~$5-20 API cost). Decide before writing `src/eval/rwth_intrinsic.py`.
-
-**Not blockers (deferrable):**
-- Off-Multi-120K assembly (only Stretch A).
-- Stage-II LoRA (only after Gate 3).
-- BLEURT-20 fetch (only when we get to Phase 2 metrics).
-- Doc-level and conversational SiMT (Stretches B, C).
+- Layer-2 streaming design is documented in `src/eval/extrinsic.py`'s module
+  docstring + the 2026-08-17 advisor spec in `LOG.md`. No design blockers.
+- cond-B n=10K SFT is annotation-blocked; annotation ETA <4h from last check.
 
 ## Weekly checkpoint reminder
 

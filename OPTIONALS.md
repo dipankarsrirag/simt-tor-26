@@ -273,6 +273,18 @@ The blockers and strengthening items above are about framing, measurement, and p
 
 **Reading `METHOD.md` §§2–4 as the baseline:** commit at `i*[j] = min { i : D(P_full[j], P_pre[i][j]) < tau }`, then enforce greedy monotonicity `i*[j] = max(i*[j], i*[j-1])`, then emit EAST's interleaved format. The improvements below sit on top.
 
+### M0. τ selection provenance — pin the primary choice, don't leave it floating
+
+**Current provenance.** `τ=0.30` is used as the primary threshold in Phase 2's
+cond-B dataset construction (`scripts/phase2_build_condB_dataset.py --tau 0.30`,
+2026-08-16). It is the Config D-ext winning point from Phase 1 (`docs/experiments.md`
+§Config D-ext table): 90% fire, chunk-count 4.67 (vs GPT-4's 4.06), positional
+Pearson med 0.81. This provenance is currently one line in the build script's
+docstring and one line in `LOG.md`'s 2026-08-16 cond-B dataset entry — for the
+paper it needs to land in `METHOD.md` §3 (criterion + threshold) with a
+one-sentence justification, and any sensitivity ablation over `τ ∈ {0.20, 0.30, 0.50}`
+in Phase 2 SFT would be worth ~2 GPU-hours on n=2K.
+
 ### M1. Scheduled-sampling annotation — fix exposure bias at the source
 
 **Current.** `P_pre[i][j] = p(y_j | S_≤i, T_<j)` teacher-forces the reference target prefix `T_<j`. Same for `P_full[j]`. The tags placed by comparing these two are therefore reference-conditioned. At inference the model sees its own outputs, not the reference — this is the exposure-bias gap `METHOD.md` §9 admits.

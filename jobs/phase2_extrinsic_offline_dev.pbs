@@ -1,0 +1,81 @@
+#!/bin/bash
+#PBS -N phase2_extrinsic_offline_dev
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=01:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_extrinsic_offline_dev.log
+
+# Queue: gpuhopper | GPU: H200-141GB x1
+# Layer-1 sanity: offline BLEU on newstest2013 (dev, 3000 sentences) for
+# both cond-A/n=10K and cond-B/n=2K. If either < 10 BLEU, streaming is
+# not worth building until the base translator works.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+# Shared po67 cache — persists across scratch purges, shared with sibling projects.
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+# gpuhopper has no internet — force HF offline mode.
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+# Bind thread counts to the allocated CPU slice.
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+DEV_DIR=/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en
+
+# First: 100-sentence smoke to catch pipeline errors before burning 30min.
+echo "===== SMOKE (100 sents, cond-A n=10K) ====="
+python -u src/eval/extrinsic.py \
+    --model_dir results/phase2/sft_condA_n10k/final \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --n_sentences 100 \
+    --mode offline \
+    --output results/phase2/extrinsic/smoke100_condA_n10k_newstest2013.json
+
+echo "===== FULL (3000 sents, cond-A n=10K) ====="
+python -u src/eval/extrinsic.py \
+    --model_dir results/phase2/sft_condA_n10k/final \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --mode offline \
+    --output results/phase2/extrinsic/offline_condA_n10k_newstest2013.json
+
+echo "===== FULL (3000 sents, cond-B n=2K) ====="
+python -u src/eval/extrinsic.py \
+    --model_dir results/phase2/sft_condB_n2k/final \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --mode offline \
+    --output results/phase2/extrinsic/offline_condB_n2k_newstest2013.json

@@ -258,6 +258,17 @@ def main():
     ap.add_argument("--logging_steps", type=int, default=5)
     ap.add_argument("--save_steps", type=int, default=200)
 
+    # Early-stopping — enabled by default at scale (>= 5K rows).
+    # Split off val_frac of rows for eval; run eval every eval_steps; stop
+    # if eval_loss doesn't improve by early_stopping_threshold within
+    # early_stopping_patience consecutive evals. Loads best-eval checkpoint
+    # at end (so `final/` is the best model, not the last).
+    ap.add_argument("--val_frac", type=float, default=0.05,
+                    help="Fraction of loaded rows held out for eval. 0 → no eval / no early stopping.")
+    ap.add_argument("--eval_steps", type=int, default=50)
+    ap.add_argument("--early_stopping_patience", type=int, default=3)
+    ap.add_argument("--early_stopping_threshold", type=float, default=1e-3)
+
     ap.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default="bf16")
     ap.add_argument("--sample_generations", type=int, default=3,
                     help="Post-train: run this many greedy generations to sanity-check tag emission.")
@@ -279,16 +290,35 @@ def main():
         corpus_file=args.corpus_file,
     )
     ds = build_dataset(rows)
-    print(f"Training dataset: {len(ds)} rows", flush=True)
+    print(f"Full dataset: {len(ds)} rows", flush=True)
+
+    # Optional train/eval split for early stopping.
+    train_ds = ds
+    eval_ds = None
+    if args.val_frac > 0 and len(ds) > 20:
+        split = ds.train_test_split(test_size=args.val_frac, seed=args.seed)
+        train_ds = split["train"]
+        eval_ds = split["test"]
+        print(f"  train: {len(train_ds)}  eval: {len(eval_ds)}  "
+              f"(val_frac={args.val_frac})", flush=True)
 
     # Save indices used — lets condition-B annotation match exactly.
+    def _idx_list(rows_in):
+        return sorted(r["index"] for r in rows_in)
+    train_idx_set = set(train_ds["index"])
+    eval_idx_set = set(eval_ds["index"]) if eval_ds is not None else set()
     (args.output_dir / "train_indices.json").write_text(json.dumps({
         "n_kept": len(rows),
         "seed": args.seed,
         "n_sentences_requested": args.n_sentences,
         "max_src_tokens": args.max_src_tokens,
         "indices_file": str(args.indices_file) if args.indices_file else None,
-        "indices": sorted(r["index"] for r in rows),
+        "corpus_file": str(args.corpus_file) if args.corpus_file else None,
+        "val_frac": args.val_frac,
+        "n_train": len(train_idx_set),
+        "n_eval": len(eval_idx_set),
+        "train_indices": sorted(train_idx_set),
+        "eval_indices": sorted(eval_idx_set),
         "by_latency": {
             lat: sorted(r["index"] for r in rows if r["latency"] == lat)
             for lat in ["low", "medium", "high"]
@@ -302,13 +332,16 @@ def main():
     before = snapshot_special_token_embeddings(model, tokenizer)
 
     from trl import SFTConfig, SFTTrainer
+    from transformers import EarlyStoppingCallback
 
+    use_eval = eval_ds is not None
     sft_cfg = SFTConfig(
         output_dir=str(args.output_dir),
         per_device_train_batch_size=args.per_device_batch_size,
+        per_device_eval_batch_size=args.per_device_batch_size,
         gradient_accumulation_steps=args.grad_accum_steps,
         max_length=args.max_length,
-        # completion_only_loss=None keeps default full-sequence CE loss — EAST §3.2.
+        # completion_only_loss=False keeps default full-sequence CE loss — EAST §3.2.
         completion_only_loss=False,
         packing=False,
         learning_rate=args.learning_rate,
@@ -316,7 +349,13 @@ def main():
         max_steps=args.max_steps,
         warmup_steps=args.warmup_steps,
         logging_steps=args.logging_steps,
-        save_steps=args.save_steps,
+        save_steps=args.eval_steps if use_eval else args.save_steps,
+        save_strategy="steps" if use_eval else "steps",
+        eval_strategy="steps" if use_eval else "no",
+        eval_steps=args.eval_steps if use_eval else None,
+        load_best_model_at_end=use_eval,
+        metric_for_best_model="eval_loss" if use_eval else None,
+        greater_is_better=False if use_eval else None,
         bf16=(args.dtype == "bf16"),
         fp16=(args.dtype == "fp16"),
         gradient_checkpointing=True,
@@ -324,14 +363,29 @@ def main():
         seed=args.seed,
         dataset_text_field="text",
         report_to=[],
-        save_total_limit=1,
+        # load_best_model_at_end needs >= 2 checkpoints to keep the best plus the current.
+        save_total_limit=2 if use_eval else 1,
     )
+
+    callbacks = []
+    if use_eval:
+        callbacks.append(EarlyStoppingCallback(
+            early_stopping_patience=args.early_stopping_patience,
+            early_stopping_threshold=args.early_stopping_threshold,
+        ))
+        print(f"Early stopping ENABLED — patience={args.early_stopping_patience}, "
+              f"threshold={args.early_stopping_threshold}, eval_steps={args.eval_steps}",
+              flush=True)
+    else:
+        print(f"Early stopping DISABLED (val_frac=0 or too few rows)", flush=True)
 
     trainer = SFTTrainer(
         model=model,
         args=sft_cfg,
-        train_dataset=ds,
+        train_dataset=train_ds,
+        eval_dataset=eval_ds,
         processing_class=tokenizer,
+        callbacks=callbacks,
     )
 
     print(f"\nStarting training ...", flush=True)
@@ -361,6 +415,7 @@ def main():
             "tokenizer_dir": str(args.tokenizer_dir),
             "output_dir": str(args.output_dir),
             "indices_file": str(args.indices_file) if args.indices_file else None,
+            "corpus_file": str(args.corpus_file) if args.corpus_file else None,
         },
         "train_metrics": train_result.metrics,
         "wall_time_sec": dt,

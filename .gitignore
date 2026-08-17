@@ -22,6 +22,8 @@ results/phase2/**/final/
 # Phase-2 in-progress annotation — commit after all shards complete.
 results/phase2/annot_ot_condB_n2k/matrices.jsonl
 results/phase2/annot_ot_condB_n2k/shard_counter
+results/phase2/annot_ot_condB_n10k/matrices.jsonl
+results/phase2/annot_ot_condB_n10k/shard_counter
 # Ad-hoc / superseded / diagnostic SFT dirs — not durable.
 results/phase2/toy_sft/
 results/phase2/sft_condA_n2k/
@@ -73,3 +75,8 @@ results/gate1/gpt4_pearson_full.json
 
 # Ad-hoc dry-runs — not part of the durable Gate-1 record.
 results/gate1/*_dryrun.json
+
+# Extrinsic eval outputs — hypothesis arrays are large; regeneratable via
+# src/eval/extrinsic.py. Score/config JSONs may be added back explicitly
+# once the numbers are paper-ready.
+results/phase2/extrinsic/
