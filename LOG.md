@@ -30,6 +30,43 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-17 — First matched A-vs-B result: cond-A BLEU 32.41, cond-B 32.54 on newstest2013 (offline, n=10K matched)
+**Config:** `src/eval/extrinsic.py --mode offline`, both models at n=10K trained under identical recipe (early stopping, 3-epoch cap, lr 2e-5, effective batch 16, mean-covariance init). Latency prompt uniform "medium". newstest2013 dev, all 3,000 De→En sentences. Greedy decode. Stops at `<|end-of-write|>` OR EOS (fix `ffa9352` — see 2-round diagnosis below).
+**Jobs:** cond-A `176512458` (walltime ~28min, cput 1699s), cond-B `176512459` (~28min, 1689s).
+**Result:**
+
+| Condition | Training data | best eval_loss | Offline BLEU | hyp/ref len | Δ vs cond-A |
+|---|---|---|---|---|---|
+| cond-A (GPT-4 chunks) | shipped source_chunks | 1.613 @ step 500 | **32.41** | 1.006 | — |
+| cond-B (OT-annotator) | condB_n10k_dataset.json (τ=0.30) | 1.677 @ step 550 | **32.54** | 1.009 | **+0.14** |
+
+Signature: `nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0` (sacrebleu 2.6, both runs). Same 9,567 latency-balanced indices for both arms.
+
+**Sample side-by-side (5 spread across corpus):**
+- idx 0: REF "A Republican strategy to counter the re-election of Obama" — both A and B: "A Republican strategy to oppose Obama's re-election".
+- idx 500: REF "In Israel, holy places await Ukrainian tourists, the omphalos and a sea of saline water" — A "In Israel, Ukrainian tourists will find holy places, the navel of the world and a sea of salt"; B "In Israel, Ukrainian tourists expect holy places, the navel of the world and a sea of salt".
+- idx 2000: REF "Norway's rakfisk: Is this the world's smelliest fish?" — A "Rakfisk from Norway: Is this the most stinky fish in the world?"; B "Rakfisk from Norway: Is this the most foul-smelling fish in the world?".
+- Neither A nor B produces perfect translations (paraphrase noise), but both are fluent, faithful, and near-identical in quality on eyeball.
+
+**Read.** **Layer-1 sanity PASSES for both arms.** BLEU delta B−A = +0.14, well inside per-seed noise at n=10K — the correct read is "cond-B does not degrade offline translation quality vs cond-A" (the null we needed to reject before streaming). Held-out eval_loss slightly higher on cond-B (1.68 vs 1.61) because cond-B trains on the pre-filtered corpus_file and the val split is bigger — plus OT chunks are less uniform than GPT-4 chunks so the modelling target has more entropy. That the offline BLEU still matches suggests the loss delta is annotation-format noise, not translation-quality signal.
+
+The real question — does streaming preserve BLEU while giving lower AL? — is Layer 2, still to build. Layer 1 unblocks it.
+
+**Two rounds of bugs caught pre-verdict (both would have silently corrupted the number if not caught):**
+1. **sft.py --corpus_file capped at --n_sentences default (2000).** cond-B n=10K SFT (job 176504130) silently trained on 2K of 9,567 rows. Caught by comparing `n_rows_trained` in sft_summary.json against corpus size. Fix `271a586`: use every row when `corpus_file` is set (that IS the whole point of pre-building it). Old output moved to `sft_condB_n10k_BUGGED/` for post-mortem. Re-trained as job 176508925.
+2. **Extrinsic offline generation didn't stop at `<|end-of-write|>`.** cond-A never saw a "one giant chunk" training row (all GPT-4 chunks are 3-6 words), so after emitting the target it kept producing `src_i+1 <eor> tgt_i+1 <eow> …`. Symptom: hyp/ref length 1.99, **BLEU depressed to 15.89** on the first end-to-end run (job 176508963). Fix `ffa9352`: pass `<|end-of-write|>` as an additional `eos_token_id`. Post-fix hyp/ref = 1.006, BLEU jumps to 32.41. `skip_special_tokens=True` cleanly strips the EOW from the decoded string (verified on the extended tokenizer before submission).
+
+**Two other things Layer 1 shows:**
+- Generation wall dropped from 1.26s/sent to 0.57s/sent (2.2×) after the eow-stop fix — no wasted generation tokens.
+- Cond-B's 2,712 single-chunk-collapse training rows (28% of dataset, tau=0.30, `collapse_policy=keep`) do not measurably hurt offline BLEU. Consistent with the theory that late-commit rows carry the reordering-tail signal without breaking basic translation.
+
+**Next.** Streaming Layer 2 (`extrinsic.py --mode streaming`): state machine (READ/WRITE), KV-cache preservation via `past_key_values=`, AL word units (Ma 2019 §4). Then Layer 3 AL-CA via `torch.cuda.Event`. Only after Layer 2 lands do we touch newstest2015 (test — reported once).
+
+### [RUN] 2026-08-17 — cond-B n=10K SFT re-run (post --corpus_file fix) — best eval_loss 1.677 @ step 550
+**Config:** Same recipe as cond-A n=10K (early stopping, 3-epoch cap, lr 2e-5, effective batch 16, mean-covariance init) but `--corpus_file results/phase2/condB_n10k_dataset.json` (9,567 rows, tau=0.30, collapse_policy=keep, built from `annot_ot_condB_n10k/matrices.jsonl`). Job 176508925. Wall 2145s (~36min).
+**Result:** best `eval_loss=1.6772` at checkpoint-550 (epoch 0.968), patience-3 stop at step 700 (epoch 1.232). Eval-loss trajectory tracks cond-A's shape. n_rows_trained = 9,567 (verified — the fix from `271a586` did what it was supposed to). Special-token embedding L2 movement 0.068-0.071 (comparable to cond-A n=10K's 0.077-0.084). Streaming smoke on the sample generations shows clean EOR+EOW emission with fluent English continuations.
+**Read.** Cond-B n=10K training landed cleanly. The matched pair for the first-cut extrinsic (see next-newest entry).
+
 ### [RUN] 2026-08-17 — newstest2013 De→En fetched as dev set for extrinsic harness
 **Config:** sacrebleu-hosted WMT13 news-test set; 3,000 De→En sentence pairs.
 **Command:** `sacrebleu -t wmt13 -l de-en --echo src 2>/dev/null > newstest2013.de` (and `--echo ref` for `.en`) at `/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en/`.

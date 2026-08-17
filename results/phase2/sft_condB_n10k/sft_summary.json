@@ -1,0 +1,64 @@
+{
+  "config": {
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B",
+    "tokenizer_dir": "/g/data/ba39/dipankar/simt-tor-26/results/phase2/tokenizer-extended",
+    "output_dir": "results/phase2/sft_condB_n10k",
+    "n_sentences": 2000,
+    "indices_file": null,
+    "corpus_file": "results/phase2/condB_n10k_dataset.json",
+    "max_src_tokens": 80,
+    "seed": 42,
+    "max_length": 1024,
+    "per_device_batch_size": 4,
+    "grad_accum_steps": 4,
+    "learning_rate": 2e-05,
+    "num_epochs": 3.0,
+    "max_steps": -1,
+    "warmup_steps": 50,
+    "logging_steps": 25,
+    "save_steps": 200,
+    "val_frac": 0.05,
+    "eval_steps": 50,
+    "early_stopping_patience": 3,
+    "early_stopping_threshold": 0.001,
+    "dtype": "bf16",
+    "sample_generations": 3
+  },
+  "train_metrics": {
+    "train_runtime": 2141.1581,
+    "train_samples_per_second": 12.733,
+    "train_steps_per_second": 0.796,
+    "total_flos": 2.246839845829632e+16,
+    "train_loss": 1.9514285714285715,
+    "epoch": 1.232394366197183
+  },
+  "wall_time_sec": 2144.8340010643005,
+  "n_rows_trained": 9567,
+  "special_token_embedding_deltas": {
+    "<|end-of-read|>": {
+      "in_emb_delta": 0.07437723129987717,
+      "out_emb_delta": null
+    },
+    "<|end-of-write|>": {
+      "in_emb_delta": 0.07813000679016113,
+      "out_emb_delta": null
+    },
+    "<|low-latency|>": {
+      "in_emb_delta": 0.07138681411743164,
+      "out_emb_delta": null
+    },
+    "<|medium-latency|>": {
+      "in_emb_delta": 0.07084483653306961,
+      "out_emb_delta": null
+    },
+    "<|high-latency|>": {
+      "in_emb_delta": 0.07060906291007996,
+      "out_emb_delta": null
+    }
+  },
+  "env": {
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "cecd0cec6756f3fafccb15b1d1c9219d6ab57b9b"
+  }
+}
