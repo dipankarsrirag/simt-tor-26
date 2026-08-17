@@ -99,7 +99,25 @@ Explained in `06-data.md`. Metric: `A = (1/T) Σ I[a_i ≤ g_i]` where `a_i` is 
 
 **Unlocks:** appendix table in the paper. Reviewers ask for this — EAST has it.
 
-## 10. Multi-language pairs (paper stretch)
+## 10. Cross-annotator SFT (annotator transferability, NEW 2026-08-18)
+
+Once cond-B annotations exist for all three backbones (E2B ✓, E4B in flight, Qwen in flight), build cond-B datasets from each and run off-diagonal SFTs:
+
+| SFT backbone \ Annotator | E2B chunks | E4B chunks | Qwen chunks |
+|---|---|---|---|
+| E2B | ✓ done | queued | queued |
+| E4B | queued | ✓ (self) | queued |
+| Qwen | queued | queued | ✓ (self) |
+
+6 off-diagonal runs. Each uses `--corpus_file results/phase2/condB_n10k_dataset_annotator-<X>.json` where the dataset is built via `scripts/phase2_build_condB_dataset.py --matrices results/phase2/annot_ot_condB_<X>_n10k/matrices.jsonl`.
+
+**Hypothesis H10 (new).** If annotator chunk quality is model-invariant ("the annotator learned something universal about which positions are committable"), then off-diagonal cells should perform comparably to on-diagonal cells. If it's model-coupled ("annotator + SFT are a joint system"), off-diagonals should degrade.
+
+**Prediction.** E4B-annotator → E2B-SFT should be within 1 BLEU of E2B-annotator → E2B-SFT (large model annotates a smaller model's training data well). Reverse (E2B-annotator → E4B-SFT) may show slight lift (smaller-model chunks generalize up).
+
+**Unlocks:** paper's H5-descendant ablation. Directly answers "does the annotator's quality matter independently, or only via matched SFT?"
+
+## 11. Multi-language pairs (paper stretch)
 
 For ACL Findings / Main-track ambition, add at least one non-De→En language pair (Zh→En, Es→En recommended — WMT parallel corpora available). Full pipeline per pair: annotate (10K), SFT cond-A + cond-B, streaming eval. ~5 days per language on gpuhopper.
 
