@@ -1,0 +1,81 @@
+#!/bin/bash
+#PBS -N phase2_extrinsic_streaming_smoke_condB
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=01:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_extrinsic_streaming_smoke_condB.log
+
+# Matched Layer 2 smoke for cond-B n=10K on newstest2013 (100 sents).
+# cond-A smoke landed: wait_k=3 BLEU 15.87 AL 2.31; wait_k=5 BLEU 23.82 AL 3.44;
+# check_argmax BLEU 37.44 AL 16.40 chunks/sent=1.00 (model never commits).
+# Paper claim: cond-B's check_argmax should show chunks/sent > 1 and AL < 16
+# because it saw 28% single-chunk-collapse rows in training (unlike cond-A).
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+DEV_DIR=/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en
+MODEL=results/phase2/sft_condB_n10k/final
+
+echo "===== SMOKE 1: wait_k=3 on cond-B/n=10K ====="
+python -u src/eval/extrinsic.py \
+    --model_dir "$MODEL" \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --n_sentences 100 \
+    --mode streaming --policy wait_k --wait_k 3 \
+    --output results/phase2/extrinsic/smoke_stream_waitk3_condB_n10k.json
+
+echo "===== SMOKE 2: wait_k=5 on cond-B/n=10K ====="
+python -u src/eval/extrinsic.py \
+    --model_dir "$MODEL" \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --n_sentences 100 \
+    --mode streaming --policy wait_k --wait_k 5 \
+    --output results/phase2/extrinsic/smoke_stream_waitk5_condB_n10k.json
+
+echo "===== SMOKE 3: check_argmax on cond-B/n=10K (THE PAPER TEST) ====="
+python -u src/eval/extrinsic.py \
+    --model_dir "$MODEL" \
+    --dev_src "$DEV_DIR/newstest2013.de" \
+    --dev_ref "$DEV_DIR/newstest2013.en" \
+    --latency medium \
+    --n_sentences 100 \
+    --mode streaming --policy check_argmax \
+    --output results/phase2/extrinsic/smoke_stream_checkargmax_condB_n10k.json

@@ -1,0 +1,20 @@
+{
+  "base_tokenizer": "/g/data/po67/dipankar/models/Qwen3.5-2B",
+  "base_vocab_size": 248077,
+  "added_tokens": [
+    "<|end-of-read|>",
+    "<|end-of-write|>",
+    "<|low-latency|>",
+    "<|medium-latency|>",
+    "<|high-latency|>"
+  ],
+  "new_vocab_size": 248082,
+  "n_added": 5,
+  "special_token_ids": {
+    "<|end-of-read|>": 248077,
+    "<|end-of-write|>": 248078,
+    "<|low-latency|>": 248079,
+    "<|medium-latency|>": 248080,
+    "<|high-latency|>": 248081
+  }
+}

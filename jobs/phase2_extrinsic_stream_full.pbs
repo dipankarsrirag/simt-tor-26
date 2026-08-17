@@ -1,0 +1,69 @@
+#!/bin/bash
+#PBS -N phase2_extrinsic_stream_full
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=05:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_extrinsic_stream_full_${MODEL_ARM}.log
+
+# Full 3000-sent newstest2013 streaming eval for one model arm across
+# wait_k ∈ {3,5,7} + check_argmax. Submitted twice: once with MODEL_ARM=condA,
+# once with MODEL_ARM=condB. ~50min per run × 4 = ~3.5h wall + margin.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+# MODEL_ARM is passed via qsub -v MODEL_ARM=condA (or condB).
+: ${MODEL_ARM:?MODEL_ARM env var required (condA or condB)}
+MODEL=results/phase2/sft_${MODEL_ARM}_n10k/final
+DEV_DIR=/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en
+OUT=results/phase2/extrinsic
+
+for POLICY in wait_k_3 wait_k_5 wait_k_7 check_argmax; do
+    case $POLICY in
+        wait_k_*) POL=wait_k; K=${POLICY##*_}; TAG=waitk${K};;
+        *)        POL=check_argmax; K=3; TAG=checkargmax;;
+    esac
+    OUT_FILE="$OUT/full_stream_${TAG}_${MODEL_ARM}_n10k.json"
+    echo ""
+    echo "===== ${MODEL_ARM} | ${TAG} | 3000 sents ====="
+    python -u src/eval/extrinsic.py \
+        --model_dir "$MODEL" \
+        --dev_src "$DEV_DIR/newstest2013.de" \
+        --dev_ref "$DEV_DIR/newstest2013.en" \
+        --latency medium \
+        --mode streaming --policy $POL --wait_k $K \
+        --output "$OUT_FILE"
+done
