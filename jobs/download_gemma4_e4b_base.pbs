@@ -16,12 +16,12 @@
 
 mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
 module load python3/3.10.4
-source /g/data/ba39/dipankar/.venv/bin/activate
+source /scratch/po67/ds9561/.venv-fil/bin/activate
 
 SCRIPT=/g/data/po67/dipankar/models/get_model.py
 DEST=/g/data/po67/dipankar/models/gemma-4-E4B
 
-python "$SCRIPT" google/gemma-3n-E4B model "$DEST"
+python3 "$SCRIPT" google/gemma-3n-E4B model "$DEST"
 
 # Sanity: list what landed.
 ls -la "$DEST"
