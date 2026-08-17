@@ -1,0 +1,22 @@
+#!/bin/bash
+#PBS -N install_matplotlib
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l walltime=00:30:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/install_matplotlib.log
+
+# Install matplotlib into the phase-2 venv (copyq has internet).
+# Needed for scripts/phase2_plot_bleu_al.py Figure 3 generation.
+
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+pip install --quiet matplotlib
+python3 -c "import matplotlib; print(f'matplotlib {matplotlib.__version__} installed OK')"
