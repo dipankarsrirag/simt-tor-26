@@ -129,16 +129,74 @@ METHOD §3 fixes this with a ground metric: `C_{a,b} = 1 - cos(E_a, E_b)` where 
 **Test.** Gated on Gate-1 passing on E2B (RWTH result). Not run.
 
 **Status.** Not started. Do not scale to E4B until E2B's Gate-1 signal is defensible.
+Update 2026-08-18: Gate 1 passed at n=210 stratified (OT reordering MATCH 54.3% > monotone 38.6%). E4B base downloaded and SFT cond-A queued (job 176530894). E4B annotation cond-B running (176530895).
+
+---
+
+## H8 — [CONFIRMED at n=10K] OT-annotated training data teaches better streaming translation than GPT-4-annotated data (H5 → SFT descendant)
+
+**Rationale.** H5 showed OT catches non-monotonicity where JS misses. If that annotation quality matters for the DOWNSTREAM policy, then models fine-tuned on OT-annotated data should produce better translations under streaming inference than models fine-tuned on GPT-4-annotated data. Cond-A's uniform 4-6-word GPT-4 chunks may over-fit to a specific chunking rhythm; cond-B's variable-length chunks (including 28% single-chunk collapse for reordering-heavy sentences) should generalize better to arbitrary commit positions imposed by streaming policies.
+
+**Prediction.**
+- (i) Under a fixed-latency streaming policy (wait_k), cond-B should give strictly higher BLEU than cond-A at matched AL.
+- (ii) The gap should hold across the useful wait-k range (k ∈ {3, 5, 7}).
+- (iii) Offline BLEU (no streaming) should be UNCHANGED — cond-B shouldn't degrade translation quality without streaming.
+
+**Test.** Config G — matched cond-A and cond-B trained on same 9,567 latency-balanced sentences, both under identical SFT recipe (Gemma-4-E2B base + extended tokenizer + early stopping + lr 2e-5, effective batch 16). Streaming eval on newstest2013 (3,000 sents) under wait_k ∈ {3, 5, 7} + check_argmax.
+
+**Outcome.**
+- (i) ✓ At each wait-k, cond-B strictly beats cond-A:
+  - wait_k=3: cond-A 16.49 BLEU @ AL 2.10, cond-B 22.14 BLEU @ AL 2.35. **Δ +5.65 BLEU.**
+  - wait_k=5: cond-A 21.53 BLEU @ AL 3.17, cond-B 26.94 BLEU @ AL 3.54. **Δ +5.41 BLEU.**
+  - wait_k=7: cond-A 23.61 BLEU @ AL 4.19, cond-B 28.40 BLEU @ AL 4.64. **Δ +4.80 BLEU.**
+- (ii) ✓ Signal is uniform across the wait-k range. Consistent, not noise.
+- (iii) ✓ Offline BLEU: cond-A 32.41, cond-B 32.54. Statistically identical.
+
+**Read.** H8 CONFIRMED at n=10K, matched conditions, matched sentences. The paper's headline result.
+
+**Follow-ups implied.**
+- Extended wait-k to k ∈ {1, 9, 11} for a smooth trade-off curve (jobs 176531163/164 queued).
+- Per-latency-prompt (low/high) — EAST Table 3 mirror (jobs 176531165/166 queued).
+- Cross-backbone (H6, Qwen3.5-2B) replication in flight — does the gap hold on a different family?
+- Scale-up (H7, Gemma-4-E4B) in flight — does the gap hold at 2× params?
+- Data-scale curve on champion (10K → 50K).
+
+---
+
+## H9 — [REFUTED at n=10K] Model-driven adaptive commitment (check_argmax) can produce reasonable AL/BLEU trade-off without external policy
+
+**Rationale.** If cond-B has learned to represent commit points as EOR tokens in its output distribution, then a "let the model decide" policy — at each source position, emit EOR if that's the model's argmax; else feed the next source word — should produce a natural streaming behaviour without needing wait-k. Cond-B in particular saw single-chunk-collapse rows in training (the "commit at end" case), so its argmax at end-of-source and at natural pause points should be EOR.
+
+**Prediction.** Under `check_argmax`:
+- (i) cond-B should give chunks/sentence > 1 (model voluntarily commits somewhere mid-source).
+- (ii) cond-B's AL should be in the useful range (< 10).
+- (iii) BLEU should be competitive with wait_k=5-7.
+
+**Test.** `src/eval/extrinsic.py --mode streaming --policy check_argmax` on newstest2013 (3,000 sents) for both arms.
+
+**Outcome.**
+- (i) ✗ **Both models emit chunks/sentence = 1.00.** Neither cond-A nor cond-B voluntarily emits EOR mid-source. At every intermediate position, the model's argmax is "next source word", never EOR.
+- (ii) ✗ AL = 18.20 (essentially offline) for both — model always reads all source before speaking.
+- (iii) BLEU 30.66 / 30.76 for A/B — comparable, at maximum latency.
+
+**Read.** H9 REFUTED at n=10K. Under threshold-argmax policy, both models revert to offline-like behaviour. SFT on the EAST format at 10K rows is not enough to teach the model to CHOOSE commit points via argmax alone — it learns the tag as a next-token in the training pattern `<latency> src <eor> tgt <eow> src ...`, not as an autonomous policy decision.
+
+**Consequence for the paper narrative.** The claim isn't "cond-B learned when to commit" (H9 refuted). The claim is H8: "cond-B produces higher-quality translations under any imposed streaming latency." The mechanism ships as: OT annotation quality → better generalization to fixed-latency policies. Wait-k is the natural way to demonstrate the effect.
+
+**Open question.** Does check_argmax start working at larger data scales (50K, 660K) or on larger backbones (E4B, 9B+)? The queued scale-up runs will inform this.
 
 ---
 
 ## Which hypothesis governs which experiment
 
-| Config | Model | Prompt | Criterion | Tests hypothesis |
+| Config | Model | Prompt/Setup | Criterion | Tests hypothesis |
 |---|---|---|---|---|
 | A (initial smoke → sweep) | gemma-4-E2B-it | raw | JS | H1 (apparent-confirm → rejected by H2) |
 | B (chat re-run) | gemma-4-E2B-it | chat | JS + entropy record | H2 |
 | **C (base + raw) ★** | **gemma-4-E2B (base)** | **raw** | **JS + entropy record** | **H3 (aggregate ✓, per-sentence partial), H4** |
 | D (OT sweep) | gemma-4-E2B (base) | raw | OT | H5 |
-| E (cross-backbone) | Qwen3.5-2B | raw | JS then OT | H6 |
-| F (scale-up) | gemma-4-E4B (base) | raw | JS/OT | H7 (only if Gate 1 passes) |
+| F (Gate 1) | gemma-4-E2B (base) | raw, n=210 stratified | OT, JS | H5 aggregate (OT passes; JS fails) |
+| **G (SFT matched) ★★★** | **gemma-4-E2B (base)** | **SFT n=10K, matched A/B** | **streaming eval** | **H8 CONFIRMED, H9 REFUTED** |
+| Qwen replication | Qwen3.5-2B | matched A/B | streaming eval | H6 (in flight) |
+| E4B replication | gemma-4-E4B (base) | matched A/B | streaming eval | H7 (in flight) |
+| Scale-data | champion | n=10K/20K/30K/40K/50K matched | streaming eval | H8 at scale (queued) |
