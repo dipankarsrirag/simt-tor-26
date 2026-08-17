@@ -155,14 +155,17 @@ def run(cfg: RunConfig) -> Dict:
     wall = time.time() - t0
     print(f"[extrinsic] generation wall: {wall:.1f}s ({wall/len(pairs):.2f}s/sent)", flush=True)
 
-    bleu = sacrebleu.corpus_bleu(hyps, [refs])
-    print(f"[extrinsic] BLEU = {bleu.score:.2f} ({bleu.signature})", flush=True)
+    # sacrebleu 2.6: `.signature` moved off the score object; get it from the metric.
+    metric = sacrebleu.BLEU()
+    bleu = metric.corpus_score(hyps, [refs])
+    signature = str(metric.get_signature())
+    print(f"[extrinsic] BLEU = {bleu.score:.2f} ({signature})", flush=True)
 
     result = {
         "config": asdict(cfg),
         "n_sentences": len(pairs),
         "bleu": bleu.score,
-        "bleu_signature": str(bleu.signature),
+        "bleu_signature": signature,
         "wall_time_sec": wall,
         "sec_per_sentence": wall / len(pairs),
         "hyps": hyps,
