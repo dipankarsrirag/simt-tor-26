@@ -377,7 +377,7 @@ class RunConfig:
 
 
 def run(cfg: RunConfig) -> Dict:
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
     import sacrebleu
 
     print(f"[extrinsic] mode={cfg.mode} latency={cfg.latency}", flush=True)
@@ -386,7 +386,13 @@ def run(cfg: RunConfig) -> Dict:
     print(f"[extrinsic] loading tokenizer {cfg.tokenizer_dir}", flush=True)
     tok = AutoTokenizer.from_pretrained(cfg.tokenizer_dir)
     print(f"[extrinsic] loading model {cfg.model_dir}", flush=True)
-    model = AutoModelForCausalLM.from_pretrained(cfg.model_dir, dtype=torch.bfloat16)
+    cfg_hf = AutoConfig.from_pretrained(cfg.model_dir)
+    if getattr(cfg_hf, "model_type", None) == "gemma3n":
+        from transformers import Gemma3nForCausalLM
+        print("[extrinsic] (model_type=gemma3n; loading text-only Gemma3nForCausalLM)", flush=True)
+        model = Gemma3nForCausalLM.from_pretrained(cfg.model_dir, dtype=torch.bfloat16)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(cfg.model_dir, dtype=torch.bfloat16)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device).eval()
 
