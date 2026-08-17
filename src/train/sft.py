@@ -177,7 +177,16 @@ def load_model_and_tokenizer(model_path: str, tokenizer_dir: Path, dtype: str):
         print(f"Resizing embeddings: +{n_new} rows (mean-covariance init via transformers default)", flush=True)
         model.resize_token_embeddings(len(tokenizer))
     elif n_new < 0:
-        raise RuntimeError(f"tokenizer smaller than model embeddings ({len(tokenizer)} < {orig_vocab})")
+        # Some backbones (Qwen3.5-2B: 248320 model rows vs 248077 base vocab)
+        # ship padded embedding matrices with reserved-but-unused rows for
+        # alignment. Our EAST tokens (ids past base vocab) land INSIDE this
+        # reserved region, so no resize is needed — the model already has
+        # embedding rows initialised for those ids (transformers default).
+        # We do NOT re-init them: the existing values are as valid as
+        # mean-covariance init would be.
+        print(f"  (tokenizer {len(tokenizer):,} < model embeddings {orig_vocab:,}; "
+              f"{orig_vocab - len(tokenizer)} reserved rows exist. Using EAST-token "
+              f"positions within the reserved region — no resize.)", flush=True)
     else:
         print(f"  (no resize needed; sizes already match)", flush=True)
     return model, tokenizer
