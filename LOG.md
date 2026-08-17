@@ -30,6 +30,69 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-17 — newstest2013 De→En fetched as dev set for extrinsic harness
+**Config:** sacrebleu-hosted WMT13 news-test set; 3,000 De→En sentence pairs.
+**Command:** `sacrebleu -t wmt13 -l de-en --echo src 2>/dev/null > newstest2013.de` (and `--echo ref` for `.en`) at `/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en/`.
+**Result:** 3000/3000 aligned. First De line: "Eine republikanische Strategie, um der Wiederwahl von Obama entgegenzutreten". (First attempt captured sacrebleu's stdout download banner into the .de file — re-fetched with stderr silenced.)
+**Read:** Dev set for the extrinsic harness. The pipeline (BLEU + AL + AL-CA under streaming) is validated on newstest2013 before newstest2015 is touched — prevents the reviewer-visible test-set numbers from being reported for a buggy inference loop.
+
+### [RUN] 2026-08-17 — cond-B n=10K OT annotation kickoff (job 176455997 → chained 176459737)
+**Config:** Same 9,567 latency-balanced indices as cond-A n=10K (`results/phase2/phase2_n10k_indices.json`, seed 42, max_src_tokens=80). OT criterion (`ot_divergence_row_batched`), τ grid `{0.30, 0.50, 0.70, 1.00}`. Pre-seeded with the 1,894 rows from `annot_ot_condB_n2k/matrices.jsonl`; chained self-resubmitting 1h shards via `jobs/phase2_annot_ot_condB_n10k_shard.pbs`.
+**Command:** `qsub jobs/phase2_annot_ot_condB_n10k_shard.pbs`.
+**Result (mid-run, shard 1 landed):** 7,246 / 9,567 rows annotated (~76%) at time of log. Batched-OT throughput ~2s/sentence on H200 (was 28s/sentence per-pair — 14× speedup; see companion RUN entry). Shard 2 (176459737) queued in H (afterany-dep) state, will pick up remaining ~2,320 rows on next launch. Verified: no NaNs in matrices.jsonl, `\|end-of-read\|` traces present and non-degenerate on sample walk.
+**Read:** On track to complete ~4 hours after shard-1 start. Next: build cond-B n=10K dataset (`phase2_build_condB_dataset.py --tau 0.30`), then cond-B n=10K SFT with the same recipe as cond-A n=10K (early-stopping wired, same 3-epoch cap, lr 2e-5, effective batch 16).
+
+### [DECISION] 2026-08-17 — PBS chain-at-START pattern for self-resubmitting shards
+**Context.** Cond-B n=10K first shard (176447xxx) hit its 1h walltime; PBS `SIGKILL`d the wrapper *before* the post-python `qsub` could fire. `shard_counter` stuck at 1, no resubmit happened, human intervention required. Same failure mode would have hit the n=2K shard-based pipeline too but we got lucky and it converged within one shard.
+**Options.**
+- (a) Larger walltime + trust python to exit cleanly (fragile — no recovery if OT hits a numerical corner case).
+- (b) Chain the *next* shard's `qsub` at the very *start* of the wrapper, gated on this job's exit status via `-W depend=afterany:$PBS_JOBID`. PBS holds the successor in H state; on any exit (clean, walltime kill, OOM) it launches. First act of the successor is to check for a `DONE` marker and exit cleanly if annotation is complete — avoiding a runaway resubmit loop. `MAX_SHARDS=10` cap as belt-and-suspenders.
+- (c) Move to array jobs. Rejected — indices are stateful (each shard's `--resume` skips what's on disk), array semantics don't match.
+**Chose:** (b). Implemented in `jobs/phase2_annot_ot_condB_n10k_shard.pbs` lines 63–80. Verified end-to-end: shard 176455997 fired shard 176459737 within seconds of its own launch, `qstat` shows shard 2 in H state pinned to shard 1's completion.
+**Revisit if:** any downstream shard-based pipeline (SFT resume, extrinsic-eval resume) shows the same walltime-kill-loses-resubmit failure. Copy this pattern; do not reinvent.
+
+### [RUN] 2026-08-17 — cond-A n=10K SFT with early stopping — best eval_loss 1.613 @ step 500 (job 176432676)
+**Config:** `src/train/sft.py --indices_file results/phase2/phase2_n10k_indices.json --num_epochs 3.0 --per_device_batch_size 4 --grad_accum_steps 4 --learning_rate 2e-5 --warmup_steps 50 --logging_steps 25 --eval_steps 50 --val_frac 0.05 --early_stopping_patience 3 --early_stopping_threshold 0.001 --sample_generations 3 --output_dir results/phase2/sft_condA_n10k`. Gemma-4-E2B base with extended tokenizer, effective batch 16, bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`, mean-covariance embedding init (default; see 2026-08-16 embedding-init fix). 9,567 indices kept after 80-tok + chunk-count filters.
+**Result:** Early stopping fired at step 650 (epoch 1.144). Best `eval_loss=1.6130` at checkpoint-500 (epoch 0.881); patience-3 window `1.6144 → 1.6443 → 1.6368` all failed to improve by 0.001, `load_best_model_at_end=True` restored step-500 weights.
+- **Eval-loss trajectory:** 2.845 (step 50) → 2.441 (100) → 1.795 (150) → 1.665 (200) → 1.660 (250) → 1.640 (300) → 1.635 (350) → 1.631 (400) → 1.625 (450) → **1.613 (500)** → 1.614 → 1.644 → 1.637.
+- **Train wall time:** 1,976s (~33 min) for 650 optimizer steps (~3s/step, effective batch 16 on H200).
+- **Special-token embedding movement L2:** EOR 0.077, EOW 0.079, LOW 0.082, MED 0.083, HIGH 0.084. All ~2× the 2K/3e values (0.10–0.15 was for full 3 epochs at n=2K; here 1.14 epochs at n=10K moves less per token but on 5× data).
+- **Streaming smoke (job 176452xxx, `scripts/phase2_inference_smoke.py`, 40 probes, seed 142):** **40/40 emit both `<|eor|>` AND `<|eow|>` in correct alternation.** Sample gen for idx=405252 (medium latency, prefix "Für Josephus ist"): `es ein Segen, <|eor|> For Josephus it is a blessing <|eow|> dass er die Möglichkeit hat, <|eor|> that he has the opportunity <|eow|> …`.
+**Read:** cond-A n=10K trained faster than a fixed-epoch schedule (early stop at ~1.14 epochs vs 3.0) and generalises: eval loss plateaus at 1.61 while train loss keeps dropping (would overfit). Streaming behaviour is clean. Ready to run the same recipe on cond-B once its annotation completes. Extrinsic harness (BLEU + AL + AL-CA on newstest2013 dev) is the next unblocker.
+
+### [DECISION] 2026-08-17 — Wire early stopping + validation split into src/train/sft.py
+**Context.** cond-A n=2K/3e (176402113) trained for a fixed 357 steps without a held-out eval. No mechanism to detect overfitting or converge-and-stop; scaling to 10K/50K under the same schedule would either underfit (3 epochs too few) or overfit and waste compute. Reviewers will ask "how did you pick 3 epochs?".
+**Options.**
+- (a) Report train-loss trajectory only. Rejected — cannot separate memorisation from generalisation on a corpus this small.
+- (b) Add explicit `--val_frac` (default 0.05), `--eval_steps`, `--early_stopping_patience`, `--early_stopping_threshold` flags; wire `EarlyStoppingCallback` and `load_best_model_at_end=True`. Same recipe used for both A and B — apples-to-apples.
+- (c) Full 3 fixed epochs on all scales, defend post-hoc. Rejected — cost scales linearly, no principled stop.
+**Chose:** (b). Rationale:
+1. Standard practice for SFT; reviewers expect it.
+2. Matched A-vs-B needs both arms to stop at "converged", not at an arbitrary step. If A converges at 1.14 epochs and B needs 2.5, letting each go to its best `eval_loss` is the fair comparison. Enforcing the same wall-clock or step count would penalise whichever converges slower.
+3. Cheap: 5% held-out from the same latency-balanced 9,567; eval every 50 steps adds <5% overhead.
+**Implementation:** `src/train/sft.py` gained `--val_frac`, `--eval_steps`, `--early_stopping_patience` (default 3), `--early_stopping_threshold` (default 0.001). Val split is deterministic (seed 42) and excluded from the train indices logged to `train_indices.json`. `EarlyStoppingCallback` from `transformers.callbacks`.
+**Revisit if:** eval-loss diverges from BLEU/COMET on extrinsic eval (unlikely at n=10K; possible at n=2K). Fallback would be to eval on newstest2013 dev directly every N steps — more expensive but a truer downstream signal.
+
+### [RUN] 2026-08-17 — cond-B n=2K SFT completed (job 176422xxx) — 3 epochs, no early stopping
+**Config:** Same recipe as cond-A/fixed 2K/3e except `--corpus_file results/phase2/condB_n2k_dataset.json` (built from `annot_ot_condB_n2k/matrices.jsonl` at τ=0.30, `collapse_policy=keep`). 1,894 sentences, 3 epochs, batch 16 effective, lr 2e-5, mean-covariance init. Run predates the early-stopping wire — fixed schedule for parity with cond-A/fixed 2K/3e.
+**Result:** 357 steps @ 3.0 epochs, no eval split. Loss 4.74 (25) → 1.13 (250) → 1.11 (350). Final checkpoint saved to `results/phase2/sft_condB_n2k/final/`. Note: `sft_summary.json` failed to serialise (PosixPath from new `--corpus_file` not str()'d) — fixed in-repo, model saved OK.
+**Read:** cond-B pipeline validated end-to-end on n=2K. This is the "does OT-annotated data train at all" smoke. The A-vs-B comparison at 2K is *not* the paper claim (n too small for a defensible extrinsic delta); the 10K result — pending — is what carries the paper.
+
+### [RUN] 2026-08-16 → 08-17 — Batched OT annotator: 14× speedup, matches per-pair within 7e-6 L∞
+**Context.** Per-pair OT (`ot_divergence_pair` → `ot_divergence_row`) at 28s/sentence made cond-B annotation at n=10K a ~78-GPU-hour job. Advisor spec (from previous session): batched log-domain Sinkhorn across all m target positions, one GPU-saturating call per source-prefix length.
+**Implementation:** `src/annotator/criterion.py` gained `ot_divergence_row_batched()`. Log-domain updates:
+```
+log_v[b,j] = log_b[b,j] - logsumexp_i(log_K[b,i,j] + log_u[b,i])
+log_u[b,i] = log_a[b,i] - logsumexp_j(log_K[b,i,j] + log_v[b,j])
+```
+Support handling (the subtle bit): each row's support = topk(p_full) ∪ topk(p_pre). Per-pair impl uses `torch.unique`, giving variable-size supports. Batched impl fixes size to `S = 2*topk` including possible duplicates, then zeros duplicate positions in the probability vectors before renormalising — equivalent semantics under Sinkhorn (duplicates contribute zero mass) without requiring ragged tensors. First-cut kept duplicates in mass-space (extra support for the regulariser to exploit) → L∞ diff 0.033 vs per-pair. Fixed by explicit dedup-by-sorting + gather-back-to-original-order; final L∞ diff 7e-6 on CPU test with (V=500, D=16, m=25, topk=32, eps=0.05, iters=100).
+**Command (verification):** `python scripts/phase2_batched_ot_smoke.py`
+**Result:**
+- CPU smoke: per-pair 4.2s, batched 0.4s (~10× on tiny problem).
+- H200 (cond-B n=10K): ~2s/sentence batched vs 28s/sentence per-pair (~14×).
+- L∞ diff `7e-06`, L1 `4.8e-05`, L2 `9e-06` on 25 pairs → **PASS** within 5e-3 Sinkhorn tolerance.
+**Read:** Pure engineering win, zero semantic drift. `make_ot(batched=True)` default; per-pair path retained (`batched=False`) as reference impl for future correctness checks. cond-B n=10K annotation now compute-feasible in <8h wall (was multi-day). Verified on-corpus by re-annotating the 1,894 n=2K indices with batched impl and checking commit-trace parity against the per-pair run (spot-checked 3 indices, matched to Sinkhorn tolerance).
+
 ### [RUN] 2026-08-16 — Phase 2 Gate 2 PASSES on cond-A after embedding-init bug fix + hand-off state
 **Summary:** Extended tokenizer + trl.SFTTrainer wrapper + full cond-A 2K×3-epoch training + verify/smoke jobs all landed; cond-B OT annotation set up as self-resubmitting 2h shards and left running for the overnight.
 

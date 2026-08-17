@@ -231,3 +231,36 @@ Matched to each config's most-informative τ (chunk-count closest to GPT-4's 4.0
 **Caveat.** Without gold alignment, agreement-with-GPT-4 is *not* tag quality — this is a gate, not a paper result. The RWTH-A intrinsic (EAST App. E.4 mirror) runs in Phase 3 and is not skipped.
 
 **Unlocks:** Phase 2 SFT. Annotate 10K/50K with OT-winning config, matched-condition training (A = GPT-4 tags, B = ours), WMT15 newstest2015 extrinsic eval with BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
+
+## Phase 2 — SFT pipeline (in flight)
+
+Full run details in `LOG.md`; this section is the readable summary.
+
+**Pipeline validated end-to-end.** trl.SFTTrainer 1.10 + Gemma-4-E2B base +
+extended tokenizer (5 EAST tokens at ids 262144–262148, `results/phase2/tokenizer-extended/`)
++ full-sequence CE loss per EAST §3.2 + mean-covariance embedding init. See
+LOG.md 2026-08-16 for the load-bearing embedding-init bug fix.
+
+**Gate 2 PASSES (cond-A, 2K/3e).** 30/30 streaming probes emit `<|eor|>` + `<|eow|>`
+in correct alternation.
+
+**Cond-A n=10K trained (job 176432676).** Early stopping fires at step 650
+(epoch 1.14); best eval_loss 1.613 at checkpoint-500. 40/40 streaming probes
+emit EOR+EOW cleanly under 3-word-prefix + latency-token prompts.
+
+**Batched OT annotator (2026-08-17).** `ot_divergence_row_batched` — log-domain
+Sinkhorn across all m target positions, one GPU-saturating call per source-prefix
+length. 14× speedup on H200 (2s/sent vs 28s/sent) with L∞ diff 7e-6 vs the
+per-pair reference impl on a CPU smoke test. Cond-B n=10K annotation now
+compute-feasible in <8h wall (was multi-day).
+
+**Cond-B n=10K annotation (in flight, ~76% done at last check).** OT criterion,
+τ grid `{0.30, 0.50, 0.70, 1.00}`, same 9,567 indices as cond-A n=10K. Chained
+self-resubmitting 1h shards via `qsub -W depend=afterany` at wrapper START
+(see LOG.md 2026-08-17 decision — prevents PBS SIGKILL from breaking the resume
+chain).
+
+**Extrinsic eval harness (scaffolded, `src/eval/extrinsic.py`).** Layer 1
+(offline BLEU) implemented. Layers 2–3 (streaming state machine + AL/AL-CA)
+pending Layer 1 sanity numbers on newstest2013 dev. WMT13 De→En dev set fetched
+via sacrebleu at `/g/data/po67/dipankar/data/simt-tor-26/wmt13-de-en/`.
