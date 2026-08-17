@@ -187,6 +187,27 @@ Update 2026-08-18: Gate 1 passed at n=210 stratified (OT reordering MATCH 54.3% 
 
 ---
 
+## H10 — [QUEUED] Annotator quality is model-invariant (cross-annotator SFT ablation)
+
+**Rationale.** In our default recipe, the same backbone that annotates the training data also gets fine-tuned on it (matched: annotator = SFT model). This entangles two things:
+(a) intrinsic quality of the annotator's chunk placements ("does the annotator identify positions where a translator can commit safely?");
+(b) matched-representation advantage ("does SFT work better when its training data uses commit points its own embeddings agree with?").
+
+If (a) dominates, chunks derived from any competent annotator should improve any SFT backbone. If (b) dominates, annotator-SFT pairs must be matched or the transfer degrades. Answer determines whether "our annotator is universal" or "our annotator + SFT is a coupled system."
+
+**Prediction.**
+- (i) E4B-annotator → E2B-SFT should be within 1-2 BLEU of E2B-annotator → E2B-SFT (larger annotator → smaller SFT should transfer well; better chunks generalize down).
+- (ii) E2B-annotator → E4B-SFT may show slight LIFT over E4B-annotator → E4B-SFT (a smaller annotator's chunks may transfer up cleanly OR may underspecify — need data).
+- (iii) Cross-family (Gemma ↔ Qwen) should be the harshest test: if their embedding spaces disagree on token-neighborhood structure, cross-family transfer should degrade more than within-family (E2B ↔ E4B).
+
+**Test.** After all three annotations complete (E2B ✓, E4B in flight, Qwen in flight), build 3 cond-B datasets (one per annotator) and run 6 off-diagonal SFTs. Streaming eval at wait_k=5 to keep the sweep tractable. See `07-next_steps.md` §10.
+
+**Status.** Queued. Not started.
+
+**Consequence.** If H10 confirmed, the annotator is a universal preprocessing step — you can annotate once with the largest available backbone and reuse for any SFT. If refuted, the annotator ships as a per-backbone artifact (bigger deployment cost, weaker paper story).
+
+---
+
 ## Which hypothesis governs which experiment
 
 | Config | Model | Prompt/Setup | Criterion | Tests hypothesis |
@@ -200,3 +221,4 @@ Update 2026-08-18: Gate 1 passed at n=210 stratified (OT reordering MATCH 54.3% 
 | Qwen replication | Qwen3.5-2B | matched A/B | streaming eval | H6 (in flight) |
 | E4B replication | gemma-4-E4B (base) | matched A/B | streaming eval | H7 (in flight) |
 | Scale-data | champion | n=10K/20K/30K/40K/50K matched | streaming eval | H8 at scale (queued) |
+| Cross-annotator | E2B, E4B, Qwen (6 off-diagonal SFTs) | matched B, mismatched A | streaming eval | H10 (queued) |
