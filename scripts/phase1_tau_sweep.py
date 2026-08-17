@@ -137,9 +137,19 @@ def main():
     print(f"Loading model from {args.model_path} ...")
     t0 = time.time()
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_path, dtype=torch.bfloat16, low_cpu_mem_usage=True
-    ).to(device)
+    from transformers import AutoConfig
+    cfg = AutoConfig.from_pretrained(args.model_path)
+    if getattr(cfg, "model_type", None) == "gemma3n":
+        # Gemma-4-E4B (gemma3n): skip vision tower, load text-only.
+        from transformers import Gemma3nForCausalLM
+        print("  (model_type=gemma3n; loading text-only Gemma3nForCausalLM)")
+        model = Gemma3nForCausalLM.from_pretrained(
+            args.model_path, dtype=torch.bfloat16, low_cpu_mem_usage=True
+        ).to(device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_path, dtype=torch.bfloat16, low_cpu_mem_usage=True
+        ).to(device)
     model.eval()
     print(f"  loaded in {time.time() - t0:.1f}s")
 

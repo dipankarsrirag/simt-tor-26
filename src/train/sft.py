@@ -146,7 +146,7 @@ def build_dataset(rows: List[Dict]) -> "Dataset":
 
 
 def load_model_and_tokenizer(model_path: str, tokenizer_dir: Path, dtype: str):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
     print(f"Loading extended tokenizer from {tokenizer_dir} ...", flush=True)
     t0 = time.time()
@@ -159,9 +159,21 @@ def load_model_and_tokenizer(model_path: str, tokenizer_dir: Path, dtype: str):
     print(f"Loading model from {model_path} ...", flush=True)
     t0 = time.time()
     torch_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[dtype]
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, dtype=torch_dtype, low_cpu_mem_usage=True
-    )
+    # Gemma-3n (E4B+) ships as multimodal with a vision tower that needs `timm`;
+    # AutoModelForCausalLM instantiates `Gemma3nForConditionalGeneration` which
+    # tries to load the vision tower. We only want the text CausalLM. Route
+    # explicitly to `Gemma3nForCausalLM` when the config declares gemma3n.
+    cfg = AutoConfig.from_pretrained(model_path)
+    if getattr(cfg, "model_type", None) == "gemma3n":
+        from transformers import Gemma3nForCausalLM
+        print(f"  (model_type=gemma3n; loading text-only Gemma3nForCausalLM)", flush=True)
+        model = Gemma3nForCausalLM.from_pretrained(
+            model_path, dtype=torch_dtype, low_cpu_mem_usage=True
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, dtype=torch_dtype, low_cpu_mem_usage=True
+        )
     orig_vocab = model.get_input_embeddings().weight.shape[0]
     print(f"  loaded in {time.time()-t0:.1f}s; original embedding rows: {orig_vocab:,}", flush=True)
 
