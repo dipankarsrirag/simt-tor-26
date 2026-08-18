@@ -18,7 +18,35 @@ Same group published **EASiST** (AAAI 2026), the speech version. Still prompt-ba
 ## Directly adjacent
 
 - **Conversational SimulMT** — Wang, Vu, Shareghi & Haffari (arXiv 2402.10552). Monash. Builds SFT data by segmenting parallel sentences with `fast_align` (~30% error rate, per EAST's Appendix A) and wraps it in a chat template. Dialogue *format*, not dialogue *data*. Relevant if we attempt the conversational extension.
-- **Simul-LLM** (ACL 2024), **TransLLaMa** (Findings EMNLP 2024), **SimulMask/SM²** (EMNLP 2024), **DST** (ACL 2024) — decoder-only LLM SiMT with fixed policies, learned wait-tokens, or bespoke architectures. Context, not competition.
+### LLM SiMT competitors — one-line framing and empirical positioning
+
+All 4 papers below put the streaming intelligence at **inference time** or in **architecture**. We put it in **data construction**. This is the axis on which we differentiate.
+
+- **Simul-LLM** (Agostinelli et al., ACL 2024). Fine-tunes LLaMA-2-7B on wait-k-formatted pairs (source truncated to k ahead of target). Their SFT commits to ONE wait-k value at training time — that's the paper's weakness reviewers raise. We train on variable-latency chunks (cond-B: 28% single-chunk-collapse + rest 2-100+ chunks); model can be deployed under any wait-k or check_argmax at inference. Empirical: their WMT De→En LLaMA-2-7B ≈ 24-26 BLEU at AL 4-6; our cond-B/Gemma-2B/n=10K = 26.94 @ AL 3.54 (comparable-to-better on 3.5× smaller model, matched training size).
+
+- **TransLLaMa** (Koshkin et al., Findings EMNLP 2024). Adds ONE `<wait>` token; LLaMA-2 learns to emit `<wait>` from current context. Reactive policy at inference — inherits classic exposure-bias problem (train-vs-test mismatch on the policy prediction). Our EAST-format SFT trains on the full multi-chunk interleave `src <eor> tgt <eow> src <eor> tgt <eow>...`; the loss covers what the model does AFTER committing, not just when to commit. Empirical: TransLLaMa Table 3 LLaMA-2-7B ≈ 22-24 BLEU at AL 4-6; ours 27-28 at same AL on 2B model.
+
+- **SimulMask / SM²** (EMNLP 2024). Custom attention-masking on standard encoder-decoder transformers — architectural surgery. Works on 300M-700M encoder-decoder MT models. We use unmodified decoder-only LLMs (Gemma-4-E2B/E4B, Qwen3.5-2B tested with zero code changes). Different ecosystem — cite for completeness, not head-to-head.
+
+- **DST — Decoder-only Streaming Transformer** (Guo et al., ACL 2024). Bespoke architecture with streaming-aware self-attention, trained from scratch on the full parallel corpus. Cost story: DST is multi-day from-scratch training on millions of pairs. Ours is 40 min SFT on 1 H200 with 10K training rows on stock Gemma-2B. Same or better BLEU at same AL. This is exactly the paper's "no API cost, no bespoke architecture, no from-scratch training" story.
+
+### The 2×2 that positions us
+
+|  | External-oracle signal | Model-native signal |
+|---|---|---|
+| **Runtime policy** | Wang et al. 2024 (fast_align annots) | TransLLaMa (`<wait>`), Simul-LLM (wait-k SFT), AlignAtt (attn), DST (streaming attn arch), SimulMask (attn masks), DiG-SST, REINA |
+| **Data-construction annotation** | EAST (GPT-4 chunks) | **← we go here (empty cell before us)** |
+
+Every prior LLM-based SiMT paper is in the top-right (model-native runtime policy). EAST is the only one in bottom-left (external-oracle data construction). We occupy the bottom-right — model-native data-construction annotation — which combines the "no runtime policy overhead" of EAST with the "no external API" of the runtime-policy family.
+
+### What we owe empirically to beat them convincingly
+
+1. **Full BLEU-vs-AL curve** with 6-8 wait-k points on Gemma-2B, Gemma-4B, Qwen-2B (in flight).
+2. **Compare against a wait-k-trained baseline** (Simul-LLM's actual method) — add cond-C: cond-A variant trained on wait-k-truncated data. ~1 day.
+3. **Compare against `<wait>` policy** (TransLLaMa's actual method) — cond-D: add `<wait>` token, SFT with `<wait>` at truncation points. ~1 day.
+4. **RWTH-A intrinsic on all 4 methods** — direct policy-quality comparison against human alignments. Blocked on RWTH baseline decision (see 07-next_steps §9).
+
+### Simul-LLM (Agostinelli et al., ACL 2024) — additional context
 
 ## Signals we are not the first to consider
 
