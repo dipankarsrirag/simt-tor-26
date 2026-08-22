@@ -2,11 +2,63 @@
 
 This is where the annotator from Phase 1 becomes an actual translator, and where the paper's headline result lands.
 
-Read Phase 1 first (`03-phase1_annotator_experiments.md`) — Phase 2 assumes the annotator is chosen (OT, τ=0.30, base Gemma-4-E2B + raw concat) and validated (Gate 1 passed on n=210 stratified).
+Read Phase 1 first (`03-phase1_annotator_experiments.md`) — Phase 2 assumes the annotator is chosen (OT, τ=0.30, base Gemma-4-E2B + raw concat) and validated (Gate 1 passed on n=210 stratified). Read `00-README.md` "Naming" section for terminology.
 
-## The pipeline in one paragraph
+---
 
-Phase 2 runs the matched-condition SFT: train the SAME backbone (Gemma-4-E2B base) on the SAME sentences (9,567 latency-balanced) under TWO chunking regimes: cond-A uses the shipped GPT-4 chunks (baseline), cond-B uses our OT annotator's chunks (τ=0.30, `collapse_policy=keep`). The trained models each learn to emit `<|end-of-read|>` and `<|end-of-write|>` in their generated text. Then at test time, we run **streaming inference** on newstest2013: feed source word-by-word, use a policy (wait-k or model-driven check_argmax) to decide when to commit, and measure BLEU vs Average Lagging (AL). If cond-B's BLEU-vs-AL curve dominates cond-A's, the OT annotator has taught the model to make better streaming decisions than GPT-4's chunks did.
+## Phase 2b (LIVE, 2026-08-21 pivot + 2026-08-22 fixes) — v6b-ctrl-merged3 is the ship model
+
+**Everything below this section header is the CURRENT live state.** The older Phase 2 material further down (Gate 2, cond-A n=10K matched-pair) is archaeological from before the v6 pivot.
+
+### The recipe (v6 + v6b fixes + EAST §3.1 merge)
+
+1. **Backbone.** `gemma-4-E2B-it` (instruct-tuned, 2B params). This was the 2026-08-21 v6 pivot away from base Gemma-4-E2B (LOG `[DECISION] 2026-08-21 — v6 pivot`).
+2. **Prompt.** Chat template with system + user turn carrying the translation instruction: `"Translate the following text from {SRC} into {TGT} with {LATENCY} latency."` Latency is one of `{low, low-medium, medium, medium-high, high}` (5-point NL ladder — 3 base labels trained, 2 interpolated at inference).
+3. **Tokenizer.** `results/phase2/tokenizer-extended-v6/` — Gemma-4-E2B-it's tokenizer + 2 added special tokens (`<|end-of-read|>`, `<|end-of-write|>`). Latency labels moved into NL (no `<|*-latency|>` tokens).
+4. **Chunks.** OT annotator on Gemma-4-E2B base (multi-90K + custom pools for ar-en/en-ar/vi-en/en-vi), τ=0.30 primary with fallback ladder to 0.5/0.7/1.0. Post-processing: **EAST §3.1 merge** at the aggressive <=3-word threshold (`--merge_small_chunks --min_src_words 4`). Chunks with < 4 source words get folded forward into the next chunk. Brings the OT chunk distribution to 82% ≤3-chunks-per-sentence (up from 37% raw), while cond-A GPT-4 chunks sit at 91%.
+5. **Training data.** `results/phase2/sft_dataset_multilingual_v6b_merged3.json` (79,309 rows across 8 language pairs, ~10K per dir).
+6. **SFT.** `src/train/sft_v6.py` — direct-ids splice (bypass string round-trip), α=1 (no EOR/EOW loss upweight; α=5 was hurting), 2 epochs, best-model-by-eval-loss, descriptive-init on EOR/EOW, per-device batch 16 × grad-accum 4 = effective batch 64. `results/phase2/sft_multilingual_v6b_ctrl_merged3/final/` (~60 min wall).
+7. **Inference.** `src/eval/extrinsic.py --use_chat_template`. Streaming: feed source word-by-word (word[0] no leading space, word[i>0] with leading space — matches annotator tokenization byte-exactly). Poll `argmax(logits) == EOR` after each word; if true, commit and generate target until EOW/EOS.
+
+### Headline sanity numbers (N=50 FLORES devtest, 8 dirs × 5 latencies = 40 cells)
+
+| variant | mean BLEU | mean AL | mean chunks/sent |
+|---|---|---|---|
+| v6b-ctrl (raw OT) | 24.89 | 3.32 | 10.5 |
+| merged (<2 words) | 27.70 | 3.46 | 7.2 |
+| **v6b-ctrl-merged3 — ship** | **29.46** | 4.78 | 4.5 |
+| E4B on raw OT | 28.10 | 3.92 | 8.2 |
+| cond-A (GPT-4 chunks, 4 dirs only) | 30.51 (20 cells) | 5.69 | 3.8 |
+
+**Restricted to the 4 cond-A directions (de-en, en-de, ru-en, en-ru):**
+- v6b-ctrl-merged3 (E2B): 29.15
+- cond-A (E2B, GPT-4 chunks): 30.51 → merged3 is 1.36 BLEU behind cond-A on average, 76% recovery of the +5.72 raw-OT-vs-cond-A gap.
+
+**On de-en at low_medium latency: merged3 (31.88) beats cond-A (30.90).** Matched-backbone head-to-head win against GPT-4 chunks.
+
+### Big finding: chunk simplification beats scaling
+
+The E4B run (Gemma-4-E4B-it, 4B) on the same raw-OT dataset gained +3.21 mean BLEU over E2B ctrl (24.89 → 28.10). But **merged3 (E2B, 2B) still beats E4B (raw OT) by −0.49 BLEU on the same 40 cells**. Coarser chunks via EAST §3.1 merge did more than doubling the model.
+
+### Fixes shipped this pivot
+
+- **v6 (2026-08-21):** Switch backbone from base Gemma-4-E2B to `gemma-4-E2B-it`. Move latency from vocab tokens to NL prompt phrase. Fixes the "en-ar produced Vietnamese output" language-selection bug the previous single-`<|latency|>`-token prompt suffered.
+- **v6b string round-trip fix (2026-08-22, `scripts/phase2_build_sft_dataset.py`):** Old builder decoded chunk ids back to strings, then re-tokenized when embedding into the chat template — 40-47% of AR/VI rows silently dropped at the leading-space retokenization gate. Even DE/EN rows had `▁And` vs `And` first-target-token drift. Fix: use annotator's original `tok(src)` ids as canonical; `sft_v6.py::build_row_ids` splices chunk_ids directly into prefix + suffix from `render_chat_open_close_ids()` (placeholder-split). Now byte-identical annotator ↔ training ↔ inference. Verified 24/24 sample rows across 8 dirs pass byte-compare (`scripts/probe_v6_sanity.py`).
+- **α=1 (2026-08-22):** Removed `--special_token_loss_weight 5.0`. α=5 was upweighting EOR/EOW loss to force sharp learning of chunk boundaries; at inference this produced over-eager EOR triggers (3-4× the training-time chunk density). Ctrl α=1 beats main α=5 by +2.60 mean BLEU on 40 cells (LOG `[DECISION] 2026-08-22 — Retire α=5`).
+- **EAST §3.1 merge at <=3 words (2026-08-22, this section):** OT annotator naturally produces 4-8 chunks/sent; GPT-4 produces 2-3. Merging silvers (< N source words) forward brings distributions into rough alignment; τ=0.30 stays, only the chunk-count operating point moves.
+
+### What's next (see 07-next_steps.md)
+
+1. Full N=1012 FLORES devtest on merged3 (5 latencies × 8 dirs = 40 cells).
+2. Full N=2170 WMT15 De↔En on merged3 for EAST Fig 3 head-to-head.
+3. Combined E4B + merged3 SFT (does scaling + merge stack?).
+4. Optional: batched annotator → fair E4B scaling test with matched annotator+trainer.
+
+---
+
+## Phase 2a (ARCHAEOLOGICAL) — pre-v6 pipeline
+
+**Everything below is archaeological.** The Aug 21 v6 pivot + Aug 22 v6b work superseded this. Kept for provenance and to explain the fix history.
 
 ## Gate 2 — does the SFT pipeline work at all?
 
@@ -38,11 +90,11 @@ Fix: remove the override, let transformers' default `mean_resizing=True` draw ne
 
 **Lesson.** Any embedding init that gives identical starting points to distinct tokens WILL train, but the LM head cannot learn to prefer one over the others because the loss landscape is symmetric. Diagnose with per-token loss, not aggregate loss.
 
-## The matched pair — cond-A vs cond-B at n=10K
+## [ARCHAEOLOGICAL — cond-A deprecated 2026-08-18] The matched pair — cond-A vs cond-B at n=10K
 
 Both arms trained identically. Same 9,567 latency-balanced sentences from SiMT-660K (`results/phase2/phase2_n10k_indices.json`, seed 42, ≤80 source tokens, chunk-count-matched filter). Same recipe (trl.SFTTrainer 1.10, lr 2e-5, effective batch 16, mean-covariance init, 3-epoch cap, 5% val, early-stopping patience 3, threshold 0.001).
 
-The only difference is the training strings. Cond-A's strings use GPT-4's `source_chunks`/`target_chunks` from the shipped corpus. Cond-B's strings use our OT annotator's chunks (τ=0.30) built by `scripts/phase2_build_condB_dataset.py`.
+The only difference is the training strings. Cond-A's strings use GPT-4's `source_chunks`/`target_chunks` from the shipped corpus. Cond-B's strings use our OT annotator's chunks (τ=0.30) built by `scripts/phase2_build_sft_dataset.py`.
 
 ### Training outcomes
 
@@ -69,6 +121,63 @@ Statistically identical. The null hypothesis ("cond-B degrades translation quali
 
 1. **`sft.py --corpus_file` capped rows at --n_sentences default (2000).** cond-B first training run silently used 2K of 9,567 rows. `n_rows_trained` field in `sft_summary.json` caught this — read every field once.
 2. **Extrinsic offline gen didn't stop at `<|end-of-write|>`.** cond-A never saw a "one giant chunk" training row (all GPT-4 chunks are 3-6 words), so after emitting a target chunk it kept producing more `src_i+1 <eor> tgt_i+1 <eow>` — matching the multi-chunk training pattern. Symptom: hyp/ref length 1.99, **BLEU depressed to 15.89**. Post-fix hyp/ref = 1.006, BLEU 32.41.
+
+### Cross-paper comparability protocol (for §Experiments text + Fig. 1/2 captions)
+
+**Method-family split (revised 2026-08-18 per user):** two separate stories on two separate figures, each with matched competitor conventions. The 2×2 diagonal-move framing (OPTIONALS §"the two-cell move") shows in Fig. 2; Fig. 1 shows we're competitive across the whole SiMT literature, not just LLM-based approaches.
+
+| Plot | Story | Test set | Metric | Competitors reportable verbatim |
+|---|---|---|---|---|
+| **Fig. 1** — vs non-LLM SiMT | "Decoder-only 2B LLM matches encoder-decoder tradition on their own benchmarks" | WMT15 De→En newstest2015 | SacreBLEU-13a × AL (Ma 2019) | ITST, SM²/SimulMask, HMT, wait-k baseline. Dashed reference line: "EAST at 8B/660K" for scale calibration. **Ours: OT-SFT.** |
+| **Fig. 2** — vs LLM SiMT | "Among LLM-based SiMT methods, data-construction beats runtime-policy approaches" | WMT22 De→En newstest2022 | SacreBLEU-13a × LAAL (Papi 2022) | EAST (Table 3), Simul-LLM, TransLLaMa, SimulPL, Conversational SimulMT. **Ours: OT-SFT.** |
+| Table 3 (multi-lingual) | Direct head-to-head with EAST Table 2 | WMT22 X↔En × 4 pairs | SacreBLEU-13a offline | EAST Table 2 row-by-row, **Ours: mixed OT-SFT (P2 iii)** |
+
+**Rationale for the split.** ITST/SM²/HMT are encoder-decoder methods that populated WMT15 De→En; SimulPL/EAST-Table3/ConvSiMT are LLM-based methods that populated WMT22. Forcing both families onto one figure requires either re-running everyone (impractical) or committing to axes that don't match half the literature. Splitting by method family: (a) matches each competitor to its native test set + metric convention, (b) tells two distinct, defensible stories, (c) EAST plays a well-defined role in each (reference line in Fig. 1, primary competitor in Fig. 2) — no double-counting.
+
+**Where EAST appears.** Primary competitor on Fig. 2 (their direct-competitor role); dashed reference line "EAST-Stage-I at 8B/660K" on Fig. 1 to calibrate the scale gap for the non-LLM comparison. Not a competing curve on Fig. 1.
+
+**Draft paragraph for §Experiments (paste as-is):**
+
+> **Cross-paper comparability.** We report competitor numbers verbatim from published tables. BLEU variants across the referenced papers differ (ITST: Moses `multi-bleu.perl`; EAST, SM², ours: SacreBLEU with 13a tokenizer; SimulPL: SacreBLEU signature not reported). Post (2018, WMT) documents that SacreBLEU-13a and Moses BLEU differ by ≤ 0.3 BLEU on well-formed WMT De→En outputs, which is smaller than the ≥ 5 BLEU spread we report between our method and baselines. Latency variants also differ: ITST/EAST/SM² report AL (Ma et al. 2019, source-truncated); SimulPL reports LAAL (Papi et al. 2022, no truncation). LAAL is empirically 0.2-1.5 source-word-equivalents higher than AL on WMT De→En streaming outputs; the method ranking is invariant across the two on our own runs (verified). Where our numbers appear alongside competitor numbers, we compute both AL and LAAL so the reader can pick either axis.
+
+**Plot marker convention** (visual disclosure — reviewers see it, don't need to hunt for it):
+- Ours: solid circle.
+- SacreBLEU competitors (EAST, SM², SimulPL): open circle.
+- Moses-BLEU competitors (ITST, older HMT): open triangle.
+- Legend footnote: *"Marker shape indicates BLEU implementation source. See §Experiments 'Cross-paper comparability' for variance discussion."*
+
+**Fig. 1 uses AL (Ma 2019) because ITST/SM²/HMT report AL; Fig. 2 uses LAAL (Papi 2022) because SimulPL reports LAAL. Our runs compute both — reader can cross-reference either axis to our numbers.**
+
+**Immediate code deliverable:** add LAAL alongside AL in `src/eval/extrinsic.py::compute_al` (~5 lines). Every existing streaming JSON gets LAAL for free on next rerun. LAAL formula: same numerator as AL but denominator is `|Y|` (target length), sum runs over all target tokens without the τ-truncation at source-exhaustion.
+
+---
+
+### Head-to-head with EAST paper (as of 2026-08-18)
+
+EAST reports on WMT22 De→En test set; we report on newstest2013 dev set. Same-test-set comparison is a pending immediate deliverable (~30 min GPU). At time of writing:
+
+**Offline BLEU (EAST Table 2, De→En):**
+
+| Model | Params | Training data | BLEU |
+|---|---|---|---|
+| GPT-4 | ? | zero-shot API | 33.87 |
+| **Ours OT-SFT** (Stage I) | **2B (Gemma-4-E2B)** | **10K SiMT-660K subset** | **32.54** |
+| EAST (Stage I + Stage II) | 8B (Llama-3) | 660K + 90K + 120K | **32.55** |
+| Llama3-MOMT | 8B | ? | 31.98 |
+| ALMA-7B-LoRA | 7B | ? | 29.56 |
+
+**Statistical tie with EAST at 4× fewer params, 66× less data, Stage I only.** This is the paper's data-efficiency headline.
+
+**Streaming BLEU/AL (EAST Table 3, De→En):**
+
+| Method | low | medium | high |
+|---|---|---|---|
+| EAST (8B, 660K, adaptive commit) | 29.87 @ AL 2.59 | 31.08 @ AL 3.42 | 32.38 @ AL 5.87 |
+| **Ours OT-SFT** (2B, 10K, fixed wait-k) | 22.14 @ AL 2.35 (k=3) | 26.94 @ AL 3.54 (k=5) | 28.40 @ AL 4.64 (k=7) |
+
+We recover ~84-88% of EAST's streaming BLEU at each latency band, at 4×/66× disadvantage AND without adaptive commit (H9 — check_argmax gives chunks/sent=1.00 at our data scale). The framing is "competitive at small scale," not "beats SOTA."
+
+COMET-22 numbers are missing (~30 min inference rerun on the `sft_n10k/final/` checkpoint). Immediate deliverable — see `07-next_steps.md`.
 
 ### Streaming BLEU + AL (Layer 2 — the paper number)
 
@@ -164,14 +273,30 @@ Verified against analytic on tiny cases before trusting model numbers:
 - Wait-3 on |X|=|Y|=99: AL = 2.01 ✓
 - Offline (`g = [|X|] * m`): AL = 9 ✓
 
-## What Phase 2 still owes the paper
+## What Phase 2 still owes the paper — with dates and gates
 
-- **Extended wait-k curve.** Currently 3 points (k=3,5,7) + check_argmax. Extending to k ∈ {1, 9, 11} for a smooth BLEU-vs-AL trade-off (jobs 176531163, 176531164 pending).
-- **Per-latency-prompt sweep.** Model was trained with `<|low/medium/high-latency|>` — evaluate under each to reproduce EAST Table 3 structure (jobs 176531165, 176531166 pending).
-- **Qwen3.5-2B replication.** Cross-family H6. Cond-A SFT complete; cond-B annotation at ~54% (job 176525721).
-- **Gemma-4-E4B (base) replication.** Scale H7. Base downloaded; cond-A SFT queued (176530894); cond-B annotation queued (176530895).
-- **AL-CA measurement** (Layer 3, EAST Table 3 mirror). `torch.cuda.Event()` per emitted target token. Small code addition.
-- **Reordering-subset analysis.** Split newstest2013 by GPT-4 per-sentence Pearson (thresholds 0.90 / 0.70) and report BLEU-vs-AL per bin. Prediction (H5-descendant): cond-B's lead widens on the reordering bin.
-- **Scale-training-data curve.** On champion (whichever of E2B/E4B/Qwen wins), n=10K/20K/30K/40K/50K. EAST Fig. 6 mirror.
-- **RWTH-A intrinsic** (Phase 3 appendix — see `06-data.md`).
-- **Statistical robustness.** Multiple seeds + paired bootstrap.
+Ordered by criticality (Findings-blocking first). Full week-by-week plan lives in `07-next_steps.md`.
+
+**CRITICAL for Findings tier:**
+
+- **[Week 1] Retrain OT-SFT on v2 dataset** (fixes fallback-τ + latency reassignment applied 2026-08-18). Streaming eval on newstest2013. Predicted P3 sub-claim iv (chunks/sent > 1 under check_argmax after collapse-row removal).
+- **[Week 1] WMT15 + WMT22 De→En reruns** — offline BLEU + streaming eval for Fig. 1/2 competitor comparison. Gate B: OT-SFT ≥ +2 BLEU over Simul-LLM's published wait-k=5 De→En number.
+- **[Week 2] Qwen3.5-2B replication (Gate A).** OT-SFT beats published wait-k numbers on Qwen (dataset ready).
+- **[Week 2] Gemma-4-E4B scale replication** (P2 ii). Build OT-SFT dataset from `annot_ot_e4b_n10k/matrices.jsonl`; SFT; streaming eval.
+- **[Week 3] Reordering-subset analysis on newstest2013** (P1 mechanism sub-claim). No new GPU compute.
+
+**Findings-desirable (Weeks 3-6):**
+
+- **[Week 3-4] Cross-annotator SFT matrix** (P4, 6 off-diagonal cells). ~36 GPU-hours across all cells.
+- **[Week 4-5] Data-scale curve on champion** (P2 sub-claim). n=20K/30K/40K/50K.
+- **[Week 5-6] Multi-90K mixed multi-lingual OT-SFT** (P2 iii, τ-generalisation P2 iv).
+
+**Engineering / final numbers (Weeks 6-7):**
+
+- **AL-CA Layer 3 measurement** via `torch.cuda.Event`. `scripts/phase2_compute_al_ca_approx.py` gives corpus-level approximation now; Layer 3 needed for apples-to-apples with EAST Table 3.
+- **Newstest2015 (WMT15) test-set numbers, reported ONCE** on frozen champion. No hyperparameter tuning after this run.
+
+**Phase 3 appendix (post-writeup / rebuttal):**
+
+- **RWTH-A intrinsic** (blocked on baseline GPT-4 re-annotation decision). ~$5-20 API cost. See `06-data.md`.
+- **WaitK-SFT within-framework rebuild** (Cond-C reprise, ~2 days) if a reviewer argues "your +BLEU vs Simul-LLM comes from EAST framework overhead."

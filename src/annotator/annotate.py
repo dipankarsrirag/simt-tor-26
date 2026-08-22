@@ -122,6 +122,23 @@ def _prob_at_positions(
     return probs
 
 
+# 2026-08-22: KV-cache reuse across source-prefix lengths was investigated
+# (see scripts/probe_annotator_kv_cache.py) and rejected for Gemma-4-family
+# models. Two blockers:
+#   1. Correctness: HybridCache (sliding-window + global attention + shared
+#      KV) doesn't produce byte-identical logits under progressive extension
+#      + snapshot-and-branch vs single full-forward. Divergence ~3-4% in
+#      target probability distributions on de-en samples.
+#   2. Performance: even without correctness issues, per-iteration cache
+#      cloning (deepcopy of HybridCache pre-allocated buffers) dominates.
+#      Measured 0.49× speedup (i.e., 2× slower) on Gemma-4-E2B.
+# The naive per-prefix full-forward (below) is well-served by Gemma-4's
+# fused attention kernels. Real speedups for annotation come from:
+#   - Batching multiple sentences per forward pass (across sentences, not
+#     across prefixes) — a separate optimization.
+#   - Sharding annotation across multiple GPUs (already done via PBS).
+
+
 def _entropy(probs: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
     """Shannon entropy H(P) in nats. Shape (m,) from (m, V)."""
     p = probs.clamp_min(eps)
@@ -139,17 +156,105 @@ def _enforce_monotone(commit: List[int]) -> List[int]:
     return out
 
 
+# Languages that don't use whitespace between words — SentencePiece's `▁`
+# marker rarely appears, so every token position is effectively a valid
+# streaming boundary (character-level or morpheme-level BPE).
+CJK_LANGS = {
+    "zh", "ja", "ko", "th", "km",
+    "Chinese", "Japanese", "Korean", "Thai", "Khmer",
+    "chinese", "japanese", "korean", "thai", "khmer",
+}
+
+
+def _is_cjk_lang(src_lang: str) -> bool:
+    """True for scripts without whitespace word separators."""
+    return src_lang in CJK_LANGS
+
+
+def _is_word_boundary_before(src_token_ids: List[int], pos: int, tokenizer,
+                              src_lang: str = "en") -> bool:
+    """A commit at token position `pos` reads src_token_ids[..pos-1] and stops
+    BEFORE src_token_ids[pos]. That's a valid word boundary iff pos is at the
+    start of a whitespace-word — i.e., either pos == 0, pos == len (past end),
+    or the token AT pos begins a new word.
+
+    SentencePiece convention: a token begins a new word iff its piece starts
+    with `▁` (U+2581). Punctuation-only tokens (no `▁` prefix) are treated as
+    word-internal — but a "commit right after a period" position is really at
+    (pos of period) + 1, i.e., between the period and the next token; if the
+    next token starts with `▁` that IS a natural boundary.
+
+    For CJK-family languages (zh/ja/ko/th/km) there is no whitespace and no
+    `▁` marker, so **every token position is a valid streaming boundary**.
+    """
+    if pos <= 0 or pos >= len(src_token_ids):
+        return True
+    if _is_cjk_lang(src_lang):
+        return True
+    piece = tokenizer.convert_ids_to_tokens(src_token_ids[pos])
+    return piece.startswith("▁")
+
+
+def _snap_to_word_boundary(commit_i: int, src_token_ids: List[int], tokenizer,
+                            prefer_after_punct: bool = True,
+                            src_lang: str = "en") -> int:
+    """Snap a raw commit position to the nearest valid word boundary AT OR
+    AFTER commit_i (never backwards — the annotator's convergence signal
+    fired here, so we should read at least this much).
+
+    If `prefer_after_punct=True`, also look one position back: if the token
+    IMMEDIATELY before commit_i is a punctuation-only token, the "natural"
+    commit is right after the punctuation — which is what a raw commit_i
+    that lands on a `▁`-prefixed token already is. So this is a no-op unless
+    the raw commit is mid-word, in which case we scan forward for the next
+    `▁` or end.
+
+    For CJK-family languages this is a no-op (every position is a boundary).
+    """
+    if commit_i <= 0 or commit_i >= len(src_token_ids):
+        return commit_i
+    if _is_cjk_lang(src_lang):
+        return commit_i
+    # Already a word boundary?
+    if _is_word_boundary_before(src_token_ids, commit_i, tokenizer, src_lang):
+        return commit_i
+    # Scan forward for the first `▁`-prefixed token or end.
+    p = commit_i + 1
+    while p < len(src_token_ids):
+        if _is_word_boundary_before(src_token_ids, p, tokenizer, src_lang):
+            return p
+        p += 1
+    return len(src_token_ids)
+
+
 def _chunks_from_commit(
     commit: List[int],
     src_token_ids: List[int],
     tgt_token_ids: List[int],
     tokenizer,
     n_src_tok: int,
-) -> tuple[list[str], list[str]]:
+    snap_to_word_boundary: bool = True,
+    src_lang: str = "en",
+) -> tuple[list[str], list[str], list[list[int]], list[list[int]]]:
     """Group consecutive target tokens sharing a commit point into write
-    chunks, and pair each with the read span that just became available."""
+    chunks, and pair each with the read span that just became available.
+
+    Returns 4-tuple: `(source_chunks, target_chunks, source_chunk_ids,
+    target_chunk_ids)`. The `_ids` variants are the raw BPE token id lists
+    for each chunk — downstream training pipelines that consume ids avoid
+    the decode+retokenize round-trip artifact (2026-08-19 fix: chunks
+    ending in `.` retokenize as `▁.` (id 783) after decode+strip vs the
+    original `.` (id 236761), a training/inference alignment bug).
+
+    If `snap_to_word_boundary=True` (default, 2026-08-19), every commit
+    position is snapped forward to the next `▁`-prefixed token. Streaming
+    inference can only fire commits at whitespace-word boundaries, so
+    mid-word commits produce training rows the model can never reproduce
+    at test time. Snapping aligns the training signal with what inference
+    can actually query.
+    """
     if not commit:
-        return [], []
+        return [], [], [], []
     # Consecutive-run grouping over commit[].
     groups: List[tuple[int, int, int]] = []  # (commit_i, tgt_start, tgt_end)
     j = 0
@@ -161,13 +266,28 @@ def _chunks_from_commit(
         j = k + 1
 
     source_chunks, target_chunks = [], []
+    source_chunk_ids, target_chunk_ids = [], []
     prev_src_end = 0
     for commit_i, jstart, jend in groups:
+        if snap_to_word_boundary:
+            commit_i = _snap_to_word_boundary(commit_i, src_token_ids, tokenizer, src_lang=src_lang)
+            if commit_i <= prev_src_end:
+                # Snap collapsed this commit into the previous one — merge
+                # the target span into the previous group instead of emitting
+                # an empty source chunk.
+                if target_chunk_ids:
+                    tgt_span = tgt_token_ids[jstart : jend + 1]
+                    target_chunk_ids[-1] = target_chunk_ids[-1] + list(tgt_span)
+                    target_chunks[-1] = (target_chunks[-1] + " "
+                                          + tokenizer.decode(tgt_span, skip_special_tokens=True).strip()).strip()
+                continue
         src_span = src_token_ids[prev_src_end:commit_i]
         tgt_span = tgt_token_ids[jstart : jend + 1]
         prev_src_end = commit_i
         source_chunks.append(tokenizer.decode(src_span, skip_special_tokens=True).strip())
         target_chunks.append(tokenizer.decode(tgt_span, skip_special_tokens=True).strip())
+        source_chunk_ids.append(list(src_span))
+        target_chunk_ids.append(list(tgt_span))
 
     # If the last commit did not exhaust the source, glue the tail onto the
     # final source chunk — the model must have "read" the whole source by
@@ -178,11 +298,14 @@ def _chunks_from_commit(
         if tail_str:
             if source_chunks:
                 source_chunks[-1] = (source_chunks[-1] + " " + tail_str).strip()
+                source_chunk_ids[-1] = source_chunk_ids[-1] + list(tail)
             else:
                 source_chunks.append(tail_str)
                 target_chunks.append("")
+                source_chunk_ids.append(list(tail))
+                target_chunk_ids.append([])
 
-    return source_chunks, target_chunks
+    return source_chunks, target_chunks, source_chunk_ids, target_chunk_ids
 
 
 @torch.no_grad()
@@ -327,8 +450,8 @@ def annotate_pair(
     # Monotonicity: i*[j] = max(i*[j], i*[j-1])
     commit_mono = _enforce_monotone(commit)
 
-    source_chunks, target_chunks = _chunks_from_commit(
-        commit_mono, src_ids, tgt_ids, tokenizer, n
+    source_chunks, target_chunks, _src_ids, _tgt_ids = _chunks_from_commit(
+        commit_mono, src_ids, tgt_ids, tokenizer, n, src_lang=src_lang
     )
 
     ann = AnnotatedPair(

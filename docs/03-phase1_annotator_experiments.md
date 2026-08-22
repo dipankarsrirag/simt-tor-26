@@ -4,6 +4,8 @@ The runs, in order, with what each tested and what it found. Cross-references `h
 
 Every run also has an entry in `../LOG.md`; this document is the readable summary.
 
+**Currency note (2026-08-22):** Phase 1 pinned the annotator recipe (OT criterion, τ=0.30 primary + fallback ladder, snap-to-word-boundary, base Gemma-4-E2B + raw concat prompt). The 2026-08-22 tau sweep on the multilingual matrices (see LOG `[DECISION] 2026-08-22 — tau=0.30 stays`) confirmed this is still the right operating point: the annotator produces ~6 chunks/sent at τ=0.30, matching EAST's low-latency chunk-density regime. The "too many chunks at inference" issue we surfaced in Phase 2b was a TRAINING problem (α=5 upweight), not an annotator problem. No changes to Phase 1 conclusions.
+
 ## Setup common to all runs
 
 - **Backbone family:** Gemma-4-E2B (both `-it` and base variants), on `/g/data/po67/dipankar/models/gemma-4-{E2B, E2B-it}/`.

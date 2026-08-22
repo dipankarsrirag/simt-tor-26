@@ -1,0 +1,9 @@
+{
+  "n_sents": 100,
+  "policy": "check_argmax",
+  "latency": "medium",
+  "chunks_per_sent_mean": 8.44,
+  "chunks_per_sent_median": 9.0,
+  "n_source_exhausted_without_eor": 1,
+  "verdict": "fire-full-eval"
+}

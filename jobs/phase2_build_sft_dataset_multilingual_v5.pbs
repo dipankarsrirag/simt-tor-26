@@ -1,0 +1,56 @@
+#!/bin/bash
+#PBS -N phase2_build_sft_dataset_multilingual_v5
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=64GB
+#PBS -l jobfs=40GB
+#PBS -l walltime=00:30:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_build_sft_dataset_multilingual_v5.log
+
+# Build the multilingual v5 SFT dataset from all 10 direction matrices.
+# Uses the multi-matrices patched builder (2026-08-20):
+#   --matrices accepts nargs="+" (list of paths)
+#   --corpus_json overrides SiMT-660K default with the multilingual source pool
+# Latency augmentation on for parity with v4 (chunk-merging for latency variants).
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+python -u scripts/phase2_build_sft_dataset.py \
+    --matrices \
+        results/phase2/annot_ot_multi_de-en/matrices.jsonl \
+        results/phase2/annot_ot_multi_en-de/matrices.jsonl \
+        results/phase2/annot_ot_multi_ar-en/matrices.jsonl \
+        results/phase2/annot_ot_multi_en-ar/matrices.jsonl \
+        results/phase2/annot_ot_multi_ru-en/matrices.jsonl \
+        results/phase2/annot_ot_multi_en-ru/matrices.jsonl \
+        results/phase2/annot_ot_multi_zh-en/matrices.jsonl \
+        results/phase2/annot_ot_multi_en-zh/matrices.jsonl \
+        results/phase2/annot_ot_multi_vi-en/matrices.jsonl \
+        results/phase2/annot_ot_multi_en-vi/matrices.jsonl \
+    --corpus_json results/phase2/multilingual_source_pool_v5.json \
+    --tau 0.30 --tau_fallbacks 0.50,0.70,1.00 \
+    --augment_latency \
+    --output results/phase2/sft_dataset_multilingual_v5.json

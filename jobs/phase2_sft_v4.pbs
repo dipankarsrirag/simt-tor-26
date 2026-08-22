@@ -1,0 +1,117 @@
+#!/bin/bash
+#PBS -N phase2_sft_v4
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=01:30:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_sft_v4.log
+
+# v4 SFT — REBUILT v2 dataset (word-boundary snap + token-ids) + fixed_tokenization
+# + descriptive-init + Test B α=5. Consumes `sft_dataset_n10k_v4.json` which is
+# the v2 dataset rebuilt 2026-08-19 with three annotator-side fixes:
+#   (a) commits snapped forward to the next `▁`-prefixed token — no mid-word
+#       commits (streaming can't reproduce those anyway).
+#   (b) raw BPE ids per chunk stored alongside decoded strings — avoids the
+#       decode+retokenize round-trip artifact (chunks ending in `.` retokenize
+#       to `▁.` id 783 vs the original `.` id 236761, a source-alignment bug).
+#   (c) relaxed-τ ladder (unchanged from v2, 0.05% collapse rows vs v1's 28%).
+# Plus training-side interventions:
+#   (d) fixed_tokenization=True: `build_dataset` detects `source_chunk_ids` and
+#       builds `input_ids` directly, bypassing text-based interleave entirely.
+#       Streaming inference then queries argmax at byte-identical token positions.
+#   (e) descriptive-init on EAST specials (semantic starting basins for EOR/EOW).
+#   (f) Test B α=5 (class-imbalance loss upweighting on specials).
+# Post-train smoke prints ADAPTIVITY_VERDICT ~2 min after SFT completes.
+#
+# Expected wall: ~37 min SFT + 2 min smoke = ~40 min. 1h30m walltime = ~2.3× margin.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+OUT_DIR=results/phase2/sft_n10k_v4
+STATE_DIR=$OUT_DIR/pbs_state
+DONE_MARKER=$STATE_DIR/DONE
+mkdir -p "$STATE_DIR"
+
+if [ -f "$OUT_DIR/final/config.json" ]; then
+    echo "SKIP: $OUT_DIR/final/ already exists."
+    touch "$DONE_MARKER"
+    exit 0
+fi
+
+# Chain-at-START — queue the next shard right now so if this one hits walltime
+# the follow-up is already in the queue. sft.py auto-detects checkpoint-*/ dirs
+# and resumes via HF Trainer's `resume_from_checkpoint`. DONE marker (set only
+# after successful `final/` write) short-circuits future chained shards.
+SHARD_COUNTER=$STATE_DIR/shard_counter
+SHARD_N=$(cat "$SHARD_COUNTER" 2>/dev/null || echo 0)
+SHARD_N=$((SHARD_N + 1))
+echo "$SHARD_N" > "$SHARD_COUNTER"
+MAX_SHARDS=3
+
+if [ ! -f "$DONE_MARKER" ] && [ "$SHARD_N" -lt "$MAX_SHARDS" ]; then
+    NEXT_JOB=$(qsub -W depend=afterany:$PBS_JOBID jobs/phase2_sft_v4.pbs)
+    echo "Shard $SHARD_N of $MAX_SHARDS. Next queued: $NEXT_JOB"
+fi
+
+python -u src/train/sft.py \
+    --corpus_file results/phase2/sft_dataset_n10k_v4.json \
+    --per_device_batch_size 4 \
+    --grad_accum_steps 4 \
+    --num_epochs 3.0 \
+    --warmup_steps 50 \
+    --logging_steps 25 \
+    --eval_steps 50 \
+    --learning_rate 2e-5 \
+    --output_dir $OUT_DIR \
+    --keep_checkpoints \
+    --sample_generations 3 \
+    --fixed_tokenization \
+    --descriptive_init \
+    --special_token_loss_weight 5.0 \
+    --post_train_smoke_sents 100
+
+# If we get here, training completed (final/ written). Mark DONE and let the
+# chained follow-up short-circuit at its skip-guard.
+if [ -f "$OUT_DIR/final/config.json" ]; then
+    touch "$DONE_MARKER"
+    echo "SFT complete — marker written to $DONE_MARKER"
+
+    # Post-hoc cleanup: intermediate checkpoint-*/ dirs (kept during training
+    # for walltime-kill resume) can be removed now that final/ is durable.
+    for p in "$OUT_DIR"/checkpoint-*; do
+        [ -d "$p" ] && rm -rf "$p" && echo "Removed $p"
+    done
+fi

@@ -380,6 +380,47 @@ this contract.
 - Reuse job names carefully — resubmit overwrites the log. If you need
   the old one, `mv logs/<name>.log logs/<name>.<date>.log` first.
 
+### 6.8 Post-job hygiene — checkpoint cleanup
+
+**Rule.** After any SFT run completes and `final/` is on disk, delete
+every `checkpoint-*/` in that `output_dir`. Each intermediate checkpoint
+is 3-30 GB depending on backbone; leaving them accumulates 50-300 GB per
+run and fills gdata quickly. `final/` is the best model (via
+`load_best_model_at_end=True`) — nothing downstream reads
+`checkpoint-*/`.
+
+**Automation.** `src/train/sft.py` now does this automatically once
+`final/` is written (added 2026-08-18). Escape hatch: pass
+`--keep_checkpoints` if you need the training trajectory for
+inspection. Default is DELETE.
+
+**Manual cleanup for pre-2026-08-18 SFT runs** (or if a job crashed
+before hitting the cleanup block):
+
+```bash
+# Preview first — never rm -rf without inspecting the list.
+for d in results/phase2/sft_*/; do
+    ls "$d" | grep '^checkpoint-'
+done
+
+# Then delete. Skip any dir that has no final/ — it may still be
+# training, or it may be a crash-mid-save leftover; investigate first.
+for d in results/phase2/sft_*/; do
+    if [ -d "$d/final" ]; then
+        rm -rf "$d"/checkpoint-*/
+    fi
+done
+```
+
+**Never delete `final/`, `sft_summary.json`, `train_indices.json`,
+`README.md`** — those are the durable artefacts that downstream
+(streaming eval, LOG entries, cross-run comparison) all point at.
+
+**Never delete `checkpoint-*/` from a dir that has no `final/`** — the
+job may be still training (check `qstat`) or may have crashed mid-save
+(check the log). The latest complete checkpoint is your only survivor
+in that case; preserve it until you know why `final/` is missing.
+
 ---
 
 ## 7. Git

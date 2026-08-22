@@ -4,13 +4,14 @@ The plan and method as written are **IWSLT-publishable** if the Stage-I primary 
 
 This document is ordered by paper impact, not by effort. Each item states the change, cites the closest prior work I read directly (not just the abstract), and says what the change adds over that prior work.
 
-## Venue verdict
+## Venue verdict (updated 2026-08-18 — Blocker 4 added; see `LOG.md` `[DECISION] 2026-08-18 — Venue targeting` for probability accounting)
 
 | Venue | Verdict | Precondition |
 |---|---|---|
-| **IWSLT** | Yes as-framed | Stage-I lands, RWTH intrinsic result is positive |
-| **ACL/EMNLP Findings** | Plausible after §Blockers 1–3 | Scale framing fixed, REINA distinction sharp, exposure-bias measured |
-| **ACL/EMNLP main track** | No | Would need 8B replication + monolingual-multilingual span |
+| **IWSLT** | Yes as-framed (90-95%) | Stage-I lands, RWTH intrinsic result is positive |
+| **ACL/EMNLP/NAACL Findings** | Plausible (55-85% depending on gates) after §Blockers 1–4 | Scale framing fixed, REINA distinction sharp, exposure-bias measured, **Cond-C/D reproduced at matched conditions (Gate B)** |
+| **COLING main** | Plausible (70-92% depending on gates) | Same as Findings, slightly softer bar |
+| **ACL/EMNLP main track** | No (10-30%) | Would need 8B replication + multi-language pairs + top-decile empirical gap |
 | **ICLR** | No | Wrong shape — this is applied SiMT, not representation learning |
 
 ## The trivial insight everyone missed — sharpened after PDF-depth verification
@@ -158,6 +159,22 @@ That is: **the log-probability-of-the-next-token ratio under full vs partial inp
 - Ranzato et al. 2016 (MIXER) — sequence-level REINFORCE as fix.
 - Zhang et al. 2019 (Confidence-Aware Scheduled Sampling, arXiv 2107.10427) — LLM-era treatment, uses model confidence to gate teacher forcing. Their diagnostic can be adapted; their fix (scheduled sampling on the annotator) is orthogonal to us since our annotator runs once, offline.
 
+### 4. Baseline within-framework ablations — Cond-C (wait-k chunking) and Cond-D (`<wait>`-token variant)
+
+**Problem.** As of 2026-08-18, `RELATEDWORKS.md` argues we beat Simul-LLM (Agostinelli et al., ACL 2024) and TransLLaMa (Koshkin et al., Findings EMNLP 2024) by construction. Findings reviewers will demand a matched-conditions comparison to at least one competitor's *mechanism* transposed into our framework — otherwise the "our chunking is better" claim is defended purely by argument, not experiment.
+
+**Scope caveat (advisor 2026-08-18).** Cond-C is NOT a full Simul-LLM reproduction — Simul-LLM trains on plain `(src_prefix, tgt_prefix)` pairs with no special tokens; ours keeps the full EAST format (`<latency>`, `<|end-of-read|>`, `<|end-of-write|>`) but replaces OT-derived chunk boundaries with a wait-k=5 procedural rule. This is a **within-framework chunking-rule ablation** — cleaner for the mechanism claim (framework held constant, only chunking rule varies) but not a framework-free reproduction. See `docs/02-hypotheses.md` H15 for the reframed scope statement.
+
+**Cond-C (wait-k procedural chunking within EAST) — Gate B, Week 1.** Same 9,567 sentences, same tokens, same SFT recipe. Chunks: first 5 src words → 1 tgt; then 1 src / 1 tgt until exhaustion. `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` (built 2026-08-18) + `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` (submitted as job 176560794). Pass: cond-B ≥ +2 BLEU over Cond-C averaged over wait_k∈{3,5,7}. Failure kills the within-framework chunking-rule claim and forces IWSLT retreat.
+
+**Cond-D (`<|wait|>`-token within EAST) — Week 2.** Single `<|wait|>` token trained at OT-derived commit points; drops full EAST interleave. Under check_argmax at inference: cond-D should give chunks/sent > 1 (cond-B under check_argmax does not — H9); BLEU-at-that-AL expected ≤ cond-B under wait-k at matched AL.
+
+**Rebuttal-cycle framework-free reproductions (Cond-C', Cond-D').** If a reviewer demands plain-Simul-LLM or plain-TransLLaMa reproductions (no EAST tokens), we build them in the rebuttal window. ~2 days each. Not part of initial submission because framework confound would let the reviewer argue *against* our contribution.
+
+**Effort.** Cond-C: done (dataset built, SFT queued). Cond-D: 1 day scripting + ~40min SFT + ~5h streaming eval. Fits inside Weeks 1-2 of `docs/07-next_steps.md`.
+
+**Why this became a blocker only recently.** Original OPTIONALS.md framed cond-C/D as "nice-to-have"; 2026-08-18 advisor pass flagged that competing SFT-based SiMT methods must be compared at matched conditions or reviewers reject on baseline coverage. Cond-C/D moved from OPTIONALS to CRITICAL. Corresponding `[DECISION]` entry in `LOG.md`.
+
 ## Strengthening (non-blocking, real paper-impact per hour)
 
 ### 4. Reordering-correlation Figure 1 — schedule as Phase 0, not "if time"
@@ -276,7 +293,7 @@ The blockers and strengthening items above are about framing, measurement, and p
 ### M0. τ selection provenance — pin the primary choice, don't leave it floating
 
 **Current provenance.** `τ=0.30` is used as the primary threshold in Phase 2's
-cond-B dataset construction (`scripts/phase2_build_condB_dataset.py --tau 0.30`,
+cond-B dataset construction (`scripts/phase2_build_sft_dataset.py --tau 0.30`,
 2026-08-16). It is the Config D-ext winning point from Phase 1 (`docs/experiments.md`
 §Config D-ext table): 90% fire, chunk-count 4.67 (vs GPT-4's 4.06), positional
 Pearson med 0.81. This provenance is currently one line in the build script's
@@ -453,6 +470,118 @@ where `y_j*` is the reference target token and `eta` is a small floor (say 0.1).
 
 **Effort.** Alignment score assembly + weighting in the SFT loss = ~one day. Kendall's τ on awesome-align permutations reuses infra from Blocker 4 (Reordering Figure 1). Score once at data-prep time, cache.
 
+### M8. Word-level OT annotator — source at word-level, target at BPE
+
+**Current.** Annotator indexes both source prefix and target position at BPE level. `D[i, j]` is defined for BPE-position i on source, BPE-position j on target. Chunks are BPE-derived then snapped to whitespace-word boundaries by `_chunks_from_commit`.
+
+**Problem.** BPE-level convergence is **strictly stronger** than word-level convergence. To satisfy `D(P_full[j], P_pre[i][j]) < τ` at BPE level, the model must have converged on the specific subword at position j. A word split into multiple BPEs (e.g., 'Erwärmung' = ' Er' 'wärm' 'ung') requires convergence on each subword. On rows where the *word* is confidently predictable ("Global warming" is a near-certain bigram) but the *subword sequence* has residual noise, BPE-level OT may refuse to commit — producing the single-chunk-collapse rows that ~28% of cond-B/n=10K exhibits. **The collapse-fallback ladder shipped 2026-08-18 patches this at dataset-build time; M8 would solve it at annotation time.**
+
+**Change.** Rewrite the annotator loop to index source prefix by word-boundary BPE positions only (i ∈ {word-boundary offsets in `src_ids`}). Cost: fewer rows in the OT matrix (n_words vs n_bpe). Target remains BPE-indexed — the target-side subword granularity is where the divergence signal lives. Matrix shape becomes `(n_words × m_bpe)` — smaller, cheaper, natively aligned with inference wait-k which is word-indexed.
+
+**Closest prior work.** Wait-k policies (Ma 2019) are word-indexed at inference; alignment-based methods (fast_align, awesome-align) operate on word units. No prior SFT-annotation work has explicitly aligned annotation granularity to inference granularity because the annotation-vs-inference decoupling was implicit — every prior LLM-SiMT method that uses tokens uses them at whatever the model's tokenizer natively produces.
+
+**Distinction.** Ours is not "word-level LLM" (impossible — LLMs are BPE-native) but "word-level *convergence-check on top of BPE-native distributions*." The next-token logits stay BPE. What changes is *which source-prefix lengths we evaluate* — only at word boundaries.
+
+**Expected paper impact.** Resolves the collapse-row cause at source rather than treating the symptom. If Tests A/B/C (soft-criterion, loss-upweight, collapse-skip) all fail to induce adaptivity on cond-B/n=10K, M8 is the next intervention worth trying. Adds one more "method contribution beyond backbone-derived tags" to the paper — the word-alignment claim.
+
+**Effort.** Rewrite ~50 lines of `annotate.py`. Reannotate n=10K (~10-15 GPU-hours on E2B; cheaper than current annotator since fewer prefix passes). Rebuild dataset. Retrain. ~2-3 days end-to-end.
+
+**Δ prior work.**
+- *Technical delta:* index source prefix at word-boundary positions only; unchanged for target.
+- *Story delta:* first SFT-annotation method to align annotation granularity to inference granularity. Wait-k is word-indexed at inference; every prior LLM-SiMT method (EAST included) annotates at token-level and ignores the mismatch. Explicit fix.
+
+---
+
+### M9. KV-cache reuse across source-prefix forward passes  *(priority ↑ 2026-08-20)*
+
+**Current.** Annotator's inner loop is `for i in range(1, n+1): model(input_ids)` — n separate forward passes on `<bos> src[:i] \n target[:m]`. Each iteration starts from scratch. Verified in `src/annotator/annotate.py:398`.
+
+**Problem.** `<bos> src[:i]` and `<bos> src[:i+1]` share the first i+1 positions. Recomputing attention K/V for those positions on every iteration is redundant. On a 24-word source, we redo ~65% of the attention compute unnecessarily.
+
+**Measured cost (2026-08-20 multilingual annotation).** Gemma-4-E2B on H200 achieves ~74 sents/min = **~0.8s/sent** on 10K-row directions. Multilingual v5 (10 directions × 10K rows) takes ~22 GPU-hours end-to-end. Any bigger scale-up (50K per direction, or 660K single-direction) becomes GPU-week rather than GPU-day territory.
+
+**Change.** Two-tier KV cache. Encode source incrementally with `past_key_values`:
+```
+past = model(prompt_ids, use_cache=True).past_key_values  # <bos> + latency token
+for i in range(1, n + 1):
+    # Extend by one source token, save the KV state at prefix length i
+    ext = model(src_ids[i-1:i], past_key_values=past, use_cache=True)
+    past_at_i = ext.past_key_values
+
+    # Teacher-force target using a COPY of past_at_i so we don't pollute
+    # the next iteration's src extension with target-token KV entries
+    tgt_out = model(tgt_ids, past_key_values=deepcopy_kv(past_at_i), use_cache=False)
+    p_pre_i = softmax(tgt_out.logits[at target positions])
+    # ... compute divergence vs p_full, check commit criterion, etc.
+
+    past = past_at_i  # advance for next iteration
+```
+
+**Complexity comparison** (n=20, m=20 typical):
+- Current: n forward passes on (i+m) tokens each → sum ≈ 610 token-equivalents processed
+- KV-cache: n forward passes on (1+m) ≈ 21 tokens each → sum ≈ 420 token-equivalents
+- **Attention cost** (dominant for L≥40): current O(n·(i+m)²) ≈ 320K; optimized O(n·m²) ≈ 8K → **~40× on attention alone**
+- **Realistic wall-clock speedup after FFN overhead + Python loop overhead:** **2-5×**
+
+**Combined with cross-sentence batching** (M9b, below): 5-10× realistic.
+
+**Expected wall.** Current multilingual v5 annotation: ~22 GPU-hours. Post-M9: ~5-10 GPU-hours. Post-M9 + M9b: ~2-3 GPU-hours. Scale-up to 50K per direction becomes tractable in one overnight run.
+
+**Distinction.** No paper contribution — pure engineering optimization. Ships as a code-quality improvement, not a method claim.
+
+**Effort.** ~1 day of code (both tiers) + regression tests to verify identical `D` matrices vs the naïve implementation.
+
+**Verification protocol** (before shipping):
+1. Run KV-cache version on 50 sentences from `annot_ot_n10k` (already-annotated DE-EN subset).
+2. Compare divergence matrices row-by-row against the stored `matrices.jsonl`. L∞ diff must be < 1e-4 (bfloat16 numerical noise floor).
+3. Verify commit points identical for τ ∈ {0.30, 0.50, 0.70}.
+4. Run 500-sentence end-to-end smoke; verify no walltime regression (should be strict speedup).
+
+**M9b. Cross-sentence batching.** After M9 lands, add a bucketed batching layer: group sentences by source-length bucket (±2 tokens), pad within bucket, process 4-8 sentences per forward pass. Requires an attention-mask patch to isolate rows within the batch. Additional 2-4× on top of M9. Non-trivial (~2 days) — worth it only if scaling to 100K+ per direction.
+
+**Priority.** Was "future work" until 2026-08-20. Multilingual v5 annotation demonstrated the cost curve (22 GPU-hours for 100K rows). Now recommended as **prerequisite for any scale-up experiment** (H14 data curve, additional-language extensions, or Multi-90K-scale replication of the full 90K).
+
+---
+
+### M10. vLLM-based annotation refactor
+
+**Current.** Annotator uses HuggingFace `AutoModelForCausalLM` for full-vocab softmax at each target position.
+
+**Change.** Rewrite annotator to use vLLM (0.5+). vLLM's `SamplingParams(prompt_logprobs=N)` returns top-N logprobs at each prompt position — exactly what we need (only top-128 are used in OT support). vLLM has automatic prefix caching across requests — the n source-prefix growth pattern hits the cache perfectly (M9's benefit for free). PagedAttention gives another 2-3× on top of that.
+
+**Expected speedup.** 5-10× on annotation vs current HF-transformers path.
+
+**Non-trivial checks (must verify before committing):**
+- (a) `prompt_logprobs` supports N ≥ 128 (our OT support size). Recent vLLM versions do, but check.
+- (b) Prefix caching works across separate `generate()` calls when the KV cache is served by the same engine process.
+- (c) Reproducibility: vLLM's numerics differ subtly from HF transformers (fused kernels + fp16 accumulation). Verify OT `D` values match within ~1e-3 L∞ on 100-sentence smoke.
+
+**Distinction.** No paper contribution. Pure infrastructure. Enables scale-up experiments (H14 data curve at 50K/100K/660K) which would otherwise be walltime-prohibitive.
+
+**Effort.** ~3-5 days of refactor + validation. Higher risk than M9 due to vLLM's opinionated API.
+
+**Priority ordering:** M9 first (safe, in-tree change, immediate 2-5× win). M10 second (if we need scale-up to 50K+ AND M9 is insufficient). Skip M10 for the initial Findings submission — M9 gets us to 50K comfortably.
+
+---
+
+### M11. Labelled-role prompt in annotator (`Source: ... \n Translation: ...`)
+
+**Current.** Annotator uses raw concat: `<bos> {source} \n {target}`. This is the primary path (`--prompt_mode raw`) chosen for base-LLM matching per H3.
+
+**Problem.** Without a role label, the base LLM may treat the sequence as a mixed-language document rather than as translation. P_pre[i][j] at mid-source positions may favour more source tokens (natural continuation of a German document) over English translation continuations. Subtle bias — likely one of the contributors to the collapse-row rate.
+
+**Change.** Add `--prompt_template` argument to `phase1_tau_sweep.py` and `annotate.py`. Template: `Source:\n{source}\n\nTranslation:\n{target}`. Still raw-concat (no chat template — matches H3), but with explicit role labels.
+
+**Ablation.** Reannotate n=500 smoke on E2B with each template; compare chunk-count distribution + Pearson-med + collapse rate. If labelled prompt reduces collapse rate substantially, roll out to full n=10K.
+
+**Distinction from H2 (chat template).** H2 rejected chat template because -it models under chat gave degenerate Pearson. This is NOT chat template — this is a labelled raw-concat prompt on a base LLM. Different intervention, different signal.
+
+**Expected paper impact.** If it reduces collapse rate by >50%, roll into cond-B pipeline as the default. Adds one line to the paper's method §: "annotator uses labelled raw-concat prompt for role disambiguation."
+
+**Effort.** ~2 GPU-hours on 500-sent smoke; 1 day if rolled out to full n=10K reannotate.
+
+---
+
 ## Method-improvement priority summary
 
 | # | Change | Prior work | Delta over prior | Effort | Priority |
@@ -486,6 +615,7 @@ The paper is a demonstration that two well-populated adjacent subcultures each s
 ## Rejected optionals (do not do these)
 
 - **ICLR reframing.** Wrong venue, wrong effort. Would require reframing as representation-learning / algorithmic-breadth. Don't.
+- **en-es / en-vi / en-ar as originally proposed.** No shipped GPT-4 cond-A baseline; would need API re-annotation (~$50 + calibration risk). Replaced 2026-08-18 with SiMT-Multi-90K's 4 pairs (en-de/en-zh/en-cs/en-ru — GPT-4 chunks shipped, zero API cost, direct match to EAST Table 2). See `../LOG.md` `[DECISION] 2026-08-18 — Multi-lingual expansion via SiMT-Multi-90K`. en-ar as appendix stretch if time.
 - **Speech extension.** EASiST (Fu et al., AAAI 2026) already covers the speech version by the same group. Any speech move is scope creep on top of scope creep.
 - **Multi-token span decisions** (commit to a phrase rather than a token). Interesting research direction, but changes the method beyond "backbone-derived tag placement." Save for follow-up work.
 - **Curriculum learning on the annotation.** Unrelated to the commit criterion claim; would confound the primary A-vs-B comparison.
@@ -499,8 +629,9 @@ The paper is a demonstration that two well-populated adjacent subcultures each s
 | 1 | Scale framing (Option A) | 1 hr text | Blocker → resolved | **Yes, week 12** |
 | 2 | REINA distinction subsection | 4 hr writing | Blocker → resolved | **Yes, week 13** |
 | 3 | Exposure-bias dev diagnostic | 1 day compute + 1 hr text | Blocker → resolved | **Yes, week 5** (before Phase 2) |
+| 4 | **Cond-C (Simul-LLM) + Cond-D (TransLLaMa) reproductions** | 2 days scripting + ~90 min GPU each | **Blocker → resolved (Gate B)** | **Yes, Weeks 1-2** (critical path) |
 | 4 | Reordering Figure 1 | Half day | Motivation figure | **Yes, Phase 0 upgrade** |
-| 5 | 3-seed + paired bootstrap on headline | 3× SFT for primary comparison | Standard credibility | **Yes, Phase 2** |
+| 5 | 3-seed + paired bootstrap on headline | 3× SFT for primary comparison | Standard credibility | **DROPPED 2026-08-18** — signal is +5 BLEU vs ~0.5 BLEU seed noise; add in rebuttal if raised. See `../LOG.md` `[DECISION] 2026-08-18 — Multi-seed protocol dropped`. |
 | 6 | Data-efficiency framing | 1 hr text | Story win | **Yes, week 12** |
 | 7 | Catchy name | 30 min | Memorability | **Yes, week 12** |
 | REINA ablation (KL matches OT) | Already in `EXPERIMENTS.md` §Ablation grid | Amplifies REINA distinction | Already scheduled |

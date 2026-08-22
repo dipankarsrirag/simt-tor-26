@@ -85,3 +85,18 @@ results/phase2/tokenizer-*/tokenizer.json
 # src/eval/extrinsic.py. Score/config JSONs may be added back explicitly
 # once the numbers are paper-ready.
 results/phase2/extrinsic/
+
+# Annotator matrices — 100-300MB each, regeneratable via src/annotator/annotate.py.
+# HOUSEKEEPING §7.1 <10MB rule.
+results/phase2/annot_ot_*/matrices.jsonl
+
+# SFT training datasets — 44-89MB each, regeneratable via scripts/phase2_build_sft_dataset.py.
+results/phase2/sft_dataset_multilingual_*.json
+
+# Multilingual source pool — 38MB, regeneratable via scripts/phase2_build_multilingual_source_pool.py.
+results/phase2/multilingual_source_pool_v5.json
+results/phase2/multilingual_source_pool_v5_per_direction/
+
+# Extended tokenizer — 31MB tokenizer.json regeneratable via scripts/phase2_build_tokenizer_v6.py.
+results/phase2/tokenizer-extended-v6/
+results/phase2/_archive_zh/annot_ot_multi_*/matrices.jsonl
