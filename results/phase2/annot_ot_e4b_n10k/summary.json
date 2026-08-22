@@ -1,0 +1,84 @@
+{
+  "config": {
+    "n_sentences_requested": 50,
+    "n_sentences_kept": 9567,
+    "n_sentences_annotated": 9567,
+    "criterion": "ot",
+    "seed": 42,
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E4B",
+    "max_src_tokens": 80,
+    "taus": [
+      0.3,
+      0.5,
+      0.7,
+      1.0
+    ],
+    "prompt_mode": "raw",
+    "record_entropy": false,
+    "indices_file": "results/phase2/phase2_n10k_indices.json"
+  },
+  "sweep": [
+    {
+      "tau": 0.3,
+      "fire_fraction": 0.861816661440368,
+      "mean_committed_fraction": 0.8464580472637162,
+      "chunks_per_sentence_mean_ours": 6.074108916065643,
+      "chunks_per_sentence_mean_gpt4": 4.024981707954427,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 8073,
+        "n_nan": 1494,
+        "min": -5.255955881681541e-16,
+        "median": 0.8655446791269228,
+        "max": 0.9982189159058635
+      }
+    },
+    {
+      "tau": 0.5,
+      "fire_fraction": 0.9698965192850423,
+      "mean_committed_fraction": 0.9680884207744903,
+      "chunks_per_sentence_mean_ours": 8.995923486986516,
+      "chunks_per_sentence_mean_gpt4": 4.024981707954427,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 9260,
+        "n_nan": 307,
+        "min": -5.255955881681541e-16,
+        "median": 0.9635445652279023,
+        "max": 0.9980123788632027
+      }
+    },
+    {
+      "tau": 0.7,
+      "fire_fraction": 1.0,
+      "mean_committed_fraction": 0.999791223572814,
+      "chunks_per_sentence_mean_ours": 3.1723633322880738,
+      "chunks_per_sentence_mean_gpt4": 4.024981707954427,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 9456,
+        "n_nan": 111,
+        "min": -5.255955881681541e-16,
+        "median": 0.799941914090822,
+        "max": 0.9849694200315184
+      }
+    },
+    {
+      "tau": 1.0,
+      "fire_fraction": 1.0,
+      "mean_committed_fraction": 1.0,
+      "chunks_per_sentence_mean_ours": 1.0,
+      "chunks_per_sentence_mean_gpt4": 4.024981707954427,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 8509,
+        "n_nan": 1058,
+        "min": -8.709165144570909e-16,
+        "median": 0.0,
+        "max": 6.873854856488296e-16
+      }
+    }
+  ],
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "9a622e6162627d63e130edaf2cd03b0ca0dad3dc"
+  }
+}

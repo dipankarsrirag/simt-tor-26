@@ -1,35 +1,38 @@
 """
 Extrinsic eval harness for Phase-2 SFT models (Gate 3 first cut).
 
-Layers, mirroring the advisor spec (2026-08-17):
+Layers:
   1. offline   — full-source generation, BLEU only. Sanity: does the model
-                 translate at all? Both A and B must have offline BLEU > 10
-                 before streaming numbers are worth reading.
-                 STATUS: landed. cond-A n=10K 32.41, cond-B n=10K 32.54 on
-                 newstest2013.
+                 translate at all?
+                 STATUS: landed. OT-SFT n=10K 32.54 on newstest2013.
   2. streaming — state-machine READ/WRITE with KV-cache preservation, per
                  EAST §3.2 inference protocol. Two policies:
                    - check_argmax: after each source word fed, poll model
                      argmax; if EOR, switch to WRITE. Model-driven policy.
                    - wait_k: force EOR after every k source words. AL unit
                      test (should land AL ≈ k on the corpus).
-                 Tracks AL (word units, Ma 2019 §4).
+                 Tracks AL (Ma 2019) + LAAL (Papi 2022) at word units.
   3. AL-CA     — torch.cuda.Event per emitted target token; warmup discard.
                  (Punted from first cut — first-cut ships offline + streaming
-                 BLEU + AL only.)
+                 BLEU + AL only. Corpus-level approximation available via
+                 scripts/phase2_compute_al_ca_approx.py.)
 
-The two conditions being compared:
-  cond-A = trained on shipped GPT-4 chunks (SiMT-660K's source_chunks).
-  cond-B = trained on our OT-annotator chunks (results/phase2/annot_ot_*).
+Single-arm setup since 2026-08-18 late — this harness runs the OT-SFT
+model (dir: `results/phase2/sft_*/final`). Cond-A (GPT-4 chunks) and
+Cond-C (within-framework wait-k baseline) were both removed after the
+decision to compare against past-work published numbers verbatim rather
+than run our own matched baselines. See `../LOG.md`
+`[DECISION] 2026-08-18 late — Remove cond-A entirely` and
+`[DECISION] 2026-08-18 late — Remove Cond-C`.
 
-Both use the SAME extended tokenizer (results/phase2/tokenizer-extended)
-and the same 5 EAST special tokens at ids 262144-262148. Any drift here
-poisons every downstream number — the tokenizer_dir CLI flag is
-non-optional.
+Uses the extended tokenizer with the 5 EAST special tokens
+(`tokenizer-extended` for E2B; `tokenizer-e4b-extended` for E4B;
+`tokenizer-qwen35-2b-extended` for Qwen). Tokenizer drift poisons every
+downstream number — `--tokenizer_dir` is non-optional.
 
-Dev-first discipline (advisor): report numbers on newstest2013 to validate
-the pipeline. newstest2015 is the test set and gets touched exactly once,
-after A-vs-B behaviour on the dev set is understood.
+Dev-first discipline: report numbers on newstest2013. newstest2015 is the
+test set and gets touched exactly once, after dev-set behaviour is
+understood. WMT22 De→En optionally added for EAST Table-3 head-to-head.
 """
 
 from __future__ import annotations
@@ -107,49 +110,81 @@ def generate_offline(
 
 # ─── Layer 2: streaming ────────────────────────────────────────────────
 
-def tokenize_source_by_words(tok, src: str) -> Tuple[List[int], List[List[int]]]:
+def tokenize_source_by_words(tok, src: str, src_lang: str = "en") -> Tuple[List[int], List[List[int]]]:
     """Tokenize source and map BPE tokens to whitespace-word spans.
 
-    Critical to correctness (advisor 2026-08-17): tokenizing " " + word_i
-    in a loop yields different IDs than tokenizing the full source in one
-    shot, because SentencePiece's leading-space and cross-boundary BPE
-    merges depend on context. Model was trained on the full-concatenated
-    form; we must feed the identical token sequence, just paced word by
-    word.
+    2026-08-22 v6b fix: word[0] tokenized WITHOUT leading space; word[i>0]
+    tokenized WITH leading space. This matches the annotator's full-source
+    tokenization (`tok(src_clean)`), which is now what the v6 SFT dataset
+    stores as source_chunk_ids (and what direct-ids-splice training feeds
+    to the model verbatim). So streaming inference produces the same ids
+    the model saw during training.
+
+    Prior v5 behavior (prepend space to EVERY word, including word[0])
+    was correct for the string-round-trip training path where the source
+    was embedded as ` source_chunk` after `<|latency|>` — the leading
+    space imputed the first `▁`. v6 no longer uses that path.
+
+    For CJK-family languages (zh/ja/ko/th/km) there is no whitespace in the
+    source. `src.split()` would return `[src]` (one giant "word"). Split
+    by CHARACTER and tokenize each without a leading space — matches the
+    annotator's no-leading-space treatment for CJK.
 
     Returns:
-      full_ids: the token IDs for the full source (add_special_tokens=False).
+      full_ids: the token IDs for the source (byte-identical to `tok(src)`).
       word_spans: list of len(words), each entry is the list of BPE token
-                  IDs belonging to that whitespace-word.
-
-    Approach: tokenize each word alone WITH a leading space (matches how
-    SentencePiece would produce it mid-sentence), concatenate spans, and
-    verify the concatenated IDs match tokenizing the full string. If they
-    don't (leading-word edge case), fall back to walking the offsets.
+                  IDs belonging to that whitespace-word (or character for CJK).
     """
+    from src.annotator.annotate import _is_cjk_lang  # local import to avoid cycles
+    is_cjk = _is_cjk_lang(src_lang)
+
+    if is_cjk:
+        # CJK: split by character. Each char is its own "word" for streaming.
+        # No leading space — training-time CJK src is fed without ` ` prefix.
+        src_clean = src.replace(" ", "")  # drop any incidental whitespace
+        chars = list(src_clean)
+        spans = []
+        for ch in chars:
+            ids = tok(ch, add_special_tokens=False).input_ids
+            spans.append(ids)
+        naive_ids = [t for s in spans for t in s]
+        full_ids = tok(src_clean, add_special_tokens=False).input_ids
+        if naive_ids == full_ids:
+            return full_ids, spans
+        # Fallback: attribute each BPE to a char span via offset_mapping.
+        # For CJK this rarely differs (mostly 1 BPE per char), but be safe.
+        enc = tok(src_clean, add_special_tokens=False, return_offsets_mapping=True)
+        full_ids = enc.input_ids
+        offsets = enc.offset_mapping
+        spans = [[] for _ in chars]
+        for tok_id, (a, b) in zip(full_ids, offsets):
+            ci = a if a < len(src_clean) else max(0, len(src_clean) - 1)
+            spans[min(ci, len(chars) - 1)].append(tok_id)
+        return full_ids, spans
+
     words = src.split()
-    # Naive first pass: " word_i" tokenized independently. First word has no
-    # leading space at true sentence-start.
+    # word[0]: no leading space (first token gets no `▁`); word[i>0]: leading
+    # space (subsequent word first tokens get `▁`). Matches annotator's
+    # `tok(src_clean)`.
     spans = []
-    for i, w in enumerate(words):
-        prefix = w if i == 0 else " " + w
+    for wi, w in enumerate(words):
+        prefix = w if wi == 0 else " " + w
         ids = tok(prefix, add_special_tokens=False).input_ids
         spans.append(ids)
     naive_ids = [t for s in spans for t in s]
-    # Cross-check: does the naive concat match a full-source tokenization?
+    # Cross-check: concatenated per-word ids should equal full-source
+    # tokenization. If not (rare boundary-merge cases), fall through to
+    # offset_mapping-based attribution.
     full_ids = tok(src, add_special_tokens=False).input_ids
     if naive_ids == full_ids:
         return full_ids, spans
-    # Fallback: use offset_mapping to assign each BPE token to its word.
-    # Some SentencePiece configs merge across whitespace; offsets are truth.
+    # Fallback: use offset_mapping on `src` directly.
     enc = tok(src, add_special_tokens=False, return_offsets_mapping=True)
     full_ids = enc.input_ids
     offsets = enc.offset_mapping
-    # Build char-position -> word-index map.
     word_of_char = [-1] * len(src)
     ci = 0
     for wi, w in enumerate(words):
-        # Skip whitespace before this word.
         while ci < len(src) and src[ci].isspace():
             ci += 1
         for _ in range(len(w)):
@@ -159,12 +194,10 @@ def tokenize_source_by_words(tok, src: str) -> Tuple[List[int], List[List[int]]]
     spans = [[] for _ in words]
     for tok_id, (a, b) in zip(full_ids, offsets):
         if b <= a:
-            # Special tokens or SentencePiece phantom offsets — attach to the
-            # last-seen word (or word 0 if none yet).
-            wi = spans and (len(spans) - 1) if spans[-1] else 0
+            wi = 0 if not words else 0
         else:
-            # Use midpoint char to pick word.
-            wi = word_of_char[(a + b) // 2]
+            mid = (a + b) // 2
+            wi = word_of_char[mid] if mid < len(word_of_char) else -1
             if wi < 0:
                 wi = 0
         spans[wi].append(tok_id)
@@ -189,13 +222,31 @@ def stream_translate(
     src: str,
     latency: str,
     device: str,
-    policy: str = "check_argmax",   # "check_argmax" | "wait_k"
+    policy: str = "check_argmax",   # see below
     wait_k: int = 3,
     max_write_per_chunk: int = 40,
+    commit_prob_thresh: float = 0.10,
+    commit_rank: int = 3,
+    commit_ratio: float = 0.5,
+    src_lang: str = "en",
+    tgt_lang: str = "en",
+    use_chat_template: bool = False,
 ) -> StreamTrace:
     """Streaming inference. Feeds source words one at a time, maintains a
-    KV cache, and lets either the model (check_argmax) or a fixed wait-k
-    schedule drive commit points.
+    KV cache, and lets one of several policies drive commit points.
+
+    Hard-argmax policies (baseline):
+      - check_argmax : commit if argmax(logits) == EOR
+      - wait_k       : commit every k source words (deterministic schedule)
+
+    Soft-commit adaptivity probes (Test A per docs/07-next_steps.md — asks
+    whether learned adaptivity is hidden behind hard argmax):
+      - check_prob_thresh : commit if p(EOR) > commit_prob_thresh
+      - check_rank        : commit if rank(EOR) <= commit_rank
+      - check_ratio       : commit if p(EOR) / p(top_non_eor) > commit_ratio
+                            (top_non_eor = argmax over vocab minus EOR — the
+                            model's best continuation guess if it did NOT
+                            want to commit; typically the next German subword)
 
     Word-unit AL bookkeeping (Ma 2019 §4):
       g_words(i) = number of source words fully read when target word i is
@@ -205,18 +256,46 @@ def stream_translate(
     # Tokenizers + special-token IDs.
     eor_id = tok(END_OF_READ, add_special_tokens=False).input_ids[0]
     eow_id = tok(END_OF_WRITE, add_special_tokens=False).input_ids[0]
-    latency_id = tok(LATENCY_TOKENS[latency], add_special_tokens=False).input_ids[0]
     bos_id = tok.bos_token_id
     eos_id = tok.eos_token_id
 
-    # Byte-identical source token sequence, grouped by word.
-    _, src_word_spans = tokenize_source_by_words(tok, src)
+    # Byte-identical source token sequence, grouped by word (or per-char for CJK).
+    _, src_word_spans = tokenize_source_by_words(tok, src, src_lang=src_lang)
     n_src_words = len(src_word_spans)
 
     trace = StreamTrace(src_words=n_src_words)
 
-    # Feed initial prompt: [BOS] <|latency|>
-    prompt_ids = [bos_id, latency_id] if bos_id is not None else [latency_id]
+    # Feed initial prompt.
+    if use_chat_template:
+        # v6 chat prompt: system + user instruction + generation-prompt.
+        # The user turn carries direction (src→tgt language names) and
+        # latency (natural-language 5-point ladder: low, low-medium, medium,
+        # medium-high, high). Model has been SFT'd to emit EOR/EOW-interleaved
+        # translation as the assistant turn.
+        from src.annotator.east_format import (
+            build_user_instruction, DEFAULT_SYSTEM_PROMPT
+        )
+        user_instr = build_user_instruction(src_lang, tgt_lang, latency)
+        messages = [
+            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+            {"role": "user", "content": user_instr},
+        ]
+        try:
+            prompt_str = tok.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        except Exception:
+            # Fallback: merge system into user
+            messages = [{"role": "user",
+                          "content": DEFAULT_SYSTEM_PROMPT + "\n\n" + user_instr}]
+            prompt_str = tok.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        prompt_ids = tok(prompt_str, add_special_tokens=False).input_ids
+    else:
+        # v1-v5 path: [BOS] <|latency|>
+        latency_id = tok(LATENCY_TOKENS[latency], add_special_tokens=False).input_ids[0]
+        prompt_ids = [bos_id, latency_id] if bos_id is not None else [latency_id]
     input_ids = torch.tensor([prompt_ids], device=device)
     out = model(input_ids=input_ids, use_cache=True)
     kv = out.past_key_values
@@ -279,6 +358,25 @@ def stream_translate(
             commit = (src_words_read % wait_k == 0)
         elif policy == "check_argmax":
             commit = (int(logits.argmax().item()) == eor_id)
+        elif policy == "check_prob_thresh":
+            p = torch.softmax(logits.float(), dim=-1)
+            commit = (float(p[eor_id].item()) > commit_prob_thresh)
+        elif policy == "check_rank":
+            # rank(EOR) among all vocab positions; rank 1 == argmax.
+            eor_logit = logits[eor_id]
+            rank = int((logits > eor_logit).sum().item()) + 1
+            commit = (rank <= commit_rank)
+        elif policy == "check_ratio":
+            p = torch.softmax(logits.float(), dim=-1)
+            p_eor = float(p[eor_id].item())
+            # top non-EOR probability: temporarily mask EOR, take argmax.
+            p_masked = p.clone()
+            p_masked[eor_id] = 0.0
+            p_top_non_eor = float(p_masked.max().item())
+            if p_top_non_eor <= 0.0:
+                commit = True
+            else:
+                commit = ((p_eor / p_top_non_eor) > commit_ratio)
         else:
             raise ValueError(f"unknown policy {policy!r}")
 
@@ -358,6 +456,32 @@ def compute_al(g_words: List[int], x_len: int, y_len: int) -> Optional[float]:
     return s / tau
 
 
+def compute_laal(g_words: List[int], x_len: int, y_len: int) -> Optional[float]:
+    """LAAL (Length-Adaptive Average Lagging) per Papi et al. 2022.
+
+    LAAL(g) = (1/|Y|) * sum_{i=1..|Y|} (g(i) - (i-1) * |X| / |Y|)
+
+    Same numerator terms as AL but summed over ALL target tokens (no
+    truncation at source-exhaustion). Handles over-generation gracefully —
+    target tokens emitted after g(i)=|X| still contribute their lag.
+    Typically LAAL >= AL; delta is 0.2-1.5 source-word-equivalents on WMT
+    De->En streaming outputs (Papi et al. 2022).
+
+    Reported alongside AL so competitor numbers using either variant can
+    be compared to ours — see docs/05-phase2_sft_and_streaming.md
+    'Cross-paper comparability protocol'.
+    """
+    if y_len == 0 or x_len == 0 or not g_words:
+        return None
+    ratio = x_len / y_len
+    n = len(g_words)
+    s = 0.0
+    for i in range(1, n + 1):
+        g = g_words[i - 1]
+        s += g - (i - 1) * ratio
+    return s / n
+
+
 # ─── Runner ────────────────────────────────────────────────────────────
 
 @dataclass
@@ -370,10 +494,16 @@ class RunConfig:
     n_sentences: int
     max_new_tokens: int
     mode: str              # offline | streaming
-    policy: str            # check_argmax | wait_k (streaming only)
+    policy: str            # check_argmax | wait_k | check_prob_thresh | check_rank | check_ratio
     wait_k: int            # k (streaming wait_k policy only)
     max_write_per_chunk: int
     output: str
+    commit_prob_thresh: float = 0.10
+    commit_rank: int = 3
+    commit_ratio: float = 0.5
+    src_lang: str = "en"
+    tgt_lang: str = "en"
+    use_chat_template: bool = False
 
 
 def run(cfg: RunConfig) -> Dict:
@@ -396,7 +526,11 @@ def run(cfg: RunConfig) -> Dict:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device).eval()
 
-    for t in SPECIAL_TOKENS:
+    # v6 tokenizer only has EOR + EOW added (latency is NL, not vocab tokens).
+    # v1-v5 tokenizer has EOR + EOW + 3 latency tokens.
+    from src.annotator.east_format import SPECIAL_TOKENS_V6
+    check_tokens = SPECIAL_TOKENS_V6 if cfg.use_chat_template else SPECIAL_TOKENS
+    for t in check_tokens:
         ids = tok(t, add_special_tokens=False).input_ids
         if len(ids) != 1:
             raise RuntimeError(f"special token {t!r} splits into {len(ids)} ids — tokenizer drift")
@@ -409,6 +543,7 @@ def run(cfg: RunConfig) -> Dict:
     hyps: List[str] = []
     refs: List[str] = [p["ref"] for p in pairs]
     al_values: List[float] = []
+    laal_values: List[float] = []
     stream_stats = {
         "n_source_exhausted_without_eor": 0,
         "n_write_cap_hits": 0,
@@ -425,6 +560,12 @@ def run(cfg: RunConfig) -> Dict:
                 model, tok, p["src"], cfg.latency, device,
                 policy=cfg.policy, wait_k=cfg.wait_k,
                 max_write_per_chunk=cfg.max_write_per_chunk,
+                commit_prob_thresh=cfg.commit_prob_thresh,
+                commit_rank=cfg.commit_rank,
+                commit_ratio=cfg.commit_ratio,
+                src_lang=cfg.src_lang,
+                tgt_lang=cfg.tgt_lang,
+                use_chat_template=cfg.use_chat_template,
             )
             hyps.append(trace.hyp)
             # AL uses self-consistent y_len = len(tgt_word_g). Using
@@ -433,8 +574,11 @@ def run(cfg: RunConfig) -> Dict:
             # yielding an artificially small AL.
             y_len_g = len(trace.tgt_word_g)
             al = compute_al(trace.tgt_word_g, trace.src_words, y_len_g)
+            laal = compute_laal(trace.tgt_word_g, trace.src_words, y_len_g)
             if al is not None:
                 al_values.append(al)
+            if laal is not None:
+                laal_values.append(laal)
             if trace.source_exhausted_without_eor:
                 stream_stats["n_source_exhausted_without_eor"] += 1
             stream_stats["n_write_cap_hits"] += trace.write_cap_hits
@@ -443,7 +587,7 @@ def run(cfg: RunConfig) -> Dict:
                 "idx": i, "src_words": trace.src_words,
                 "y_len_g": y_len_g, "y_len_hyp": len(trace.hyp.split()),
                 "chunks": trace.chunks_committed,
-                "al": al, "g_words": trace.tgt_word_g,
+                "al": al, "laal": laal, "g_words": trace.tgt_word_g,
             })
         else:
             raise ValueError(f"unknown mode {cfg.mode!r}")
@@ -477,6 +621,9 @@ def run(cfg: RunConfig) -> Dict:
         result["al_mean"] = s.mean(al_values) if al_values else None
         result["al_median"] = s.median(al_values) if al_values else None
         result["al_n_defined"] = len(al_values)
+        result["laal_mean"] = s.mean(laal_values) if laal_values else None
+        result["laal_median"] = s.median(laal_values) if laal_values else None
+        result["laal_n_defined"] = len(laal_values)
         result["stream_stats"] = {
             "n_source_exhausted_without_eor": stream_stats["n_source_exhausted_without_eor"],
             "n_write_cap_hits": stream_stats["n_write_cap_hits"],
@@ -484,38 +631,77 @@ def run(cfg: RunConfig) -> Dict:
             "chunks_per_sent_median": s.median(stream_stats["chunk_counts"]),
             "per_sent": stream_stats.get("per_sent", []),
         }
-        print(f"[extrinsic] AL mean={result['al_mean']:.2f}  median={result['al_median']:.2f}  n_defined={result['al_n_defined']}/{len(pairs)}", flush=True)
+        print(f"[extrinsic] AL   mean={result['al_mean']:.2f}  median={result['al_median']:.2f}  n_defined={result['al_n_defined']}/{len(pairs)}", flush=True)
+        if result["laal_mean"] is not None:
+            print(f"[extrinsic] LAAL mean={result['laal_mean']:.2f}  median={result['laal_median']:.2f}  n_defined={result['laal_n_defined']}/{len(pairs)}", flush=True)
         print(f"[extrinsic] chunks/sent mean={result['stream_stats']['chunks_per_sent_mean']:.2f}  median={result['stream_stats']['chunks_per_sent_median']:.1f}", flush=True)
         print(f"[extrinsic] source-exhausted-without-eor: {stream_stats['n_source_exhausted_without_eor']}/{len(pairs)}", flush=True)
         print(f"[extrinsic] write-cap hits: {stream_stats['n_write_cap_hits']}", flush=True)
 
     Path(cfg.output).parent.mkdir(parents=True, exist_ok=True)
-    Path(cfg.output).write_text(json.dumps(result, indent=2, ensure_ascii=False))
-    print(f"[extrinsic] wrote {cfg.output}", flush=True)
+    # Retry on transient NCI /g/data filesystem I/O errors (Errno 5). Observed
+    # on 2026-08-22 low+medium full-FLORES jobs — cost 30 min GPU each.
+    payload = json.dumps(result, indent=2, ensure_ascii=False)
+    for attempt in range(5):
+        try:
+            Path(cfg.output).write_text(payload)
+            print(f"[extrinsic] wrote {cfg.output}", flush=True)
+            break
+        except OSError as e:
+            wait = 2 ** attempt  # 1, 2, 4, 8, 16s
+            print(f"[extrinsic] write attempt {attempt+1}/5 failed ({e!r}); "
+                  f"retrying in {wait}s", flush=True)
+            time.sleep(wait)
+    else:
+        # All 5 retries failed; dump to jobfs as last resort so eval isn't lost.
+        import os as _os
+        fallback = f"{_os.environ.get('PBS_JOBFS', '/tmp')}/{Path(cfg.output).name}"
+        Path(fallback).write_text(payload)
+        print(f"[extrinsic] FALLBACK: wrote {fallback} (target /g/data still failing)", flush=True)
     return result
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True,
-                    help="e.g. results/phase2/sft_condA_n10k/final")
+                    help="e.g. results/phase2/sft_n10k/final (OT-SFT, our method).")
     ap.add_argument("--tokenizer_dir",
                     default="/g/data/ba39/dipankar/simt-tor-26/results/phase2/tokenizer-extended")
     ap.add_argument("--dev_src", required=True)
     ap.add_argument("--dev_ref", required=True)
-    ap.add_argument("--latency", choices=list(LATENCY_TOKENS), default="medium")
+    ap.add_argument("--latency", type=str, default="medium",
+                    help="Latency prompt. v1-v5: {low,medium,high}. v6 chat-template: "
+                         "{low, low-medium, medium, medium-high, high} (5-point NL ladder).")
     ap.add_argument("--n_sentences", type=int, default=-1)
     ap.add_argument("--max_new_tokens", type=int, default=200,
                     help="Offline mode: cap on decoded target tokens.")
     ap.add_argument("--mode", choices=["offline", "streaming"], default="offline")
-    ap.add_argument("--policy", choices=["check_argmax", "wait_k"],
+    ap.add_argument("--policy",
+                    choices=["check_argmax", "wait_k",
+                             "check_prob_thresh", "check_rank", "check_ratio"],
                     default="check_argmax",
-                    help="Streaming policy. wait_k is the AL unit test.")
+                    help="Streaming policy. wait_k is the AL unit test; "
+                         "check_prob_thresh/check_rank/check_ratio are Test A "
+                         "soft-commit adaptivity probes.")
     ap.add_argument("--wait_k", type=int, default=3)
+    ap.add_argument("--commit_prob_thresh", type=float, default=0.10,
+                    help="check_prob_thresh: commit if p(EOR) > this.")
+    ap.add_argument("--commit_rank", type=int, default=3,
+                    help="check_rank: commit if rank(EOR) <= this.")
+    ap.add_argument("--commit_ratio", type=float, default=0.5,
+                    help="check_ratio: commit if p(EOR)/p(top_non_eor) > this.")
     ap.add_argument("--max_write_per_chunk", type=int, default=40,
                     help="Streaming: cap on target tokens per WRITE chunk before "
                          "forcing return to READ. If >5%% of chunks hit this, "
                          "the WRITE-stop mechanism is broken.")
+    ap.add_argument("--src_lang", type=str, default="en",
+                    help="Source language code (en/de/ar/ru/zh/vi/...). Used for CJK "
+                         "streaming routing + v6 chat-template direction phrase.")
+    ap.add_argument("--tgt_lang", type=str, default="en",
+                    help="Target language code (v6 chat-template only, for direction phrase).")
+    ap.add_argument("--use_chat_template", action="store_true",
+                    help="v6 mode: apply Gemma chat template with NL translation instruction. "
+                         "Requires an instruct-tuned backbone + tokenizer-extended-v6.")
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
 
@@ -532,6 +718,12 @@ def main():
         wait_k=args.wait_k,
         max_write_per_chunk=args.max_write_per_chunk,
         output=args.output,
+        commit_prob_thresh=args.commit_prob_thresh,
+        commit_rank=args.commit_rank,
+        commit_ratio=args.commit_ratio,
+        src_lang=args.src_lang,
+        tgt_lang=args.tgt_lang,
+        use_chat_template=args.use_chat_template,
     )
     run(cfg)
 

@@ -65,23 +65,24 @@ def main():
                     default=Path("/g/data/ba39/dipankar/simt-tor-26/results/phase2/extrinsic"))
     args = ap.parse_args()
 
-    # Fixed set of runs we care about.
+    # Fixed set of runs we care about. Only live arm is OT-SFT (paths are
+    # results/phase2/extrinsic/full_stream_<policy>_n10k.json under the new
+    # naming after cond-A/cond-C removal 2026-08-18 late).
     runs = []
     for policy in ["waitk1", "waitk3", "waitk5", "waitk7", "waitk9", "waitk11", "checkargmax"]:
-        for arm in ["condA", "condB"]:
-            p = args.extrinsic_dir / f"full_stream_{policy}_{arm}_n10k.json"
-            if p.exists():
-                runs.append((policy, arm, p))
+        p = args.extrinsic_dir / f"full_stream_{policy}_n10k.json"
+        if p.exists():
+            runs.append((policy, p))
 
     print("=== AL-CA approximation (uniform-per-token, source_rate=1 word/s) ===\n")
-    print(f"{'Policy':<14} {'arm':<8} {'BLEU':<8} {'AL':<8} {'AL-CA':<8} {'sec/tgt':<10} {'chunks/sent':<12}")
-    print("-" * 74)
-    for policy, arm, p in runs:
+    print(f"{'Policy':<14} {'BLEU':<8} {'AL':<8} {'AL-CA':<8} {'sec/tgt':<10} {'chunks/sent':<12}")
+    print("-" * 66)
+    for policy, p in runs:
         r = load_and_compute(p)
         if r is None:
-            print(f"{policy:<14} {arm:<8} (missing per_sent trace)")
+            print(f"{policy:<14} (missing per_sent trace)")
             continue
-        print(f"{policy:<14} {arm:<8} {r['bleu']:<8.2f} {r['al_mean']:<8.2f} {r['al_ca_approx']:<8.2f} {r['sec_per_tgt_word']:<10.4f} {r['chunks_per_sent']:<12.2f}")
+        print(f"{policy:<14} {r['bleu']:<8.2f} {r['al_mean']:<8.2f} {r['al_ca_approx']:<8.2f} {r['sec_per_tgt_word']:<10.4f} {r['chunks_per_sent']:<12.2f}")
 
     print()
     print("Caveats:")

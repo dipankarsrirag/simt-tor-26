@@ -119,6 +119,12 @@ def main():
                          "corpus indices exactly (overrides --n_sentences balanced-"
                          "latency sampling). Used by Gate-1 stratified-by-reordering "
                          "runs (see phase1_precompute_gpt4_pearson.py).")
+    ap.add_argument("--input_json", type=Path, default=None,
+                    help="Path to a pre-built row JSON (list of {source,target,"
+                         "src_lang,tgt_lang,index[,latency]}). Overrides CORPUS "
+                         "and skips latency-balanced sampling — use every row in "
+                         "input_json. Enables multilingual pipeline: sample once "
+                         "per direction, then annotate each direction file.")
     ap.add_argument("--resume", action="store_true",
                     help="Read output_dir/matrices.jsonl if it exists, skip already-"
                          "processed indices, append to the same file. Enables sharded "
@@ -153,19 +159,24 @@ def main():
     model.eval()
     print(f"  loaded in {time.time() - t0:.1f}s")
 
-    with open(CORPUS) as f:
-        rows = json.load(f)
-    print(f"Corpus: {len(rows):,} rows")
-
-    if args.indices_file is not None:
-        idx_spec = json.loads(args.indices_file.read_text())
-        wanted = set(idx_spec["indices"])
-        by_idx = {r["index"]: r for r in rows}
-        picks = [by_idx[i] for i in sorted(wanted) if i in by_idx]
-        print(f"Using {len(picks)} indices from {args.indices_file} "
-              f"(bin thresholds: {idx_spec.get('thresholds', {})})")
+    if args.input_json is not None:
+        with open(args.input_json) as f:
+            rows = json.load(f)
+        print(f"Input pool: {args.input_json} ({len(rows):,} rows)")
+        picks = rows  # use every row — the pool is pre-sampled/pre-filtered
     else:
-        picks = pick_sentences(rows, args.n_sentences, args.seed)
+        with open(CORPUS) as f:
+            rows = json.load(f)
+        print(f"Corpus: {len(rows):,} rows")
+        if args.indices_file is not None:
+            idx_spec = json.loads(args.indices_file.read_text())
+            wanted = set(idx_spec["indices"])
+            by_idx = {r["index"]: r for r in rows}
+            picks = [by_idx[i] for i in sorted(wanted) if i in by_idx]
+            print(f"Using {len(picks)} indices from {args.indices_file} "
+                  f"(bin thresholds: {idx_spec.get('thresholds', {})})")
+        else:
+            picks = pick_sentences(rows, args.n_sentences, args.seed)
     kept = []
     for r in picks:
         n_src = len(tokenizer(r["source"], add_special_tokens=False)["input_ids"])

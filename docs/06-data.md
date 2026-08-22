@@ -2,11 +2,14 @@
 
 All data lives under `/g/data/po67/dipankar/data/simt-tor-26/`, accessed via the `data/` symlink in the repo root. Never committed.
 
+**Currency note (2026-08-22):** the v6b multilingual pipeline uses 3 additional data assets not in the table below: (1) `results/phase2/multilingual_source_pool_v5.json` — 96K rows across 10 directions (8 covered after zh drop) sourced from SiMT-Multi-90K + custom Vi/Ar pools; (2) `results/phase2/annot_ot_multi_*/matrices.jsonl` — the 8 per-direction OT annotator matrices used by v6b builders; (3) **FLORES-200 devtest** at `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest/*.devtest` — 1012 sents × 200 languages, our primary streaming eval set for v6b (all BLEU/AL numbers in `05-phase2_sft_and_streaming.md` Phase 2b section).
+
 | Asset | Path under `data/` | Rows | Role | Fetch |
 |---|---|---|---|---|
 | `SiMT-De-En-660K` | `SiMT-De-En-660K/SiMT-De-En-660K.json` | 660,876 | Primary SFT data. GPT-4-chunked at 3 latency levels. | `scripts/download_data.sh` (HF) |
-| `SiMT-Multi-90K` | `SiMT-Multi-90K/` | 90,700 | Stretch — Stage II multilingual. | `scripts/download_data.sh` (HF) |
-| WMT15 De→En `newstest2015` | `wmt15-de-en/newstest2015.{de,en}` | 2,169 | Primary SiMT test (EAST Fig. 3). | `sacrebleu -t wmt15 -l de-en` |
+| `SiMT-Multi-90K` | `SiMT-Multi-90K/` | 90,700 | Stretch — Stage II multilingual. **Also the source of cond-A-v6b's GPT-4 chunks** in the matched-backbone head-to-head (2026-08-22). | `scripts/download_data.sh` (HF) |
+| **FLORES-200 devtest** | via `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/` | 1012 × 200 langs | **Primary streaming eval set for v6b** (2026-08-22). | HF `openlanguagedata/flores_plus` |
+| WMT15 De→En `newstest2015` | `wmt15-de-en/newstest2015.{de,en}` (also `.../simul-mt/data/eval/de-en/wmt15.*`) | 2,169 | EAST Fig. 3 head-to-head test set. | `sacrebleu -t wmt15 -l de-en` |
 | WMT22 8 pairs | `wmt22/*/newstest2022.*` | ~2K each | Stretch multilingual + document-level test. | `sacrebleu -t wmt22` |
 | **RWTH De→En gold alignments** | `rwth-de-en/DeEn/` | **509** | **Phase 3 appendix eval (EAST App. E.4). Deferred from Gate 1 per 2026-08-16 decision.** | **Manual browser step, see below.** |
 

@@ -1,224 +1,109 @@
 # Hypotheses driving the experiments
 
-The project's central falsifiable claim is in `../CLAUDE.md`. The hypotheses below are the working ones that motivate each Phase-1 experiment. Read this before `experiments.md` — experiments trace back here.
+The project's central falsifiable claim is in `../CLAUDE.md`. Four paper-facing hypotheses (P1-P4) structure the Results section; each has **claim / prediction / test / status**. Consolidated 2026-08-18 late from an earlier working set of 23 exploratory hypotheses (H1-H23) that guided individual experiments; the H* labels are gone and replaced by the four P* ones. Git history preserves the archaeology.
 
-Each hypothesis has: **rationale** (why we'd expect it to be true or false), **prediction** (what we'd observe if it holds), **test** (the experiment that decides), **outcome** (where done).
+**Gate status updated 2026-08-22.** The Aug 21 v6 pivot and Aug 22 v6b work reintroduced a matched-backbone cond-A (Multi-90K GPT-4 chunks) baseline, replacing the "past-work verbatim" strategy from Aug 18. Gate A/B are being deprecated in favor of the new head-to-head:
 
----
-
-## H1 — [REJECTED] JS-divergence is degenerate as a commit criterion on Gemma-4-E2B
-
-**Rationale.** METHOD §3 hypothesises OT is the right criterion because JS/KL ignore the vocabulary's semantic geometry. If JS is a bad criterion for this task, we should see it fail even in the easiest setup.
-
-**Prediction.** If JS on Gemma-4-E2B is degenerate, then across the tau grid `{0.02, ..., 0.30}` we'll see per-sentence Pearson(i*/n, j/m) rise monotonically toward 1 with tau, and JS should be no better than uniform-random monotone chunk placement at any tau.
-
-**Test.** Config A — `gemma-4-E2B-it` with raw-concat prompt, JS at 6 tau values, 48 sentences.
-
-**Outcome.** *Apparently confirmed* — JS was worse than random-at-matched-latency at every tau (JS Pearson_med > random Pearson_med by 2–15 pp). But this was overturned by H2 below — the setup was confounded.
-
-**Rejected on:** H2's fix (chat template) closed the JS-vs-random gap and revealed the confound was the prompt, not the criterion.
+- **Gate A' (new, live 2026-08-22)** = P1's headline on the matched-backbone comparison: our v6b-ctrl-merged3 (OT chunks + EAST §3.1 merge) matches or beats cond-A (GPT-4 chunks) on the 4 overlapping directions (de-en, en-de, ru-en, en-ru), and dominates on ar/vi where cond-A can't reach. **Status:** merged3 beats cond-A on de-en at low_medium latency (31.88 vs 30.90), ties on en-de, still losing by 1-2 BLEU on ru-en/en-ru. Full-scale N=1012 test pending.
+- Gate A (Qwen family-robustness) and Gate B (vs Simul-LLM published) from the Aug 18 plan are **paused** — the paper story shifted from single-arm-vs-published to matched-cond-A-head-to-head. If reviewers press on family-robustness, we may re-fire Qwen on the v6b recipe as a rebuttal experiment.
 
 ---
 
-## H2 — [PARTIALLY SUPPORTED] The prompt confound: -it models under raw concat don't do translation
+## P1 — Chunk-placement quality drives streaming translation quality (headline)
 
-**Rationale.** `gemma-4-E2B-it` is instruction-tuned. Under raw `{source}\n{target}` it isn't translating — it's doing next-token prediction on a mixed-language document. The shift in `P_pre` as source grows tracks "how many German-language tokens have accumulated" rather than "how much translation-relevant context."
-
-**Prediction.** Under Gemma's chat template with an explicit translation instruction, the criterion should fire more (because the model is now confident about English continuation given a translation task), and should look less "diagonal-because-of-language-accumulation."
-
-**Test.** Config B — `gemma-4-E2B-it` with chat template + `Translate the following German text to English.` instruction, same 48 sentences.
-
-**Outcome.**
-- (i) ✓ Fire rate jumped from 22% → 100% at τ=0.05.
-- (ii) ✗ Pearson_med stayed at 0.94–0.97 across all taus.
-- Aggregate JS-vs-random gap narrowed from ~15 pp (raw) to ~2 pp (chat) — JS still barely loses, but the gap shrank.
-
-**Read.** The prompt was necessary but not sufficient. The chat fix restored fire coverage but didn't dislodge the diagonal Pearson. Something else was still off — hence H3.
-
----
-
-## H3 — [SUPPORTED (aggregate); PARTIAL (per-sentence)] Base pretrained model + raw concat is the correct match to METHOD §1
-
-**Rationale.** METHOD §1 defines `P_full` and `P_pre` as raw next-token-prediction distributions of the backbone. That is what a *pretrained base* model natively produces. Instruction-tuning warps this distribution around task-following behaviour. Using an -it checkpoint with a chat template was a workaround for having chosen the wrong checkpoint; the right fix is to use the base checkpoint with raw concat, matching the algorithm's specification exactly.
+**Claim.** Given identical backbone, identical SFT recipe, identical training sentences, and identical EAST framework (special tokens + interleave), replacing procedural wait-k chunk boundaries with backbone-derived per-token OT-convergence chunk boundaries produces materially higher streaming BLEU at matched Average Lagging.
 
 **Prediction.**
-- (i) JS on `gemma-4-E2B` (base) + raw concat should beat random-at-matched-latency at at least one tau.
-- (ii) Chunk counts should land closer to GPT-4's (~4/sentence) than under -it+chat (~9/sentence).
-- (iii) On the GPT-4-identified reordering candidates (lowest GPT-4 Pearson), our criterion's per-sentence Pearson should be low too — i.e., we catch the same non-monotonic sentences.
-- (iv) Per-sentence r-of-Pearsons between GPT-4 and ours should rise above the -it+chat baseline (0.15).
+- (i) Under wait-k inference (k∈{3,5,7}), OT-SFT beats WaitK-SFT by ≥ +2 BLEU averaged over the wait-k grid at matched AL. **This is Gate B.**
+- (ii) Offline BLEU is unchanged between the two arms (null result — OT chunking doesn't degrade full-source translation).
+- (iii) Absolute BLEU on published test sets (WMT15 De→En newstest2015 + WMT22 De→En newstest2022) lands in the range of past LLM SiMT methods at matched-latency: within a few BLEU of EAST-Stage-I-8B at 4×/66× disadvantage, and competitive with Simul-LLM / TransLLaMa / SimulPL / ITST at matched published bins.
 
-**Test.** Config C — `gemma-4-E2B` (base), raw concat, JS, same 48 sentences.
+**Test.** OT-SFT (already trained, `sft_n10k/final/`). Streaming eval on newstest2013 dev, then WMT15 + WMT22 De→En for competitor comparison. Cross-paper plotting via `scripts/phase2_plot_bleu_al.py` — competitor numbers hand-populated from published tables per RELATEDWORKS.md.
 
-**Outcome.**
-- (i) ✓ JS beats random at τ=0.15 (JS Pearson_med 0.842 vs random 0.881 — JS is *less* diagonal than random, which is what "beat" means for this metric).
-- (ii) ✓ Ours chunk-count mean = 2.96 at per-sentence matched-count tau, chunk-count delta mean_abs = 1.44 (vs 2.25 under -it+chat). Materially closer.
-- (iii) ✓ on idx=553850 (walked German verb-final case): ours produced 2 chunks with Pearson=0.311, matching GPT-4's 2-chunk late-commit pattern; under -it+chat we gave 7 chunks with Pearson=0.907 (a MISS).
-- (iv) ✗ Per-sentence r stayed at 0.175 (barely up from 0.149).
+**Empirical status (as of 2026-08-22, N=50 FLORES devtest sanity):**
+- (i) 🟡 PARTIAL — v6b-ctrl-merged3 (OT + EAST §3.1 merge) is +4.36 BLEU over raw v6b-ctrl on the matched-cond-A 4 directions, closing 76% of the +5.72 gap that separated raw OT from GPT-4 chunks. Still 1.36 BLEU behind cond-A on average. **On de-en at low_medium latency, merged3 (31.88) beats cond-A (30.90).**
+- (ii) 🟢 Offline BLEU comparable across variants; the merged3 recipe doesn't degrade full-source translation.
+- (iii) 🟡 PARTIAL — WMT15 De→En sanity (N=50) puts v6b-ctrl at BLEU 26.68 / AL 2.78 (low latency), 37.36 / AL 9.70 (high) → interpolated to ~35 BLEU at AL 8, matching EAST-Stage-I-Llama-2 (8B) with our 2B backbone. **Full N=1012 sweep on merged3 is the next milestone.**
 
-**Read.** The prompt/backbone axis matters a lot. Base+raw catches individual reordering cases where -it+chat misses them. But the aggregate r-of-Pearsons metric isn't a strong discriminator here — most sentences are monotonic, so per-sentence Pearson variance is dominated by small differences on easy sentences that neither criterion cares about. The **qualitative** catch on the reordering minority is the real signal; the **aggregate** stat isn't the right way to see it.
-
-**Follow-up implied.** Change the primary reporting metric from r-of-Pearsons to sentence-level A-score under RWTH Eq. 4 (which weights all target tokens equally, no per-sentence averaging).
+**Historical note.** Prior to 2026-08-22, the paper's headline was OT-SFT vs Simul-LLM published wait-k=5 (Gate B). The Aug 21 v6 pivot (chat-template + NL latency prompt) + Aug 22 v6b work (direct-ids splice + α=1 + EAST §3.1 merge) reframed the story around matched-cond-A head-to-head. Earlier "vs cond-A n=10K" numbers (32.54 vs 32.41 offline; +5 BLEU under wait-k) in the archaeological section of `05-phase2_sft_and_streaming.md` are pre-v6-pivot and no longer represent the live claim.
 
 ---
 
-## H4 — [DEFERRED, INCONCLUSIVE] The oracle is doing real work — `P_full` adds signal beyond prefix-entropy alone
+## P2 — The finding is robust across backbone family, scale, and language pair
 
-**Rationale.** The criterion `D(P_full, P_pre) < tau` uses two things: the "oracle" distribution `P_full` (what the model would predict with the whole source) and the prefix distribution `P_pre[i]`. If we could get similar commit patterns by just looking at *when the prefix distribution's entropy `H(P_pre[i][j])` becomes small*, then `P_full` isn't contributing and the paper simplifies to "commit when the model becomes confident."
-
-**Prediction.** If `P_full` is doing work, then at matched chunk counts, JS with oracle should give lower Pearson_med (less diagonal) than entropy-only.
-
-**Test.** Entropy-only sweep — `record_entropy=True` in the annotator; offline, commit when `H(P_pre[i][j]) < H_tau`.
-
-**Outcome (base + raw matrices).**
-- At H_tau=2.0 (chunks 3.50 ≈ GPT-4's 4.06), entropy-only Pearson_med = 0.828.
-- At τ=0.10 (chunks 3.46), JS Pearson_med = 0.732.
-- JS ≈ 10 pp lower Pearson at matched chunk count — suggests `P_full` IS doing work.
-
-**But.** The chunk counts don't match exactly (3.50 vs 3.46 is close but the H_tau grid is coarse). The test needs finer H_tau + tau grids to be conclusive. **Deferred until after OT lands.**
-
----
-
-## H5 — [QUEUED FOR TEST] OT with embedding ground cost catches committability JS misses
-
-**Rationale.** JS says two distributions are "far" if they place mass on different tokens, regardless of whether those tokens are semantically similar. Consider `P_pre` concentrated on "cat"/"kitten"/"feline" vs `P_full` on "cat"/"kitten"/"feline" but with slightly different weights — JS reads this as "different distributions" and refuses to commit. But semantically, all three tokens are equivalent for the user, so the position **is** committable.
-
-METHOD §3 fixes this with a ground metric: `C_{a,b} = 1 - cos(E_a, E_b)` where `E` is the input embedding matrix. OT with this cost knows "cat" ↔ "kitten" is a cheap transport and marks the position committable. This is the paper's primary theoretical claim.
+**Claim.** OT-SFT's absolute BLEU (P1's (iii)) and its lead over WaitK-SFT (P1's Gate B) reproduces on other backbones (Qwen3.5-2B, Gemma-4-E4B) and on multi-lingual training corpora (Multi-90K's four En↔X pairs) with a single fixed τ — showing the result is not a Gemma-2B/De→En artefact.
 
 **Prediction.**
-- (i) At matched chunk count, OT Pearson_med ≤ JS Pearson_med (OT catches more non-monotonicity).
-- (ii) Per-sentence r(GPT-4, ours) should improve above JS's 0.175.
-- (iii) On sentences where the model is uncertain among near-synonyms (typically easy monotonic cases), OT should commit *earlier* than JS.
-- (iv) On the top reordering candidates (GPT-4 Pearson < 0.85), OT should still commit late (same as JS).
+- (i) On Qwen3.5-2B at n=10K/De→En, OT-SFT lands within ~2 BLEU of the E2B result at matched wait-k, and beats past-work published wait-k=5 De→En numbers by ≥ +2 BLEU. **This is Gate A.**
+- (ii) On Gemma-4-E4B (base, 4B params) at n=10K/De→En, OT-SFT absolute BLEU rises by 1-3 BLEU vs E2B (larger model); still beats published wait-k numbers by ≥ +2 BLEU.
+- (iii) On Multi-90K's 4 pairs (En↔{De, Zh, Cs, Ru}) trained as a mixed 40K corpus with a single τ=0.30, OT-SFT lands in EAST Table 2 range averaged across pairs.
+- (iv) τ=0.30 is within 1 BLEU of the per-pair optimal τ on all 4 directions (τ-generalisation).
 
-**Test.** Config D — same base+raw setup, OT criterion (topk=128, eps=0.05, Sinkhorn iters=200 via `pot.bregman.sinkhorn_log`), same 48 sentences, tau grid `{0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50}` (OT distances live in a different numeric range than JS; grid extended).
+**Test.** Qwen replication (annotation COMPLETE, dataset built, SFT queued); E4B replication (annotation COMPLETE, dataset build not yet triggered); Multi-90K mixed SFT (planned Weeks 5-6).
 
-**Outcome (job 176307323 landed):**
-- (i) ✓ At matched chunk count (OT τ=0.30 gives 4.67 chunks ≈ GPT-4's 4.06; JS τ=0.15 gives 6.04 chunks): OT Pearson_med=0.81 vs JS Pearson_med=0.84. Tied within noise at matched chunks, but OT achieves it with chunk count closer to GPT-4.
-- (ii) ✓ Per-sentence r(GPT-4, ours) = **0.306** (up from JS's 0.175 — nearly doubled). Meaningful.
-- (iii) OT beats random-at-matched-chunk-count at TWO tau values (0.20 and 0.30) vs JS at ONE (0.15). Broader "signal" range.
-- (iv) On top-8 reordering candidates: 3 MATCH, 5 MISS. 4 of 5 MISS are single-chunk collapse (coverage limit — OT stays above τ=0.50 on those hard cases). Same idx=553850 catch as JS Config C, plus idx=493988 improves from 0.81 → 0.66.
-
-**Cost:** OT is ~24× JS per pair (~31s/sentence vs 1.3s). Acceptable for annotation (offline); would matter more if it ran online.
-
-**Read.** H5 SUPPORTED. Embedding-grounded OT with cost `1 - cos(E)` earns its keep on the two metrics that matter (per-sentence r, beats-random range). JS remains a valid cheap ablation. Paper's headline claim stands up.
-
-**Follow-ups implied:**
-- Extend tau grid to `{0.70, 1.0}` to resolve the 4 single-chunk collapses.
-- Sensitivity of OT to topk (32 / 128 / 512) and eps (0.02 / 0.05 / 0.10) — EXPERIMENTS.md ablation row 4.
+**Empirical status (as of 2026-08-22):**
+- (i) Qwen deprioritized after v6 pivot; may re-fire as rebuttal experiment on the v6b recipe.
+- (ii) E4B v6b-ctrl ✓ trained on E2B-annotated data (confound: 4B model learning to reproduce chunks a 2B model chose). Mean BLEU +3.21 over E2B ctrl on 40 cells. **BUT: merged3 (E2B, 2B) beats E4B (raw OT, 4B) by −0.49 BLEU** — chunk simplification outperforms scaling for this task. Clean scaling test (E4B annotator → E4B chunks → E4B SFT) needs the batched annotator (see LOG); deferred.
+- (iii) Multilingual v6b covers 8 pairs (de-en, en-de, ar-en, en-ar, ru-en, en-ru, vi-en, en-vi) with a single fixed τ=0.30. **Extension to ar/vi is a coverage story cond-A cannot match** — SiMT-Multi-90K only ships de-en/en-de/ru-en/en-ru/zh-en/en-zh/cs-en/en-cs.
+- (iv) τ=0.30 stayed after 2026-08-22 tau-sweep on de-en confirmed the annotator's chunk-per-sent regime (~6/sent at τ=0.30) IS the correct operating point; the "too-fine chunks" problem was at inference (α=5 issue), not annotation.
 
 ---
 
-## H6 — [FUTURE] Cross-backbone: the finding is family-robust
+## P3 — OT-SFT is a policy-agnostic partial translator, not an adaptive commit policy (mechanism + limitation)
 
-**Rationale.** If the base+raw+JS/OT behaviour we see on Gemma-4-E2B holds on Qwen3.5-2B (matched size, different family), the finding isn't a Gemma-specific artefact.
-
-**Prediction.** On `Qwen3.5-2B` with raw concat and the same tau grid, JS/OT should show the same qualitative properties: JS beats random at some tau; OT beats JS at matched chunk count; per-sentence structure catches the same reordering candidates.
-
-**Test.** Config E — annotate with Qwen3.5-2B, run all the same analyses. Only after RWTH-based A-score is established on Gemma to have a comparison anchor.
-
-**Status.** Queued. Not started.
-
----
-
-## H7 — [FUTURE, HYPOTHETICAL] Scale-up: E4B produces tighter Pearson tracking of GPT-4
-
-**Rationale.** A larger backbone has better-calibrated distributions; commit points might align more precisely with the ground truth.
-
-**Prediction.** On `gemma-4-E4B` (base), per-sentence r(GPT-4, ours) rises above E2B's; RWTH A-score improves.
-
-**Test.** Gated on Gate-1 passing on E2B (RWTH result). Not run.
-
-**Status.** Not started. Do not scale to E4B until E2B's Gate-1 signal is defensible.
-Update 2026-08-18: Gate 1 passed at n=210 stratified (OT reordering MATCH 54.3% > monotone 38.6%). E4B base downloaded and SFT cond-A queued (job 176530894). E4B annotation cond-B running (176530895).
-
----
-
-## H8 — [CONFIRMED at n=10K] OT-annotated training data teaches better streaming translation than GPT-4-annotated data (H5 → SFT descendant)
-
-**Rationale.** H5 showed OT catches non-monotonicity where JS misses. If that annotation quality matters for the DOWNSTREAM policy, then models fine-tuned on OT-annotated data should produce better translations under streaming inference than models fine-tuned on GPT-4-annotated data. Cond-A's uniform 4-6-word GPT-4 chunks may over-fit to a specific chunking rhythm; cond-B's variable-length chunks (including 28% single-chunk collapse for reordering-heavy sentences) should generalize better to arbitrary commit positions imposed by streaming policies.
+**Claim.** The mechanism behind P1's win is NOT that OT-SFT learned autonomous adaptive commit at n=10K/2B. It's that OT-derived chunks (with allowed reordering, variable length, no chunk-count filter) train the LLM to produce correct partial translations under *any imposed* streaming policy. Adaptivity is a separable capability that requires either (a) more training data, (b) loss reweighting on EAST special tokens, or (c) collapse-row filtering (already implemented in the 2026-08-18 dataset build via τ-fallback ladder); investigated as follow-ups.
 
 **Prediction.**
-- (i) Under a fixed-latency streaming policy (wait_k), cond-B should give strictly higher BLEU than cond-A at matched AL.
-- (ii) The gap should hold across the useful wait-k range (k ∈ {3, 5, 7}).
-- (iii) Offline BLEU (no streaming) should be UNCHANGED — cond-B shouldn't degrade translation quality without streaming.
+- (i) Under check_argmax, OT-SFT gives chunks/sent = 1.00 (never voluntarily emits EOR mid-source) at n=10K on v1 dataset (collapse-heavy).
+- (ii) OT-SFT's BLEU-vs-AL curve under wait-k lands above ITST / SM² published points at matched AL — OT-SFT is uniformly better across imposed commit positions than encoder-decoder-tradition SiMT at matched-latency.
+- (iii) The class-imbalance mechanism: ~90% of SFT loss labels are content tokens, ~10% are EAST specials → insufficient gradient signal to induce autonomous EOR emission at 10K rows.
+- (iv) At least one of the following induces chunks/sent > 1 under check_argmax without hurting wait-k BLEU: soft commit criterion at inference (Test A), loss upweighting on special tokens (Test B), retraining on the v2 dataset built with τ-fallback ladder (Test C — dataset ready as `sft_dataset_n10k_v2.json`).
 
-**Test.** Config G — matched cond-A and cond-B trained on same 9,567 latency-balanced sentences, both under identical SFT recipe (Gemma-4-E2B base + extended tokenizer + early stopping + lr 2e-5, effective batch 16). Streaming eval on newstest2013 (3,000 sents) under wait_k ∈ {3, 5, 7} + check_argmax.
+**Test.** (i) confirmed empirically on v1. Follow-up: Tests A/B/C probe (iv).
 
-**Outcome.**
-- (i) ✓ At each wait-k, cond-B strictly beats cond-A:
-  - wait_k=3: cond-A 16.49 BLEU @ AL 2.10, cond-B 22.14 BLEU @ AL 2.35. **Δ +5.65 BLEU.**
-  - wait_k=5: cond-A 21.53 BLEU @ AL 3.17, cond-B 26.94 BLEU @ AL 3.54. **Δ +5.41 BLEU.**
-  - wait_k=7: cond-A 23.61 BLEU @ AL 4.19, cond-B 28.40 BLEU @ AL 4.64. **Δ +4.80 BLEU.**
-- (ii) ✓ Signal is uniform across the wait-k range. Consistent, not noise.
-- (iii) ✓ Offline BLEU: cond-A 32.41, cond-B 32.54. Statistically identical.
-
-**Read.** H8 CONFIRMED at n=10K, matched conditions, matched sentences. The paper's headline result.
-
-**Follow-ups implied.**
-- Extended wait-k to k ∈ {1, 9, 11} for a smooth trade-off curve (jobs 176531163/164 queued).
-- Per-latency-prompt (low/high) — EAST Table 3 mirror (jobs 176531165/166 queued).
-- Cross-backbone (H6, Qwen3.5-2B) replication in flight — does the gap hold on a different family?
-- Scale-up (H7, Gemma-4-E4B) in flight — does the gap hold at 2× params?
-- Data-scale curve on champion (10K → 50K).
+**Empirical status:**
+- (i) ✓ CONFIRMED at n=10K/E2B on v1 (collapse-heavy): chunks/sent = 1.00 under check_argmax.
+- (ii) 🔄 PENDING: WMT15 De→En run for direct ITST/SM² comparison.
+- (iii) ✓ Empirically demonstrated on real training rows: idx=2411 (collapse row) has 5.8% specials in loss; idx=372951 (positive row) has 14.5% specials. See `05-phase2_sft_and_streaming.md` walkthrough 2026-08-18.
+- (iv) 🔄 PENDING: Tests A/B/C not yet run. Test C ready to submit (v2 dataset built 2026-08-18).
 
 ---
 
-## H9 — [REFUTED at n=10K] Model-driven adaptive commitment (check_argmax) can produce reasonable AL/BLEU trade-off without external policy
+## P4 — The annotator is a universal preprocessing step (annotator-quality independence)
 
-**Rationale.** If cond-B has learned to represent commit points as EOR tokens in its output distribution, then a "let the model decide" policy — at each source position, emit EOR if that's the model's argmax; else feed the next source word — should produce a natural streaming behaviour without needing wait-k. Cond-B in particular saw single-chunk-collapse rows in training (the "commit at end" case), so its argmax at end-of-source and at natural pause points should be EOR.
-
-**Prediction.** Under `check_argmax`:
-- (i) cond-B should give chunks/sentence > 1 (model voluntarily commits somewhere mid-source).
-- (ii) cond-B's AL should be in the useful range (< 10).
-- (iii) BLEU should be competitive with wait_k=5-7.
-
-**Test.** `src/eval/extrinsic.py --mode streaming --policy check_argmax` on newstest2013 (3,000 sents) for both arms.
-
-**Outcome.**
-- (i) ✗ **Both models emit chunks/sentence = 1.00.** Neither cond-A nor cond-B voluntarily emits EOR mid-source. At every intermediate position, the model's argmax is "next source word", never EOR.
-- (ii) ✗ AL = 18.20 (essentially offline) for both — model always reads all source before speaking.
-- (iii) BLEU 30.66 / 30.76 for A/B — comparable, at maximum latency.
-
-**Read.** H9 REFUTED at n=10K. Under threshold-argmax policy, both models revert to offline-like behaviour. SFT on the EAST format at 10K rows is not enough to teach the model to CHOOSE commit points via argmax alone — it learns the tag as a next-token in the training pattern `<latency> src <eor> tgt <eow> src ...`, not as an autonomous policy decision.
-
-**Consequence for the paper narrative.** The claim isn't "cond-B learned when to commit" (H9 refuted). The claim is H8: "cond-B produces higher-quality translations under any imposed streaming latency." The mechanism ships as: OT annotation quality → better generalization to fixed-latency policies. Wait-k is the natural way to demonstrate the effect.
-
-**Open question.** Does check_argmax start working at larger data scales (50K, 660K) or on larger backbones (E4B, 9B+)? The queued scale-up runs will inform this.
-
----
-
-## H10 — [QUEUED] Annotator quality is model-invariant (cross-annotator SFT ablation)
-
-**Rationale.** In our default recipe, the same backbone that annotates the training data also gets fine-tuned on it (matched: annotator = SFT model). This entangles two things:
-(a) intrinsic quality of the annotator's chunk placements ("does the annotator identify positions where a translator can commit safely?");
-(b) matched-representation advantage ("does SFT work better when its training data uses commit points its own embeddings agree with?").
-
-If (a) dominates, chunks derived from any competent annotator should improve any SFT backbone. If (b) dominates, annotator-SFT pairs must be matched or the transfer degrades. Answer determines whether "our annotator is universal" or "our annotator + SFT is a coupled system."
+**Claim.** The chunk-annotation criterion (OT + τ=0.30) captures a property of the parallel data that is largely model-invariant — OT-SFT chunks from one backbone (E2B) can be used to SFT a different backbone (E4B, Qwen) with only mild degradation vs the matched-annotator setup. This makes the annotator a portable preprocessing step, not a per-backbone artifact.
 
 **Prediction.**
-- (i) E4B-annotator → E2B-SFT should be within 1-2 BLEU of E2B-annotator → E2B-SFT (larger annotator → smaller SFT should transfer well; better chunks generalize down).
-- (ii) E2B-annotator → E4B-SFT may show slight LIFT over E4B-annotator → E4B-SFT (a smaller annotator's chunks may transfer up cleanly OR may underspecify — need data).
-- (iii) Cross-family (Gemma ↔ Qwen) should be the harshest test: if their embedding spaces disagree on token-neighborhood structure, cross-family transfer should degrade more than within-family (E2B ↔ E4B).
+- (i) E2B-annotated chunks → E4B-SFT is within 1-2 BLEU of E4B-annotated chunks → E4B-SFT at wait_k=5.
+- (ii) Reverse (E4B-annotated chunks → E2B-SFT) shows slight lift or match.
+- (iii) Cross-family (Gemma ↔ Qwen) is the harshest case: cross-family transfer degrades more than within-family (E2B ↔ E4B) but the transferred model still beats published wait-k numbers by ≥ +2 BLEU.
 
-**Test.** After all three annotations complete (E2B ✓, E4B in flight, Qwen in flight), build 3 cond-B datasets (one per annotator) and run 6 off-diagonal SFTs. Streaming eval at wait_k=5 to keep the sweep tractable. See `07-next_steps.md` §10.
+**Test.** Cross-annotator OT-SFT matrix — 6 off-diagonal cells (E2B/E4B/Qwen × 3 × OT-SFT). Planned Week 3-4.
 
-**Status.** Queued. Not started.
-
-**Consequence.** If H10 confirmed, the annotator is a universal preprocessing step — you can annotate once with the largest available backbone and reuse for any SFT. If refuted, the annotator ships as a per-backbone artifact (bigger deployment cost, weaker paper story).
+**Empirical status:** 🔄 QUEUED. All 3 OT annotations complete (E2B ✓, E4B ✓, Qwen ✓); cross-family SFT + eval not started.
 
 ---
 
-## Which hypothesis governs which experiment
+## Appendix — reported but not core hypotheses
 
-| Config | Model | Prompt/Setup | Criterion | Tests hypothesis |
-|---|---|---|---|---|
-| A (initial smoke → sweep) | gemma-4-E2B-it | raw | JS | H1 (apparent-confirm → rejected by H2) |
-| B (chat re-run) | gemma-4-E2B-it | chat | JS + entropy record | H2 |
-| **C (base + raw) ★** | **gemma-4-E2B (base)** | **raw** | **JS + entropy record** | **H3 (aggregate ✓, per-sentence partial), H4** |
-| D (OT sweep) | gemma-4-E2B (base) | raw | OT | H5 |
-| F (Gate 1) | gemma-4-E2B (base) | raw, n=210 stratified | OT, JS | H5 aggregate (OT passes; JS fails) |
-| **G (SFT matched) ★★★** | **gemma-4-E2B (base)** | **SFT n=10K, matched A/B** | **streaming eval** | **H8 CONFIRMED, H9 REFUTED** |
-| Qwen replication | Qwen3.5-2B | matched A/B | streaming eval | H6 (in flight) |
-| E4B replication | gemma-4-E4B (base) | matched A/B | streaming eval | H7 (in flight) |
-| Scale-data | champion | n=10K/20K/30K/40K/50K matched | streaming eval | H8 at scale (queued) |
-| Cross-annotator | E2B, E4B, Qwen (6 off-diagonal SFTs) | matched B, mismatched A | streaming eval | H10 (queued) |
+- **RWTH-A intrinsic**: Phase 3 appendix; reviewer-expected, not a core claim.
+- **Prompt-format ablation** (labelled `Source:...\nTranslation:...` raw-concat): method-improvement sub-check for the annotator; ablation table row.
+- **Adaptivity investigations Tests A/B/C** (soft argmax at inference, EAST-token loss upweight, collapse-skip retrain): support P3's claim (iv); reported as discussion + one ablation table row each.
+
+
+---
+
+## Which experiment supports which prediction
+
+| Experiment | Config | Reads out |
+|---|---|---|
+| OT-SFT training | Gemma-4-E2B base + 9,562-row v2 dataset (2026-08-18 fixes: fallback-τ ladder + latency reassignment) | Trains the primary model. |
+| Streaming eval on newstest2013 | wait_k∈{3,5,7,check_argmax}; SacreBLEU-13a + AL + LAAL | P1 (i), P3 (i)-(ii). |
+| Fig. 1 comparison — WMT15 De→En / AL | vs ITST, SM²/SimulMask, HMT, wait-k baseline (published verbatim); EAST dashed reference | P1 (iii) non-LLM tier. |
+| Fig. 2 comparison — WMT22 De→En / LAAL | vs EAST, Simul-LLM, TransLLaMa, SimulPL, ConversationalSiMT (published verbatim) | P1 (iii) LLM tier; **Gate B** = OT-SFT ≥ +2 BLEU over Simul-LLM's published number. |
+| Multi-90K mixed (weeks 5-6) | 40K rows across en↔{de,zh,cs,ru}, single τ=0.30 | P2 (iii)-(iv). |
+| Qwen3.5-2B replication | annotation DONE; SFT queued | P2 (i), **Gate A**. |
+| Gemma-4-E4B replication | annotation DONE; dataset build queued | P2 (ii). |
+| Tests A/B/C (adaptivity) | soft argmax + special-token loss weight + collapse-skip retrain | P3 (iv). |
+| Cross-annotator SFT matrix | 6 off-diagonal cells (E2B/E4B/Qwen × 3) | P4. |
+| RWTH-A intrinsic (Phase 3 appendix) | 509 sentences with gold alignments; A-score vs GPT-4 / fast_align | Appendix — not a core P-claim. |

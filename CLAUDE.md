@@ -50,7 +50,7 @@ EAST is a **two-stage** recipe over **three datasets**. Ours mirrors the shape b
 | Dataset | HF | Size | Role in EAST | Role in our project |
 |---|---|---|---|---|
 | `SiMT-De-En-660K` | `biaofu-xmu/SiMT-De-En-660K` | 660,876 rows (De→En only) | **Stage I** — full-weight SFT, 1 epoch. Activates adaptive read/write. Derived from WMT15 De→En training. | **Primary run.** Both conditions (A = GPT-4 chunks, B = ours) trained on this. |
-| `SiMT-Multi-90K` | `biaofu-xmu/SiMT-Multi-90K` | 90.7K rows across 8 directions | **Stage II** — LoRA on top of Stage I. Generalises to multilingual. | **Stretch** — only after Gate 3 passes. |
+| `SiMT-Multi-90K` | `biaofu-xmu/SiMT-Multi-90K` | 90.7K rows across 8 directions (en↔{de, zh, cs, ru}) | **Stage II** — LoRA on top of Stage I. Generalises to multilingual. | **Weeks 5-6** — used at **Stage I** for mixed-lingual training (H19) instead of EAST's Stage-II LoRA. GPT-4 chunks shipped → cond-A free. See `docs/02-hypotheses.md` H18/H19. |
 | `Off-Multi-120K` | not on HF (assemble à la ALMA from WMT17-21) | 120K, 8 directions | **Stage II** — LoRA co-training to preserve full-sentence quality. | Only if Stage II runs. |
 
 Chunks ship as `source_chunks`/`target_chunks` lists — EAST wraps them at load time with `<|end-of-read|>`/`<|end-of-write|>` and a latency indicator token (`low`/`medium`/`high`, ≈1/3 of the 660K each). Loss is computed on **source + target + special tokens**.

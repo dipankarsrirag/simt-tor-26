@@ -1,0 +1,67 @@
+#!/bin/bash
+#PBS -N phase2_sft_multilingual_v6b
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=05:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_sft_multilingual_v6b.log
+
+# Multilingual v6b SFT — gemma-4-E2B-it + chat-template + NL instruction.
+# 2 epochs on 79K base rows (8 directions, no zh, no augmentation).
+# Direct-ids-splice training (2026-08-22 fix) — bypasses the string round-trip
+# that dropped 40-47% of AR/VI rows in v6. All 8 directions now ~9.8-10K rows.
+# Best-model-at-end (eval_loss); post-train cleanup of checkpoint-* dirs.
+#
+# Expected wall: ~180-240 min (2 epochs × 90-120 min v6-run). 5h margin.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+OUT_DIR=results/phase2/sft_multilingual_v6b
+
+if [ -f "$OUT_DIR/final/config.json" ]; then
+    echo "SKIP: $OUT_DIR/final/ already exists."
+    exit 0
+fi
+
+python -u src/train/sft_v6.py \
+    --corpus_file results/phase2/sft_dataset_multilingual_v6b.json \
+    --output_dir $OUT_DIR \
+    --per_device_batch_size 16 \
+    --grad_accum_steps 4 \
+    --num_epochs 2.0 \
+    --warmup_steps 200 \
+    --logging_steps 50 \
+    --eval_steps 200 \
+    --val_frac 0.05 \
+    --descriptive_init \
+    --special_token_loss_weight 5.0

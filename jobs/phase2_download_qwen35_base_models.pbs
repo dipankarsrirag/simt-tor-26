@@ -1,0 +1,43 @@
+#!/bin/bash
+#PBS -N download_qwen35_base_models
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=32GB
+#PBS -l jobfs=40GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/download_qwen35_base_models.log
+
+# Download the BASE variants of Qwen3.5-2B / Qwen3.5-4B from HuggingFace.
+# Motivation: cross-backbone PPL probe (176833274) showed our on-disk
+# Qwen3.5-2B/4B checkpoints have a chat_template set on their tokenizer —
+# i.e. they are INSTRUCTION-TUNED variants despite the naming. Project rule
+# (CLAUDE.md, LOG H3): backbones must be base (not -it) for the annotator.
+#
+# If Qwen doesn't ship separate "-Base" for 3.5, both will 404 and we'll
+# pivot to Qwen3-4B-Base (already on disk) for the backbone-transfer story.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+SCRIPT=/g/data/po67/dipankar/models/get_model.py
+DEST=/g/data/po67/dipankar/models
+
+echo "=== Qwen/Qwen3.5-2B-Base ==="
+python3 $SCRIPT Qwen/Qwen3.5-2B-Base model $DEST/Qwen3.5-2B-Base || echo "FAILED — model ID may not exist"
+
+echo ""
+echo "=== Qwen/Qwen3.5-4B-Base ==="
+python3 $SCRIPT Qwen/Qwen3.5-4B-Base model $DEST/Qwen3.5-4B-Base || echo "FAILED — model ID may not exist"
+
+echo ""
+echo "=== Post-download listing ==="
+ls -la $DEST/Qwen3.5-2B-Base/ 2>&1 | head -5
+ls -la $DEST/Qwen3.5-4B-Base/ 2>&1 | head -5

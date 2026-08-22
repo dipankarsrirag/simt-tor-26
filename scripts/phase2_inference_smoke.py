@@ -12,7 +12,7 @@ proper streaming inference loop; this smoke is deliberately quicker.
 
 Usage:
     python scripts/phase2_inference_smoke.py \\
-        --model_dir results/phase2/sft_condA_n2k/final \\
+        --model_dir results/phase2/sft_n10k/final \\
         --tokenizer_dir results/phase2/tokenizer-extended \\
         --n_probes 20 --prefix_words 3 --max_new_tokens 50
 """
