@@ -1,0 +1,42 @@
+#!/bin/bash
+#PBS -N dl_iwslt15_envi
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=10GB
+#PBS -l walltime=01:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/dl_iwslt15_envi.log
+
+set -o pipefail
+cd /g/data/ba39/dipankar/simul-mt/data/raw/iwslt15-en-vi
+
+# IWSLT15 en-vi tst2013 (test set) via Stanford NLP mirror
+# https://nlp.stanford.edu/projects/nmt/data/iwslt15.en-vi/
+BASE="https://nlp.stanford.edu/projects/nmt/data/iwslt15.en-vi"
+for f in tst2013.en tst2013.vi tst2012.en tst2012.vi; do
+    if [ ! -f "$f" ]; then
+        wget -q "$BASE/$f" -O "$f" && echo "OK $f: $(wc -l < $f) lines"
+    fi
+done
+
+# Install to eval directory
+mkdir -p /g/data/ba39/dipankar/simul-mt/data/eval/vi-en
+DEST=/g/data/ba39/dipankar/simul-mt/data/eval/vi-en
+for year in tst2013 tst2012; do
+    if [ -f $year.en ] && [ -f $year.vi ]; then
+        cp $year.vi $DEST/iwslt15_${year}.vi-en.src
+        cp $year.en $DEST/iwslt15_${year}.vi-en.ref
+        cp $year.en $DEST/iwslt15_${year}.en-vi.src
+        cp $year.vi $DEST/iwslt15_${year}.en-vi.ref
+        echo "  installed $year: $(wc -l < $DEST/iwslt15_${year}.vi-en.src) lines"
+    fi
+done
+
+echo ""
+echo "=== Final ==="
+ls -la $DEST/iwslt15_* 2>/dev/null

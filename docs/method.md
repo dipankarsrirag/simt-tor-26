@@ -2,7 +2,7 @@
 
 Read `_archive/method-formal.md` first for the formalism. This document is the implementation-shaped version — what the code actually does, what shape each object has, and why.
 
-**Currency note (2026-08-22):** The annotator itself is unchanged since Phase 1. The v6b pipeline (2026-08-22) changed the DOWNSTREAM steps (SFT recipe + streaming inference) but not the annotator. One post-processing step was added on the SFT-dataset side: EAST §3.1 chunk merging (`scripts/phase2_build_sft_dataset.py --merge_small_chunks --min_src_words 4`) folds chunks with < 4 source words forward into the next chunk. This runs AFTER `_chunks_from_commit`; the annotator's commit points and word-boundary snapping are unmodified.
+**Currency note (2026-08-22):** The annotator itself is unchanged since Phase 1. The v6b pipeline (2026-08-22) changed the DOWNSTREAM steps (SFT recipe + streaming inference) but not the annotator. One post-processing step was added on the SFT-dataset side: EAST §3.1 chunk merging (`scripts/02_build_sft_dataset.py --merge_small_chunks --min_src_words 4`) folds chunks with < 4 source words forward into the next chunk. This runs AFTER `_chunks_from_commit`; the annotator's commit points and word-boundary snapping are unmodified.
 
 ## The one-sentence version
 

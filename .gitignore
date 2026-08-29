@@ -17,17 +17,19 @@ checkpoints/
 runs/
 # Phase-2 trained-model output dirs — regeneratable via src/train/sft.py.
 # Keep only sft_summary.json / train_indices.json per run (staged explicitly).
-results/phase2/**/checkpoint-*/
-results/phase2/**/final/
+results/train/**/checkpoint-*/
+results/_archive/**/checkpoint-*/
+results/train/**/final/
+results/_archive/**/final/
 # Phase-2 in-progress annotation — commit after all shards complete.
-results/phase2/annot_ot_condB_n2k/matrices.jsonl
-results/phase2/annot_ot_condB_n2k/shard_counter
-results/phase2/annot_ot_condB_n10k/matrices.jsonl
-results/phase2/annot_ot_condB_n10k/shard_counter
+# (old n2k paths archived)
+
+
+
 # Ad-hoc / superseded / diagnostic SFT dirs — not durable.
-results/phase2/toy_sft/
-results/phase2/sft_condA_n2k/
-results/phase2/sft_condA_n2k_e5/
+
+
+
 
 # Logs — PBS output, metrics jsonl, wandb offline dirs.
 logs/
@@ -83,24 +85,30 @@ results/gate1/*_dryrun.json
 # Extended tokenizer.json files are 20-30MB each; regeneratable via
 # scripts/phase2_prepare_tokenizer.py in seconds. Keep the manifest +
 # tokenizer_config, not the vocab blob.
-results/phase2/tokenizer-*/tokenizer.json
+results/**/tokenizer-*/tokenizer.json
 
 # Extrinsic eval outputs — hypothesis arrays are large; regeneratable via
 # src/eval/extrinsic.py. Score/config JSONs may be added back explicitly
 # once the numbers are paper-ready.
-results/phase2/extrinsic/
+results/eval/**/*.json
+results/_archive/**/extrinsic/
 
 # Annotator matrices — 100-300MB each, regeneratable via src/annotator/annotate.py.
 # HOUSEKEEPING §7.1 <10MB rule.
-results/phase2/annot_ot_*/matrices.jsonl
+results/annotate/**/matrices.jsonl
+results/_archive/**/annot_ot_*/matrices.jsonl
 
 # SFT training datasets — 44-89MB each, regeneratable via scripts/phase2_build_sft_dataset.py.
-results/phase2/sft_dataset_multilingual_*.json
+results/sft_dataset/**/*.json
+results/_archive/**/sft_dataset_*.json
 
 # Multilingual source pool — 38MB, regeneratable via scripts/phase2_build_multilingual_source_pool.py.
-results/phase2/multilingual_source_pool_v5.json
-results/phase2/multilingual_source_pool_v5_per_direction/
+
+
 
 # Extended tokenizer — 31MB tokenizer.json regeneratable via scripts/phase2_build_tokenizer_v6.py.
-results/phase2/tokenizer-extended-v6/
-results/phase2/_archive_zh/annot_ot_multi_*/matrices.jsonl
+results/_archive/**/tokenizer-extended-v6/
+
+
+# Live per-tag log dirs — everything except placeholder .gitkeep.
+logs/*/**/*.log

@@ -1,0 +1,47 @@
+#!/bin/bash
+#PBS -N phase2_build_v4_dataset
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=48GB
+#PBS -l jobfs=20GB
+#PBS -l walltime=00:20:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_build_v4_dataset.log
+
+# Rebuild the OT-SFT dataset with 2026-08-19 fixes:
+#   - word-boundary snapping on commits (never mid-word)
+#   - raw BPE ids per chunk (avoids decode+retokenize round-trip artifact)
+#   - existing v2 relaxed-τ ladder (fallback τ for collapse rows)
+# Output → sft_dataset_n10k_v4.json  (input for v4 SFT run)
+# CPU-only; ~5 min. Uses copyq for high-memory JSON load (660K corpus rows).
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+python -u scripts/02_build_sft_dataset.py \
+    --matrices results/phase2/annot_ot_n10k/matrices.jsonl \
+    --tau 0.30 \
+    --tau_fallbacks 0.50,0.70,1.00 \
+    --augment_latency \
+    --output results/phase2/sft_dataset_n10k_v4.json

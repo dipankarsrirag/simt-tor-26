@@ -10,7 +10,7 @@ Checks:
   5. Can we run a 2-sentence streaming smoke? (offline generation to sanity
      the tag emission shape.)
 
-Output: prints report; also writes results/phase2/east_8b_compat.json.
+Output: prints report; also writes results/_archive/v6b_gemma_2b/east_8b_compat.json.
 
 Usage:  python -u scripts/probe_east_8b_compat.py [--model_dir PATH]
 Default model_dir: /g/data/po67/dipankar/models/EAST-8B
@@ -33,7 +33,7 @@ def main():
     ap.add_argument("--model_dir", type=str,
                     default="/g/data/po67/dipankar/models/EAST-8B")
     ap.add_argument("--output", type=str,
-                    default="/g/data/ba39/dipankar/simt-tor-26/results/phase2/east_8b_compat.json")
+                    default="/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/east_8b_compat.json")
     args = ap.parse_args()
 
     print(f"=== EAST-8B compat probe ===")

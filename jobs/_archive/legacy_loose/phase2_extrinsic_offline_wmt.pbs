@@ -1,0 +1,83 @@
+#!/bin/bash
+#PBS -N phase2_extrinsic_offline_wmt
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=01:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_extrinsic_offline_wmt.log
+
+# Task 1c per docs/next-steps.md: offline BLEU on WMT15 newstest2015
+# (Fig. 1 competitor axis) AND WMT22 newstest2022 De→En (Fig. 2 + EAST
+# Table 2 head-to-head axis). Same v1 checkpoint sft_n10k/final that has
+# been the anchor number all along.
+#
+# Test-set line counts verified: WMT15 2169 pairs, WMT22 1984 pairs.
+# Observed timing on gpuhopper: 20 min (WMT15) + 16 min (WMT22) = 36 min
+# end-to-end. 1h walltime = ~65% margin. Per-test-set skip-if-exists lets a
+# walltime-killed resume pick up on the second test set.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+export OMP_NUM_THREADS=${PBS_NCPUS:-12}
+export MKL_NUM_THREADS=${PBS_NCPUS:-12}
+
+MODEL=results/phase2/sft_n10k/final
+OUT=results/phase2/extrinsic
+
+if [ -f "$OUT/offline_n10k_newstest2015.json" ]; then
+    echo "===== SKIP WMT15 (exists) ====="
+else
+    echo ""
+    echo "===== OT-SFT | offline | WMT15 newstest2015 De→En (2169 sents) ====="
+    python -u src/eval/extrinsic.py \
+        --model_dir "$MODEL" \
+        --dev_src /g/data/po67/dipankar/data/simt-tor-26/wmt15-de-en/newstest2015.de \
+        --dev_ref /g/data/po67/dipankar/data/simt-tor-26/wmt15-de-en/newstest2015.en \
+        --latency medium \
+        --mode offline \
+        --output "$OUT/offline_n10k_newstest2015.json"
+fi
+
+if [ -f "$OUT/offline_n10k_newstest2022.json" ]; then
+    echo "===== SKIP WMT22 (exists) ====="
+else
+    echo ""
+    echo "===== OT-SFT | offline | WMT22 newstest2022 De→En (1984 sents) ====="
+    python -u src/eval/extrinsic.py \
+        --model_dir "$MODEL" \
+        --dev_src /g/data/po67/dipankar/data/simt-tor-26/wmt22/de-en/newstest2022.de \
+        --dev_ref /g/data/po67/dipankar/data/simt-tor-26/wmt22/de-en/newstest2022.en \
+        --latency medium \
+        --mode offline \
+        --output "$OUT/offline_n10k_newstest2022.json"
+fi

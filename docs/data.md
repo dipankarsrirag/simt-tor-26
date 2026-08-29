@@ -2,7 +2,7 @@
 
 All data lives under `/g/data/po67/dipankar/data/simt-tor-26/`, accessed via the `data/` symlink in the repo root. Never committed.
 
-**Currency note (2026-08-22):** the v6b multilingual pipeline uses 3 additional data assets not in the table below: (1) `results/phase2/multilingual_source_pool_v5.json` — 96K rows across 10 directions (8 covered after zh drop) sourced from SiMT-Multi-90K + custom Vi/Ar pools; (2) `results/phase2/annot_ot_multi_*/matrices.jsonl` — the 8 per-direction OT annotator matrices used by v6b builders; (3) **FLORES-200 devtest** at `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest/*.devtest` — 1012 sents × 200 languages, our primary streaming eval set for v6b (all BLEU/AL numbers in `05-phase2_sft_and_streaming.md` Phase 2b section).
+**Currency note (2026-08-22):** the v6b multilingual pipeline uses 3 additional data assets not in the table below: (1) `results/_archive/v6b_gemma_2b/multilingual_source_pool_v5.json` — 96K rows across 10 directions (8 covered after zh drop) sourced from SiMT-Multi-90K + custom Vi/Ar pools; (2) `results/_archive/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl` — the 8 per-direction OT annotator matrices used by v6b builders; (3) **FLORES-200 devtest** at `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest/*.devtest` — 1012 sents × 200 languages, our primary streaming eval set for v6b (all BLEU/AL numbers in `05-phase2_sft_and_streaming.md` Phase 2b section).
 
 ## htgt pipeline (2026-08-24) — human-target training corpus
 
@@ -20,11 +20,11 @@ target translations. Gives the paper a clean "no GPT-4 anywhere" story.
 | ar-en, en-ar | TED2020 (100%) | 10K/dir | unchanged from v6b |
 | vi-en, en-vi | TED2020 (100%) | 10K/dir | unchanged from v6b |
 
-**Pooled at:** `results/phase2/multilingual_source_pool_htgt.json` (80K rows,
+**Pooled at:** `results/_archive/v6b_gemma_2b/multilingual_source_pool_htgt.json` (80K rows,
 indexed 20000-139999 with no collisions — reindexed to preserve v6b ar/vi
 matrices' original indices).
 
-**Per-direction shards at:** `results/phase2/multilingual_source_pool_htgt_per_direction/{pair}.json`
+**Per-direction shards at:** `results/_archive/v6b_gemma_2b/multilingual_source_pool_htgt_per_direction/{pair}.json`
 
 **Known confound (2026-08-25):** htgt's de/ru sources come from europarl+NC+TED,
 which is a DIFFERENT domain from CondB's de/ru sources (Multi-90K, derived
@@ -44,7 +44,7 @@ via a 3-tier matching ladder (exact alnum → 8-token prefix jaccard≥0.75 →
 5-token prefix jaccard≥0.85). See LOG.md 2026-08-25 for full method
 and per-direction numbers.
 
-**Artifact:** `results/phase2/m90k_wmt_recovery.pkl` (Python pickle).
+**Artifact:** `results/_archive/v6b_gemma_2b/m90k_wmt_recovery.pkl` (Python pickle).
 
 Schema: `dict[direction: str, dict[m90k_source_string: str, wmt_reference: str]]`.
 

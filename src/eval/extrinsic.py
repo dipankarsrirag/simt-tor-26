@@ -18,7 +18,7 @@ Layers:
                  scripts/phase2_compute_al_ca_approx.py.)
 
 Single-arm setup since 2026-08-18 late — this harness runs the OT-SFT
-model (dir: `results/phase2/sft_*/final`). Cond-A (GPT-4 chunks) and
+model (dir: `results/_archive/v6b_gemma_2b/sft_*/final`). Cond-A (GPT-4 chunks) and
 Cond-C (within-framework wait-k baseline) were both removed after the
 decision to compare against past-work published numbers verbatim rather
 than run our own matched baselines. See `../LOG.md`
@@ -664,9 +664,9 @@ def run(cfg: RunConfig) -> Dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True,
-                    help="e.g. results/phase2/sft_n10k/final (OT-SFT, our method).")
+                    help="e.g. results/_archive/v6b_gemma_2b/sft_n10k/final (OT-SFT, our method).")
     ap.add_argument("--tokenizer_dir",
-                    default="/g/data/ba39/dipankar/simt-tor-26/results/phase2/tokenizer-extended")
+                    default="/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/tokenizer-extended")
     ap.add_argument("--dev_src", required=True)
     ap.add_argument("--dev_ref", required=True)
     ap.add_argument("--latency", type=str, default="medium",

@@ -1,0 +1,40 @@
+{
+  "config": {
+    "n_sentences_requested": 50,
+    "n_sentences_kept": 4809,
+    "n_sentences_annotated": 4809,
+    "criterion": "ot",
+    "seed": 42,
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B",
+    "max_src_tokens": 80,
+    "taus": [
+      0.3
+    ],
+    "prompt_mode": "raw",
+    "record_entropy": false,
+    "indices_file": null,
+    "lookahead_k": 0
+  },
+  "sweep": [
+    {
+      "tau": 0.3,
+      "fire_fraction": 0.7176128093158661,
+      "mean_committed_fraction": 0.6854267135033364,
+      "chunks_per_sentence_mean_ours": 3.3052609690164276,
+      "chunks_per_sentence_mean_gpt4": 0.0,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 3246,
+        "n_nan": 1563,
+        "min": -5.255955881681541e-16,
+        "median": 0.8005430867241736,
+        "max": 0.9938837346736188
+      }
+    }
+  ],
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "b574f666ddc61a5a14a4a732dc24b3726740b159"
+  }
+}

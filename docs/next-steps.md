@@ -6,7 +6,7 @@ Target: ACL/EMNLP Findings; IWSLT hedge.
 
 ## As of 2026-08-22 — current state + next actions
 
-**Ship model:** `results/phase2/sft_multilingual_v6b_ctrl_merged3/final/` (Gemma-4-E2B-it + chat template + NL latency + direct-ids splice + α=1 + EAST §3.1 merge at <=3-word threshold). Trained on 79K rows × 8 language pairs. See `00-README.md` "Naming" table for the full family of trained arms.
+**Ship model:** `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3/final/` (Gemma-4-E2B-it + chat template + NL latency + direct-ids splice + α=1 + EAST §3.1 merge at <=3-word threshold). Trained on 79K rows × 8 language pairs. See `00-README.md` "Naming" table for the full family of trained arms.
 
 **Headline sanity numbers (N=50 FLORES devtest, mean across 40 cells = 8 dirs × 5 latencies):**
 
@@ -73,7 +73,7 @@ Two parallel workstreams. Cond-C and Cond-D are gone (see LOG `[DECISION] 2026-0
 
 Dataset built with 2026-08-18 fixes: fallback τ ladder + latency reassignment. Stats: 9,562 kept / 5 skipped, collapse rate down from 28% (v1) to 0.05% (v2), 71.7% used primary τ=0.30, latency distribution 57% low / 20% medium / 23% high.
 
-**SFT LANDED (job 176597831, 2026-08-19).** 36.9 min wall, early-stopped at step 700 / epoch 1.23, best `eval_loss = 1.632` (v1 was 1.677). All 5 EAST-token embeddings moved ~0.08 L2. Sample gens emit clean `<|end-of-read|>` / `<|end-of-write|>`. `results/phase2/sft_n10k_v2/final/` is the checkpoint.
+**SFT LANDED (job 176597831, 2026-08-19).** 36.9 min wall, early-stopped at step 700 / epoch 1.23, best `eval_loss = 1.632` (v1 was 1.677). All 5 EAST-token embeddings moved ~0.08 L2. Sample gens emit clean `<|end-of-read|>` / `<|end-of-write|>`. `results/_archive/v6b_gemma_2b/sft_n10k_v2/final/` is the checkpoint.
 
 **Streaming eval queued (176597836, chained afterok on SFT).** Runs the 4 policies (wait_k ∈ {3,5,7} + check_argmax) at 3000 sents on newstest2013. Predicted: chunks/sent > 1 under check_argmax if collapse rows were the bottleneck (P3 sub-claim iv). AL under check_argmax drops from v1's ~18 to a plausible mid-latency range. Now uses lean 4h30m walltime + per-policy skip-if-exists + chain-at-start (see LOG `[DECISION] 2026-08-19 — Week-1 PBS walltimes shortened`).
 
@@ -107,7 +107,7 @@ Signature `nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0`. WMT22 vs
 
 **Concrete work:**
 1. **Qwen OT-SFT** on `sft_dataset_n10k_annotator-qwen35.json` (dataset built 2026-08-18). Streaming eval → Gate A result.
-2. **E4B OT-SFT** — build dataset from `annot_ot_e4b_n10k/matrices.jsonl` using `scripts/phase2_build_sft_dataset.py` (2026-08-18 fixes apply); SFT; streaming eval → P2 (ii) result.
+2. **E4B OT-SFT** — build dataset from `annot_ot_e4b_n10k/matrices.jsonl` using `scripts/02_build_sft_dataset.py` (2026-08-18 fixes apply); SFT; streaming eval → P2 (ii) result.
 3. Optional Test B (loss upweighting on EAST specials) if Test A doesn't find adaptivity: add `--special_token_loss_weight` to `sft.py`; sweep α ∈ {3, 5, 10}; retrain OT-SFT.
 
 **Deliverable:** Gate A pass/fail; P2 (ii) result on 4B params.

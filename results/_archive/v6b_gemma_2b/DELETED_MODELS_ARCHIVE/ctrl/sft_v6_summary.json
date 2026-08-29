@@ -1,0 +1,33 @@
+{
+  "config": {
+    "corpus_file": "results/phase2/sft_dataset_multilingual_v6b.json",
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B-it",
+    "tokenizer_dir": "/g/data/ba39/dipankar/simt-tor-26/results/phase2/tokenizer-extended-v6",
+    "output_dir": "results/phase2/sft_multilingual_v6b_ctrl",
+    "use_augmentation": false,
+    "per_device_batch_size": 16,
+    "grad_accum_steps": 4,
+    "num_epochs": 2.0,
+    "learning_rate": 2e-05,
+    "warmup_steps": 200,
+    "logging_steps": 50,
+    "eval_steps": 200,
+    "val_frac": 0.05,
+    "early_stopping_patience": 999999,
+    "descriptive_init": true,
+    "special_token_loss_weight": 1.0,
+    "max_length": 1024,
+    "seed": 42,
+    "n_smoke_rows": -1
+  },
+  "train_metrics": {
+    "wall_time_sec": 3481.8593740463257,
+    "train_loss": 1.9902321575857786
+  },
+  "n_train_rows": 75344,
+  "n_eval_rows": 3965,
+  "special_token_embedding_deltas": {
+    "<|end-of-read|>": 0.039192769676446915,
+    "<|end-of-write|>": 0.029898032546043396
+  }
+}

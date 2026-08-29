@@ -1,0 +1,59 @@
+{
+  "config": {
+    "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B",
+    "tokenizer_dir": "/g/data/ba39/dipankar/simt-tor-26/results/phase2/tokenizer-extended",
+    "output_dir": "results/phase2/toy_sft",
+    "n_sentences": 100,
+    "indices_file": null,
+    "max_src_tokens": 80,
+    "seed": 42,
+    "max_length": 1024,
+    "per_device_batch_size": 2,
+    "grad_accum_steps": 2,
+    "learning_rate": 2e-05,
+    "num_epochs": 1.0,
+    "max_steps": 20,
+    "warmup_steps": 2,
+    "logging_steps": 1,
+    "save_steps": 100,
+    "dtype": "bf16",
+    "sample_generations": 3
+  },
+  "train_metrics": {
+    "train_runtime": 113.1309,
+    "train_samples_per_second": 0.707,
+    "train_steps_per_second": 0.177,
+    "total_flos": 128069464642560.0,
+    "train_loss": 3.4992236852645875,
+    "epoch": 0.8333333333333334
+  },
+  "wall_time_sec": 113.38652563095093,
+  "n_rows_trained": 95,
+  "special_token_embedding_deltas": {
+    "<|end-of-read|>": {
+      "in_emb_delta": 0.0034804355818778276,
+      "out_emb_delta": null
+    },
+    "<|end-of-write|>": {
+      "in_emb_delta": 0.0037079746834933758,
+      "out_emb_delta": null
+    },
+    "<|low-latency|>": {
+      "in_emb_delta": 0.0024170593824237585,
+      "out_emb_delta": null
+    },
+    "<|medium-latency|>": {
+      "in_emb_delta": 0.002161100972443819,
+      "out_emb_delta": null
+    },
+    "<|high-latency|>": {
+      "in_emb_delta": 0.0019556081388145685,
+      "out_emb_delta": null
+    }
+  },
+  "env": {
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "2a951957c30ea52c82f2bf79785bec1b019d8f20"
+  }
+}

@@ -1,0 +1,392 @@
+{
+  "config": {
+    "n_sents": 100,
+    "flores_dir": "/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest"
+  },
+  "per_backbone": {
+    "gemma-4-E2B": {
+      "model_path": "/g/data/po67/dipankar/models/gemma-4-E2B",
+      "is_base": true,
+      "per_direction": [
+        {
+          "src_lang": "de",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.215086396667417,
+          "ppl": 3.3705852590759267,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "de",
+          "n_sents": 100,
+          "total_tokens": 3930,
+          "avg_nll": 1.2648805443567175,
+          "ppl": 3.542669518965322,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ar",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.4267606807928157,
+          "ppl": 4.1651849516561255,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ar",
+          "n_sents": 100,
+          "total_tokens": 4310,
+          "avg_nll": 1.4861411756263254,
+          "ppl": 4.420006539557134,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ru",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.4133603604238065,
+          "ppl": 4.109742442243786,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ru",
+          "n_sents": 100,
+          "total_tokens": 4129,
+          "avg_nll": 1.148935034362246,
+          "ppl": 3.154831333063059,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "zh",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.4813175931707159,
+          "ppl": 4.398737611013106,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "zh",
+          "n_sents": 100,
+          "total_tokens": 3282,
+          "avg_nll": 1.5498829777105634,
+          "ppl": 4.710918867822049,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "vi",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.4253694054490564,
+          "ppl": 4.1593940618259015,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "vi",
+          "n_sents": 100,
+          "total_tokens": 4025,
+          "avg_nll": 1.4111231904592574,
+          "ppl": 4.100558526710364,
+          "verdict": "\u2705 excellent"
+        }
+      ]
+    },
+    "gemma-4-E4B": {
+      "model_path": "/g/data/po67/dipankar/models/gemma-4-E4B",
+      "is_base": true,
+      "per_direction": [
+        {
+          "src_lang": "de",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.170772200562602,
+          "ppl": 3.224481623930955,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "de",
+          "n_sents": 100,
+          "total_tokens": 3930,
+          "avg_nll": 1.137726699790275,
+          "ppl": 3.1196683552904836,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ar",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.288149567007275,
+          "ppl": 3.6260705433363527,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ar",
+          "n_sents": 100,
+          "total_tokens": 4310,
+          "avg_nll": 1.3124289612205842,
+          "ppl": 3.7151868062305056,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ru",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.338788817346881,
+          "ppl": 3.8144207461891098,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ru",
+          "n_sents": 100,
+          "total_tokens": 4129,
+          "avg_nll": 1.0645194017849582,
+          "ppl": 2.8994451809782356,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "zh",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.3667000577586934,
+          "ppl": 3.922385669160472,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "zh",
+          "n_sents": 100,
+          "total_tokens": 3282,
+          "avg_nll": 1.483675310482418,
+          "ppl": 4.409120826361638,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "vi",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2886,
+          "avg_nll": 1.364148862313993,
+          "ppl": 3.9123916504770087,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "vi",
+          "n_sents": 100,
+          "total_tokens": 4025,
+          "avg_nll": 1.2950954053416757,
+          "ppl": 3.6513443152761793,
+          "verdict": "\u2705 excellent"
+        }
+      ]
+    },
+    "Qwen3.5-2B": {
+      "model_path": "/g/data/po67/dipankar/models/Qwen3.5-2B",
+      "is_base": false,
+      "per_direction": [
+        {
+          "src_lang": "de",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.4660918514887056,
+          "ppl": 4.332270855287199,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "de",
+          "n_sents": 100,
+          "total_tokens": 3926,
+          "avg_nll": 1.6884028677180052,
+          "ppl": 5.41083198595814,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ar",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.6043762245596558,
+          "ppl": 4.974755504404817,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ar",
+          "n_sents": 100,
+          "total_tokens": 3913,
+          "avg_nll": 2.1945454270645324,
+          "ppl": 8.975919919036137,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ru",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.6230134820186413,
+          "ppl": 5.0683406801788635,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ru",
+          "n_sents": 100,
+          "total_tokens": 4216,
+          "avg_nll": 1.3873175841807415,
+          "ppl": 4.00409498692865,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "zh",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.5402353929280417,
+          "ppl": 4.665688411792347,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "zh",
+          "n_sents": 100,
+          "total_tokens": 2842,
+          "avg_nll": 1.888691833705486,
+          "ppl": 6.610715107434308,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "vi",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.524426531513886,
+          "ppl": 4.592509154729589,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "vi",
+          "n_sents": 100,
+          "total_tokens": 3927,
+          "avg_nll": 1.7394286530419163,
+          "ppl": 5.694089192574048,
+          "verdict": "\u2705 excellent"
+        }
+      ]
+    },
+    "Qwen3.5-4B": {
+      "model_path": "/g/data/po67/dipankar/models/Qwen3.5-4B",
+      "is_base": false,
+      "per_direction": [
+        {
+          "src_lang": "de",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.3769782065037917,
+          "ppl": 3.9629084252250872,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "de",
+          "n_sents": 100,
+          "total_tokens": 3926,
+          "avg_nll": 1.384573992818093,
+          "ppl": 3.993124442733978,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ar",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.4003643152891896,
+          "ppl": 4.056677607340486,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ar",
+          "n_sents": 100,
+          "total_tokens": 3913,
+          "avg_nll": 1.8454630613144236,
+          "ppl": 6.331030767167421,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "ru",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.5618716374580954,
+          "ppl": 4.767736373578306,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "ru",
+          "n_sents": 100,
+          "total_tokens": 4216,
+          "avg_nll": 1.1965520033573969,
+          "ppl": 3.308688883975565,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "zh",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.4431105663385841,
+          "ppl": 4.233845011448908,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "zh",
+          "n_sents": 100,
+          "total_tokens": 2842,
+          "avg_nll": 1.7313329480551733,
+          "ppl": 5.64817762033006,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "vi",
+          "tgt_lang": "en",
+          "n_sents": 100,
+          "total_tokens": 2918,
+          "avg_nll": 1.3704792650862048,
+          "ppl": 3.93723722369823,
+          "verdict": "\u2705 excellent"
+        },
+        {
+          "src_lang": "en",
+          "tgt_lang": "vi",
+          "n_sents": 100,
+          "total_tokens": 3927,
+          "avg_nll": 1.5201799666149973,
+          "ppl": 4.5730481170805515,
+          "verdict": "\u2705 excellent"
+        }
+      ]
+    }
+  }
+}

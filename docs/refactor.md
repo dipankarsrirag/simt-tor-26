@@ -117,11 +117,11 @@ simt-tor-26/
 
 | Current | Destination | Reason |
 |---|---|---|
-| `scripts/phase2_build_htgt_source_pool.py` | `scripts/01_build_source_pool.py` | Live, entry stage. |
-| `scripts/phase2_build_sft_dataset.py` | `scripts/02_build_sft_dataset.py` | Live. |
-| `scripts/plot_v6b_bleu_al.py` | `scripts/03_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
-| `scripts/phase2_score_comet.py` | `scripts/04_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
-| `scripts/phase2_build_tokenizer_v6.py` | `scripts/prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
+| `scripts/01_build_source_pool.py` | `scripts/01_build_source_pool.py` | Live, entry stage. |
+| `scripts/02_build_sft_dataset.py` | `scripts/02_build_sft_dataset.py` | Live. |
+| `scripts/03_plot_bleu_al.py` | `scripts/03_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
+| `scripts/04_score_comet.py` | `scripts/04_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
+| `scripts/prepare_tokenizer.py` | `scripts/prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
 | `scripts/probe_east_8b_compat.py` | (keep in place) | Used 2026-08-28 for EAST-8B baseline; live. |
 | `scripts/make_job.py`, `download_*.py`, `download_data.sh` | (keep in place) | Utilities. |
 | `scripts/phase1_*.py` (all 8) | `scripts/_archive/` | Gate 1 passed 2026-08-16; not re-runnable. |
@@ -133,7 +133,7 @@ simt-tor-26/
 | Current | Destination | Reason |
 |---|---|---|
 | `src/train/sft.py` | `src/_archive/sft_pre_v6.py` | Old base-model + latency-token recipe; deprecated 2026-08-21 (v6 pivot). |
-| `src/train/sft_v6.py` | `src/train/sft.py` | Rename to plain name — this is the live recipe. |
+| `src/train/sft.py` | `src/train/sft.py` | Rename to plain name — this is the live recipe. |
 | `src/annotator/*`, `src/eval/extrinsic.py`, `src/constants.py` | (no change) | All live. |
 | `src/**/__pycache__/` | delete | Runtime artifacts, in .gitignore. |
 
@@ -141,11 +141,11 @@ simt-tor-26/
 
 | Current | Destination | Reason |
 |---|---|---|
-| `jobs/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
-| `jobs/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
-| `jobs/htgt_evals/` + `jobs/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
-| `jobs/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
-| `jobs/resubmit_missing_evals.sh` | `jobs/loop_resubmit.sh` | Rename to clearer intent. |
+| `jobs/_archive/v6b_gemma_2b/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
+| `jobs/_archive/v6b_gemma_2b/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
+| `jobs/_archive/v6b_gemma_2b/htgt_evals/` + `jobs/_archive/v6b_gemma_2b/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
+| `jobs/_archive/v6b_gemma_2b/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
+| `jobs/loop_resubmit.sh` | `jobs/loop_resubmit.sh` | Rename to clearer intent. |
 | `pbs/templates/`, `pbs/env.sh` | `jobs/templates/`, `jobs/env.sh` | Consolidate into `jobs/`. |
 | `jobs/htgt_build/` | `jobs/_archive/htgt_build/` | 1 PBS, one-time build. |
 | `jobs/v2bal_full/`, `rb_fw_full/`, `condA_full/`, `v2bal_v3_wmt15/`, `ctrl_envi_backfill/`, `download_east/` | `jobs/_archive/` | Superseded / one-time / abandoned. |
@@ -170,8 +170,8 @@ simt-tor-26/
 | Current | Destination | Reason |
 |---|---|---|
 | `results/phase1_*` (11 dirs) | `results/_archive/phase1_*` | Gate 1 evidence, no re-runs. |
-| `results/phase2/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
-| `results/phase2/extrinsic/` | (no change) | All 798 landed cells. |
+| `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
+| `results/_archive/v6b_gemma_2b/extrinsic/` | (no change) | All 798 landed cells. |
 
 ### Delete outright
 
@@ -285,9 +285,9 @@ One-liner per archived script explaining why it's there.
 2. Move top-level MD files per table. Update all internal cross-references (`docs/_archive/method-formal.md` → `docs/01-method.md` etc.) via `grep -rl` + `sed`.
 3. Move `phase1_*.py`, `probe_*.py`, `smoke_*.py`, `phase0_*`, `phase2_v[1-5]_*.py` to `scripts/_archive/`.
 4. Rename active scripts to `01_..06_` prefix. Update any PBS files that reference them.
-5. Move `src/train/sft.py` → `src/_archive/sft_pre_v6.py`. Rename `src/train/sft_v6.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
+5. Move `src/train/sft.py` → `src/_archive/sft_pre_v6.py`. Rename `src/train/sft.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
 6. Consolidate `pbs/` into `jobs/`. Update `#PBS -o` paths and any `source $PBS_O_WORKDIR/pbs/env.sh` refs in PBS files.
-7. Rename `jobs/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
+7. Rename `jobs/_archive/v6b_gemma_2b/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
 8. Move `jobs/v2bal_full/`, `rb_fw_full/`, etc. to `jobs/_archive/`.
 9. Delete `tests/`, all `__pycache__/`.
 10. Write `README.md`, `jobs/reproduce_v6b.sh`, all `_archive/README.md` files.

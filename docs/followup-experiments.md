@@ -61,7 +61,7 @@ The `↺` glyph reads "self-trained on"; policy suffix disambiguates.
 
 ## Corpus sizes (pre-registered)
 
-**htgt-corpus** (from `results/phase2/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
+**htgt-corpus** (from `results/_archive/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
 
 | Direction | Rows |
 |---|---|
@@ -258,7 +258,7 @@ Each SFT run comparable to `v6b_v2bal_v3_htgt` — ~12 GPU-h on H200 (see `LOG.m
 - SFT: **~85 GPU-h**
 - Eval: **~130 GPU-h**
 - Redo/debug buffer: **~50 GPU-h**
-- **~330 GPU-h total.** On ba39's ~50-job cap and H200 turnaround, fits in ~2 wall-clock weeks via `jobs/resubmit_missing_evals.sh`.
+- **~330 GPU-h total.** On ba39's ~50-job cap and H200 turnaround, fits in ~2 wall-clock weeks via `jobs/loop_resubmit.sh`.
 
 ---
 
@@ -290,7 +290,7 @@ Not yet computed at scale — see `docs/next-steps.md` §COMET rescoring.
 | EAST↺ours matches or loses to EAST | Terminal for the headline | Report faithfully; pivot to "Gemma-2B Ours is efficient at 4× fewer params" story |
 | Wait-k / Conv-SiMT reimplementation is buggy | Fig 2 line 4-5 unusable | Sanity-check against published wait-k numbers on WMT15 De→En; require ±1 BLEU match |
 | htgt-corpus target quality is uneven across directions | Cross-direction comparisons look noisy | Sample-inspect 20 rows/direction before large SFT runs |
-| GPU quota exhaustion mid-run | Delays 1-2 weeks | Resubmit-loop already handles queue saturation (`jobs/resubmit_missing_evals.sh`) |
+| GPU quota exhaustion mid-run | Delays 1-2 weeks | Resubmit-loop already handles queue saturation (`jobs/loop_resubmit.sh`) |
 | Fig 4 flat because 8B is data-bound at 30K rows/direction | Weakens scaling story | Note explicitly in analysis; add a smaller-N and larger-N point per backbone if the initial run is flat |
 | Fig 1 with 6 lines is unreadable | Headline harder to parse | Drop `Gemma-2B CondA` (superseded by `Gemma-2B Ours`) — falls back to 5 lines |
 | `EAST↺east` and `EAST↺ours` differ in both source and target simultaneously | Ablation isn't clean | Explicit in Fig 2 caption: "target quality controlled; source pool differs". The ideal orthogonal ablation (same sources, different targets) needs retranslation — deferred if reviewers ask. |
