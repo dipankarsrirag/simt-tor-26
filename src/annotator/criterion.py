@@ -1,7 +1,7 @@
 """
 Divergence functions for the commit criterion (METHOD §3).
 
-docs/_archive/method-formal.md's primary criterion is embedding-grounded OT (Sinkhorn). JS/KL
+_archive/docs/method-formal.md's primary criterion is embedding-grounded OT (Sinkhorn). JS/KL
 are cheap baselines that answer the prior question — do i*[j] traces
 have signal at all? OT tests whether uncertainty spread across
 semantically-nearby vocabulary tokens is committable (JS calls it "far"

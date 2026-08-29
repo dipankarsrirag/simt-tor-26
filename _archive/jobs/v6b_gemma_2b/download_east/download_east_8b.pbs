@@ -1,0 +1,40 @@
+#!/bin/bash
+#PBS -N dl_east_8b
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=05:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/download_east_8b.log
+
+set -o pipefail
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $TMPDIR
+
+cd /g/data/po67/dipankar/models
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+TARGET=/g/data/po67/dipankar/models/EAST-8B
+if [ -f "$TARGET/config.json" ] && [ -s "$TARGET/model.safetensors.index.json" ]; then
+    echo "SKIP: EAST-8B already downloaded at $TARGET"
+    ls -lh $TARGET
+    exit 0
+fi
+
+python3 -u /g/data/po67/dipankar/models/get_model.py \
+    biaofu-xmu/EAST-8B model $TARGET
+
+echo "=== Downloaded files ==="
+ls -lh $TARGET

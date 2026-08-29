@@ -29,11 +29,11 @@ We now have **multiple trained arms** — the ship arm plus supporting head-to-h
 
 | Name | Path prefix | What it is |
 |---|---|---|
-| **v6b-ctrl-merged3** (ship) | `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3/final/` | Gemma-4-E2B-it + chat template + NL latency prompt + our OT-chunks with EAST §3.1 merge (<=3-word chunks folded forward). α=1 (no EOR/EOW upweight), 2 epochs, best-model-by-eval-loss, direct-ids splice. **The paper's headline model.** |
-| **v6b-ctrl** (raw OT baseline) | `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_ctrl/final/` | Same recipe, no merge — raw OT chunks. Sits below merged3 by ~5 BLEU on average. |
-| **v6b-ctrl-merged** (<2-word merge) | `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged/final/` | EAST §3.1 original threshold. Middle of the pack. |
-| **cond-A-v6b** (GPT-4 chunks head-to-head) | `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_condA/final/` | Matched-backbone baseline: SiMT-Multi-90K's GPT-4 chunks, same recipe as ship. 4 dirs only (de-en, en-de, ru-en, en-ru). |
-| **v6b-ctrl-e4b** (scaling test) | `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_ctrl_e4b/final/` | Same v6b-ctrl training data on Gemma-4-**E4B**-it (4B). Notably **UNDERPERFORMS merged3** on E2B → chunk simplification beats scaling. |
+| **v6b-ctrl-merged3** (ship) | `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3/final/` | Gemma-4-E2B-it + chat template + NL latency prompt + our OT-chunks with EAST §3.1 merge (<=3-word chunks folded forward). α=1 (no EOR/EOW upweight), 2 epochs, best-model-by-eval-loss, direct-ids splice. **The paper's headline model.** |
+| **v6b-ctrl** (raw OT baseline) | `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl/final/` | Same recipe, no merge — raw OT chunks. Sits below merged3 by ~5 BLEU on average. |
+| **v6b-ctrl-merged** (<2-word merge) | `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged/final/` | EAST §3.1 original threshold. Middle of the pack. |
+| **cond-A-v6b** (GPT-4 chunks head-to-head) | `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_condA/final/` | Matched-backbone baseline: SiMT-Multi-90K's GPT-4 chunks, same recipe as ship. 4 dirs only (de-en, en-de, ru-en, en-ru). |
+| **v6b-ctrl-e4b** (scaling test) | `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_e4b/final/` | Same v6b-ctrl training data on Gemma-4-**E4B**-it (4B). Notably **UNDERPERFORMS merged3** on E2B → chunk simplification beats scaling. |
 
 **Deprecated arms (kept only for regression / LOG.md provenance):**
 - `sft_multilingual_v6/final` — pre-v6b (pre-string-round-trip-fix, pre-α=1) with silent 40-47% AR/VI row drop; superseded 2026-08-22.

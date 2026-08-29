@@ -11,7 +11,7 @@ backbone:
   hf_id: google/gemma-4-E2B-it      # HF model id (or local path)
   local_path: /g/data/po67/dipankar/models/gemma-4-E2B-it
   is_instruct: true                 # true → use chat template, natural-language latency
-  tokenizer_dir: results/_archive/v6b_gemma_2b/tokenizer-extended-v6
+  tokenizer_dir: _archive/results/v6b_gemma_2b/tokenizer-extended-v6
 
 # ─────────── source pool ───────────
 # (Stage 1 — scripts/01_build_source_pool.py)

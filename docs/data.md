@@ -2,7 +2,7 @@
 
 All data lives under `/g/data/po67/dipankar/data/simt-tor-26/`, accessed via the `data/` symlink in the repo root. Never committed.
 
-**Currency note (2026-08-22):** the v6b multilingual pipeline uses 3 additional data assets not in the table below: (1) `results/_archive/v6b_gemma_2b/multilingual_source_pool_v5.json` — 96K rows across 10 directions (8 covered after zh drop) sourced from SiMT-Multi-90K + custom Vi/Ar pools; (2) `results/_archive/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl` — the 8 per-direction OT annotator matrices used by v6b builders; (3) **FLORES-200 devtest** at `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest/*.devtest` — 1012 sents × 200 languages, our primary streaming eval set for v6b (all BLEU/AL numbers in `05-phase2_sft_and_streaming.md` Phase 2b section).
+**Currency note (2026-08-22):** the v6b multilingual pipeline uses 3 additional data assets not in the table below: (1) `_archive/results/v6b_gemma_2b/multilingual_source_pool_v5.json` — 96K rows across 10 directions (8 covered after zh drop) sourced from SiMT-Multi-90K + custom Vi/Ar pools; (2) `_archive/results/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl` — the 8 per-direction OT annotator matrices used by v6b builders; (3) **FLORES-200 devtest** at `/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest/*.devtest` — 1012 sents × 200 languages, our primary streaming eval set for v6b (all BLEU/AL numbers in `05-phase2_sft_and_streaming.md` Phase 2b section).
 
 ## The curated corpus — human-translated parallel training data
 
@@ -51,7 +51,7 @@ Per direction, 30,000 rows sampled from public human-translated parallel corpora
 
 3. **Sample.** Uniform sample per direction to hit the row target (30K); log the seed.
 
-4. **Pool.** All 8 directions merged into a single indexed JSON with disjoint global indices, written to `results/sft_dataset/{tag}/source_pool.json` (or, for the v6b baseline, the fossilised path `results/_archive/v6b_gemma_2b/multilingual_source_pool_htgt.json`).
+4. **Pool.** All 8 directions merged into a single indexed JSON with disjoint global indices, written to `results/sft_dataset/{tag}/source_pool.json` (or, for the v6b baseline, the fossilised path `_archive/results/v6b_gemma_2b/multilingual_source_pool_htgt.json`).
 
 5. **Per-direction shards.** Also written to `results/sft_dataset/{tag}/per_direction/{pair}.json` for parallel annotation.
 
@@ -83,7 +83,7 @@ via a 3-tier matching ladder (exact alnum → 8-token prefix jaccard≥0.75 →
 5-token prefix jaccard≥0.85). See LOG.md 2026-08-25 for full method
 and per-direction numbers.
 
-**Artifact:** `results/_archive/v6b_gemma_2b/m90k_wmt_recovery.pkl` (Python pickle).
+**Artifact:** `_archive/results/v6b_gemma_2b/m90k_wmt_recovery.pkl` (Python pickle).
 
 Schema: `dict[direction: str, dict[m90k_source_string: str, wmt_reference: str]]`.
 

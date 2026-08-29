@@ -3,7 +3,7 @@ instruction prompt. Matches EAST's actual training format (Fu et al. 2025 Fig 18
 
 Key differences from src/train/sft.py:
   - Backbone: gemma-4-E2B-it (instruction-tuned, NOT base)
-  - Tokenizer: results/_archive/v6b_gemma_2b/tokenizer-extended-v6 (EOR + EOW only; latency
+  - Tokenizer: _archive/results/v6b_gemma_2b/tokenizer-extended-v6 (EOR + EOW only; latency
     tokens dropped since latency is now natural language in the user turn)
   - Prompt format: chat template with system + user instruction + assistant
       user: "Translate the following text from {SRC_NAME} into {TGT_NAME}

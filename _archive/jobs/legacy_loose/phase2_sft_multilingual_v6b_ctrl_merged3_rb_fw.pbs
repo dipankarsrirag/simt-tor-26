@@ -1,0 +1,66 @@
+#!/bin/bash
+#PBS -N phase2_sft_v6b_m3rb_fw
+#PBS -P po67
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=03:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_fw.log
+
+# v6b-ctrl-merged3 with rebucket + stranded-function-word merge.
+# Post-hoc pass on merged3_rebucketed: merges any chunk whose target ends with
+# a stranded det/prep/conj (the/and/of/in/... in en; der/die/das/und/... in de;
+# и/в/на/... in ru) into next chunk. Eliminates all 16,463 stranded-ending
+# rows (20.8% -> 0%). Latency re-bucketed after merge; marginals 6.7/14.7/78.6
+# (was 12/19/69; cond-A target 6.1/9.0/84.9). See LOG.md 2026-08-23.
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export TRITON_CACHE_DIR=/g/data/po67/dipankar/cache/triton
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export PIP_CACHE_DIR=/g/data/po67/dipankar/cache/pip
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $HF_HOME $HF_HUB_CACHE $TRANSFORMERS_CACHE $HF_DATASETS_CACHE \
+         $TORCH_HOME $TRITON_CACHE_DIR $PIP_CACHE_DIR $TMPDIR
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+OUT_DIR=results/phase2/sft_multilingual_v6b_ctrl_merged3_rb_fw
+
+if [ -f "$OUT_DIR/final/config.json" ]; then
+    echo "SKIP: $OUT_DIR/final/ already exists."
+    exit 0
+fi
+
+python -u src/train/sft.py \
+    --corpus_file results/phase2/sft_dataset_multilingual_v6b_merged3_rb_fw.json \
+    --output_dir $OUT_DIR \
+    --per_device_batch_size 16 \
+    --grad_accum_steps 4 \
+    --num_epochs 2.0 \
+    --warmup_steps 200 \
+    --logging_steps 50 \
+    --eval_steps 200 \
+    --val_frac 0.05 \
+    --descriptive_init \
+    --special_token_loss_weight 1.0

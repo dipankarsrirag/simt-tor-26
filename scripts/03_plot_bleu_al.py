@@ -23,7 +23,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/extrinsic")
+EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic")
 FIG = Path("/g/data/ba39/dipankar/simt-tor-26/figures/phase2")
 FIG.mkdir(parents=True, exist_ok=True)
 

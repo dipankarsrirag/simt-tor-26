@@ -23,8 +23,8 @@ Goal: bring an undergrad assistant onto the codebase. Current state = 14 weeks o
 ```
 simt-tor-26/
 ├── CLAUDE.md               docs/experiments.md    docs/setup.md
-├── LOG.md                  docs/_archive/method-formal.md         docs/_archive/OPTIONALS.md
-├── docs/related-work.md         docs/_archive/TIMELINE.md       create-venv.sh
+├── LOG.md                  _archive/docs/method-formal.md         _archive/docs/OPTIONALS.md
+├── docs/related-work.md         _archive/docs/TIMELINE.md       create-venv.sh
 ├── data -> …               docs/ (9 files)
 ├── figures/  jobs/ (14 subdirs, 485 PBS)  logs/  pbs/  results/  scripts/ (48)
 ├── src/ (annotator/ eval/ train/ constants.py + __pycache__/)
@@ -42,7 +42,7 @@ simt-tor-26/
 ├── data -> …               # KEEP (symlink).
 ├── docs/
 │   ├── 00-README.md        # Doc index (rewrite from current 00-README.md).
-│   ├── 01-method.md        # ← docs/_archive/method-formal.md (moved from root).
+│   ├── 01-method.md        # ← _archive/docs/method-formal.md (moved from root).
 │   ├── 02-hypotheses.md    # KEEP.
 │   ├── 03-experiments.md   # ← docs/experiments.md (moved from root).
 │   ├── 04-data.md          # KEEP (renamed from 06-data.md).
@@ -52,8 +52,8 @@ simt-tor-26/
 │   ├── 08-followup-experiments.md   # KEEP (locked 2026-08-29).
 │   ├── 09-refactor.md      # THIS FILE.
 │   └── _archive/
-│       ├── docs/_archive/OPTIONALS.md
-│       ├── docs/_archive/TIMELINE.md
+│       ├── _archive/docs/OPTIONALS.md
+│       ├── _archive/docs/TIMELINE.md
 │       ├── CLAUDE-original.md      # (content folded into README + docs/01)
 │       ├── HOUSEKEEPING-full.md    # (full ops manual)
 │       ├── 03-phase1_annotator_experiments.md
@@ -63,7 +63,7 @@ simt-tor-26/
 │   ├── __init__.py         constants.py
 │   ├── annotator/          # annotate.py, criterion.py, east_format.py, boundary_refine.py
 │   ├── train/
-│   │   └── sft.py          # ← sft_v6.py (renamed). OLD sft.py → src/_archive/.
+│   │   └── sft.py          # ← sft_v6.py (renamed). OLD sft.py → _archive/src/.
 │   └── eval/
 │       └── extrinsic.py    # KEEP.
 ├── scripts/
@@ -124,15 +124,15 @@ simt-tor-26/
 | `scripts/prepare_tokenizer.py` | `scripts/prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
 | `scripts/probe_east_8b_compat.py` | (keep in place) | Used 2026-08-28 for EAST-8B baseline; live. |
 | `scripts/make_job.py`, `download_*.py`, `download_data.sh` | (keep in place) | Utilities. |
-| `scripts/phase1_*.py` (all 8) | `scripts/_archive/` | Gate 1 passed 2026-08-16; not re-runnable. |
-| `scripts/probe_v6_*.py`, `probe_lookahead_*.py`, `probe_tau_sweep.py`, `smoke_load_gemma4.py`, `phase0_verify_east_format.py`, `phase2_streaming_smoke.py`, `phase2_inference_smoke.py`, `phase2_batched_ot_smoke.py`, `probe_annotator_batched.py`, `probe_annotator_kv_cache.py`, `probe_v6b_latency_diag.py` | `scripts/_archive/` | Diagnostics for closed bugs; historical only. |
-| `scripts/phase2_build_condA_dataset.py`, `phase2_build_multilingual_source_pool.py`, `phase2_prep_indices.py`, `phase2_verify_loss.py`, `phase2_prepare_tokenizer.py`, `phase2_probe_*.py`, `phase2_compute_al_ca_approx.py`, `phase2_space_probe.py`, `phase2_plot_bleu_al.py`, `phase2_tau_sweep.py`, `plot_bleu_vs_al_all_conditions.py`, `compute_dal_from_stream.py` | `scripts/_archive/` | Pre-v6b variants; superseded. |
+| `scripts/phase1_*.py` (all 8) | `_archive/scripts/` | Gate 1 passed 2026-08-16; not re-runnable. |
+| `scripts/probe_v6_*.py`, `probe_lookahead_*.py`, `probe_tau_sweep.py`, `smoke_load_gemma4.py`, `phase0_verify_east_format.py`, `phase2_streaming_smoke.py`, `phase2_inference_smoke.py`, `phase2_batched_ot_smoke.py`, `probe_annotator_batched.py`, `probe_annotator_kv_cache.py`, `probe_v6b_latency_diag.py` | `_archive/scripts/` | Diagnostics for closed bugs; historical only. |
+| `scripts/phase2_build_condA_dataset.py`, `phase2_build_multilingual_source_pool.py`, `phase2_prep_indices.py`, `phase2_verify_loss.py`, `phase2_prepare_tokenizer.py`, `phase2_probe_*.py`, `phase2_compute_al_ca_approx.py`, `phase2_space_probe.py`, `phase2_plot_bleu_al.py`, `phase2_tau_sweep.py`, `plot_bleu_vs_al_all_conditions.py`, `compute_dal_from_stream.py` | `_archive/scripts/` | Pre-v6b variants; superseded. |
 
 ### src/ modules
 
 | Current | Destination | Reason |
 |---|---|---|
-| `src/train/sft.py` | `src/_archive/sft_pre_v6.py` | Old base-model + latency-token recipe; deprecated 2026-08-21 (v6 pivot). |
+| `src/train/sft.py` | `_archive/src/sft_pre_v6.py` | Old base-model + latency-token recipe; deprecated 2026-08-21 (v6 pivot). |
 | `src/train/sft.py` | `src/train/sft.py` | Rename to plain name — this is the live recipe. |
 | `src/annotator/*`, `src/eval/extrinsic.py`, `src/constants.py` | (no change) | All live. |
 | `src/**/__pycache__/` | delete | Runtime artifacts, in .gitignore. |
@@ -141,37 +141,37 @@ simt-tor-26/
 
 | Current | Destination | Reason |
 |---|---|---|
-| `jobs/_archive/v6b_gemma_2b/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
-| `jobs/_archive/v6b_gemma_2b/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
-| `jobs/_archive/v6b_gemma_2b/htgt_evals/` + `jobs/_archive/v6b_gemma_2b/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
-| `jobs/_archive/v6b_gemma_2b/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
+| `_archive/jobs/v6b_gemma_2b/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
+| `_archive/jobs/v6b_gemma_2b/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
+| `_archive/jobs/v6b_gemma_2b/htgt_evals/` + `_archive/jobs/v6b_gemma_2b/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
+| `_archive/jobs/v6b_gemma_2b/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
 | `jobs/loop_resubmit.sh` | `jobs/loop_resubmit.sh` | Rename to clearer intent. |
 | `pbs/templates/`, `pbs/env.sh` | `jobs/templates/`, `jobs/env.sh` | Consolidate into `jobs/`. |
-| `jobs/htgt_build/` | `jobs/_archive/htgt_build/` | 1 PBS, one-time build. |
-| `jobs/v2bal_full/`, `rb_fw_full/`, `condA_full/`, `v2bal_v3_wmt15/`, `ctrl_envi_backfill/`, `download_east/` | `jobs/_archive/` | Superseded / one-time / abandoned. |
-| `jobs/_archived/` (existing dir with 1 tar.gz) | `jobs/_archive/` | Consolidate archive naming (`_archive` throughout). |
+| `jobs/htgt_build/` | `_archive/jobs/htgt_build/` | 1 PBS, one-time build. |
+| `jobs/v2bal_full/`, `rb_fw_full/`, `condA_full/`, `v2bal_v3_wmt15/`, `ctrl_envi_backfill/`, `download_east/` | `_archive/jobs/` | Superseded / one-time / abandoned. |
+| `_archive/jobsd/` (existing dir with 1 tar.gz) | `_archive/jobs/` | Consolidate archive naming (`_archive` throughout). |
 
 ### Top-level markdown
 
 | Current | Destination | Reason |
 |---|---|---|
 | `README.md` | **NEW** | Doesn't exist yet. Entry point for new contributor. |
-| `CLAUDE.md` | `docs/_archive/CLAUDE-original.md` | Content folded into new README + `docs/01-method.md`. |
-| `docs/_archive/method-formal.md` | `docs/01-method.md` | Detailed algorithm — belongs in docs. |
+| `CLAUDE.md` | `_archive/docs/CLAUDE-original.md` | Content folded into new README + `docs/01-method.md`. |
+| `_archive/docs/method-formal.md` | `docs/01-method.md` | Detailed algorithm — belongs in docs. |
 | `docs/experiments.md` | `docs/03-experiments.md` | Ablation grid; reference doc. |
-| `docs/setup.md` | `docs/05-setup.md` (trimmed) + `docs/_archive/HOUSEKEEPING-full.md` | Trim to §1-3 (venv/paths/data fetch). Full 23KB version archived. |
+| `docs/setup.md` | `docs/05-setup.md` (trimmed) + `_archive/docs/HOUSEKEEPING-full.md` | Trim to §1-3 (venv/paths/data fetch). Full 23KB version archived. |
 | `docs/related-work.md` | `docs/06-related-work.md` | Lit review reference. |
-| `docs/_archive/TIMELINE.md` | `docs/_archive/TIMELINE.md` | Superseded by LOG.md. |
-| `docs/_archive/OPTIONALS.md` | `docs/_archive/OPTIONALS.md` | 74KB dumping ground; 80% is stale venue-targeting discussion. |
+| `_archive/docs/TIMELINE.md` | `_archive/docs/TIMELINE.md` | Superseded by LOG.md. |
+| `_archive/docs/OPTIONALS.md` | `_archive/docs/OPTIONALS.md` | 74KB dumping ground; 80% is stale venue-targeting discussion. |
 | `LOG.md` | (no change — top level) | Primary record. Internal cross-references. |
 
 ### Results directories
 
 | Current | Destination | Reason |
 |---|---|---|
-| `results/phase1_*` (11 dirs) | `results/_archive/phase1_*` | Gate 1 evidence, no re-runs. |
-| `results/_archive/v6b_gemma_2b/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
-| `results/_archive/v6b_gemma_2b/extrinsic/` | (no change) | All 798 landed cells. |
+| `results/phase1_*` (11 dirs) | `_archive/results/phase1_*` | Gate 1 evidence, no re-runs. |
+| `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
+| `_archive/results/v6b_gemma_2b/extrinsic/` | (no change) | All 798 landed cells. |
 
 ### Delete outright
 
@@ -243,11 +243,11 @@ Sequentially invokes 01→06 with the canonical config paths. Undergrad's "just 
 
 New content: doc index with 3-sentence description of each 01→09 file. Points to `README.md` for the top-level onboarding.
 
-### `scripts/_archive/README.md` (NEW inside archive)
+### `_archive/scripts/README.md` (NEW inside archive)
 
 One-liner per archived script explaining why it's there.
 
-### Similarly for `jobs/_archive/README.md`, `results/_archive/README.md`, `src/_archive/README.md`, `docs/_archive/README.md`.
+### Similarly for `_archive/jobs/README.md`, `_archive/results/README.md`, `_archive/src/README.md`, `_archive/docs/README.md`.
 
 ---
 
@@ -256,7 +256,7 @@ One-liner per archived script explaining why it's there.
 - **Live scripts:** numbered prefix `NN_verb_noun.py`. Verbs: build, annotate, train, eval, plot, score, prepare, probe, download.
 - **Live modules under `src/`:** plain name (no `_v6` suffix). Git preserves history.
 - **Live PBS dirs:** pipeline-stage names (annotate, train, eval). Not backbone/dataset names.
-- **Archive naming:** always `_archive/` (leading underscore, no dash, singular). Existing `jobs/_archived/` renamed to match.
+- **Archive naming:** always `_archive/` (leading underscore, no dash, singular). Existing `_archive/jobsd/` renamed to match.
 
 ---
 
@@ -281,14 +281,14 @@ One-liner per archived script explaining why it's there.
 ## Execution order (if approved)
 
 **Phase A — safe (git-visible, reversible via revert):**
-1. Create `docs/_archive/`, `scripts/_archive/`, `jobs/_archive/`, `results/_archive/`, `src/_archive/` (empty dirs with `.gitkeep`).
-2. Move top-level MD files per table. Update all internal cross-references (`docs/_archive/method-formal.md` → `docs/01-method.md` etc.) via `grep -rl` + `sed`.
-3. Move `phase1_*.py`, `probe_*.py`, `smoke_*.py`, `phase0_*`, `phase2_v[1-5]_*.py` to `scripts/_archive/`.
+1. Create `_archive/docs/`, `_archive/scripts/`, `_archive/jobs/`, `_archive/results/`, `_archive/src/` (empty dirs with `.gitkeep`).
+2. Move top-level MD files per table. Update all internal cross-references (`_archive/docs/method-formal.md` → `docs/01-method.md` etc.) via `grep -rl` + `sed`.
+3. Move `phase1_*.py`, `probe_*.py`, `smoke_*.py`, `phase0_*`, `phase2_v[1-5]_*.py` to `_archive/scripts/`.
 4. Rename active scripts to `01_..06_` prefix. Update any PBS files that reference them.
-5. Move `src/train/sft.py` → `src/_archive/sft_pre_v6.py`. Rename `src/train/sft.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
+5. Move `src/train/sft.py` → `_archive/src/sft_pre_v6.py`. Rename `src/train/sft.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
 6. Consolidate `pbs/` into `jobs/`. Update `#PBS -o` paths and any `source $PBS_O_WORKDIR/pbs/env.sh` refs in PBS files.
-7. Rename `jobs/_archive/v6b_gemma_2b/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
-8. Move `jobs/v2bal_full/`, `rb_fw_full/`, etc. to `jobs/_archive/`.
+7. Rename `_archive/jobs/v6b_gemma_2b/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
+8. Move `jobs/v2bal_full/`, `rb_fw_full/`, etc. to `_archive/jobs/`.
 9. Delete `tests/`, all `__pycache__/`.
 10. Write `README.md`, `jobs/reproduce_v6b.sh`, all `_archive/README.md` files.
 11. Commit as **one** atomic commit per phase (A.1-A.11) with clear messages.
@@ -307,7 +307,7 @@ One-liner per archived script explaining why it's there.
 |---|---|
 | Broken PBS paths after `jobs/` restructure | Update all `#PBS -o` and `source` lines via scripted rewrite; smoke-test 1 PBS from each stage post-move. |
 | Broken `import` after `src/train/sft.py` swap | `grep -rn "from src.train.sft"` before + after; verify identical count. |
-| `LOG.md` cross-references break | LOG.md references `docs/_archive/method-formal.md`, `docs/experiments.md`, etc. — `sed -i 's|METHOD\.md|docs/01-method.md|g' LOG.md`. |
+| `LOG.md` cross-references break | LOG.md references `_archive/docs/method-formal.md`, `docs/experiments.md`, etc. — `sed -i 's|METHOD\.md|docs/01-method.md|g' LOG.md`. |
 | `docs/*.md` cross-references break | Same treatment. |
 | Undergrad thinks archived stuff is deleted | `_archive/README.md` explains what's there and when to look. |
 | Refactor disrupts live jobs in queue | Complete refactor when queue is empty (currently is — verified 2026-08-29). |

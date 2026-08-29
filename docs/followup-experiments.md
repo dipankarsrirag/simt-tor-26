@@ -61,7 +61,7 @@ The `↺` glyph reads "self-trained on"; policy suffix disambiguates.
 
 ## Corpus sizes (pre-registered)
 
-**curated-corpus** (from `results/_archive/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
+**curated-corpus** (from `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
 
 | Direction | Rows |
 |---|---|

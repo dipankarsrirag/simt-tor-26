@@ -2,7 +2,7 @@
 
 Compute, paths, accounts, admin. Standing operational rules for the
 Teacher-Free Read/Write Annotation project (`simt-tor-26`). No scientific
-claims here — see `CLAUDE.md`, `docs/_archive/method-formal.md`, `docs/experiments.md`.
+claims here — see `CLAUDE.md`, `_archive/docs/method-formal.md`, `docs/experiments.md`.
 
 **Maintained by Dipankar.** If a rule below blocks you, message me before
 working around it. This is a taste-of-research project (14 weeks) — the
@@ -37,7 +37,7 @@ Paths assumed throughout:
   the plaintext token found in `/g/data/po67/dipankar/models/get_model.py`.
   Use `$HF_TOKEN` at runtime if you must.
 - **Weekly meeting.** 30 minutes, in person or Zoom. Bring `LOG.md`, not a
-  summary. If a gate in `docs/_archive/TIMELINE.md` fails, message me the same day —
+  summary. If a gate in `_archive/docs/TIMELINE.md` fails, message me the same day —
   do not wait for the next standing meeting.
 - **Escalate before you spend.** Any single job over ~200 SU (roughly a
   full night on 4×H200), or any download over ~50 GB, ping me first. SU
@@ -50,9 +50,9 @@ Paths assumed throughout:
 ```
 simt-tor-26/
 ├── CLAUDE.md              # project spec — the claim, invariants, docs map
-├── docs/_archive/method-formal.md              # the annotation algorithm, precisely
+├── _archive/docs/method-formal.md              # the annotation algorithm, precisely
 ├── docs/experiments.md         # ablation grid, baselines, metrics
-├── docs/_archive/TIMELINE.md            # phases, gates, weeks
+├── _archive/docs/TIMELINE.md            # phases, gates, weeks
 ├── docs/related-work.md        # what exists, what we build on
 ├── LOG.md                 # decisions + runs, append-only
 ├── docs/setup.md        # this file
@@ -61,7 +61,7 @@ simt-tor-26/
 ├── .gitignore
 ├── data/       -> symlink to /g/data/po67/dipankar/data/simt-tor-26/ (never committed)
 ├── src/                   # library code + annotator + runners
-│   ├── annotator/         # docs/_archive/method-formal.md §§1–4 lives here
+│   ├── annotator/         # _archive/docs/method-formal.md §§1–4 lives here
 │   ├── train/             # SFT wrapper (trl SFTTrainer)
 │   └── eval/              # intrinsic (RWTH) + extrinsic (SimulEval) harnesses
 ├── scripts/               # one-shot utilities incl. make_job.py
@@ -205,18 +205,18 @@ a matched comparison — consistent with `docs/experiments.md`
 deliverable"). This drops the 8×A100 compute floor entirely.
 
 **Start small — 2B primary.** The 14-week timeline and the
-annotator-first plan (`docs/_archive/TIMELINE.md` Phase 1) mean we want fast
+annotator-first plan (`_archive/docs/TIMELINE.md` Phase 1) mean we want fast
 iteration on the annotation criterion, not maximum absolute BLEU.
-2B is fast enough to sweep `tau`, run the `docs/_archive/method-formal.md` §8 sanity
+2B is fast enough to sweep `tau`, run the `_archive/docs/method-formal.md` §8 sanity
 checks daily, and re-annotate at will.
 
 Ladder on disk (`MODEL_BASE = /g/data/po67/dipankar/models/`):
 
 | Family | Model | Path | Role |
 |---|---|---|---|
-| Qwen-3.5 | `Qwen3.5-2B` | `Qwen3.5-2B/` | **Primary backbone** for both annotator and SFT (per `docs/_archive/method-formal.md` §5). |
+| Qwen-3.5 | `Qwen3.5-2B` | `Qwen3.5-2B/` | **Primary backbone** for both annotator and SFT (per `_archive/docs/method-formal.md` §5). |
 | Gemma-4 | `gemma-4-E2B-it` | `gemma-4-E2B-it/` | **Cross-family replication** at matched size — annotator-model ablation (`docs/experiments.md` §Ablation grid, row 2). |
-| Qwen-3.5 | `Qwen3.5-4B` | `Qwen3.5-4B/` | Scale-up candidate only after Gate 3 in `docs/_archive/TIMELINE.md` passes. |
+| Qwen-3.5 | `Qwen3.5-4B` | `Qwen3.5-4B/` | Scale-up candidate only after Gate 3 in `_archive/docs/TIMELINE.md` passes. |
 | Gemma-4 | `gemma-4-E4B-it` | `gemma-4-E4B-it/` | Second scale-up candidate; keep parity with the 2B ablation. |
 
 Larger variants (`Qwen3.5-9B`, `Qwen3.5-27B`, `gemma-4-31B-it`) exist
@@ -234,7 +234,7 @@ Not on disk (fetch on `copyq` when you get to `docs/experiments.md` metrics):
 
 Rules:
 
-- **Same model for annotation and fine-tuning** per `docs/_archive/method-formal.md` §5.
+- **Same model for annotation and fine-tuning** per `_archive/docs/method-formal.md` §5.
   Annotate with `Qwen3.5-2B` → fine-tune `Qwen3.5-2B`. The annotator-model
   ablation is a separate, deliberate axis (`gemma-4-E2B-it` annotates →
   `gemma-4-E2B-it` fine-tunes, then compare).
@@ -399,13 +399,13 @@ before hitting the cleanup block):
 
 ```bash
 # Preview first — never rm -rf without inspecting the list.
-for d in results/_archive/v6b_gemma_2b/sft_*/; do
+for d in _archive/results/v6b_gemma_2b/sft_*/; do
     ls "$d" | grep '^checkpoint-'
 done
 
 # Then delete. Skip any dir that has no final/ — it may still be
 # training, or it may be a crash-mid-save leftover; investigate first.
-for d in results/_archive/v6b_gemma_2b/sft_*/; do
+for d in _archive/results/v6b_gemma_2b/sft_*/; do
     if [ -d "$d/final" ]; then
         rm -rf "$d"/checkpoint-*/
     fi

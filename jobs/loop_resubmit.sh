@@ -27,7 +27,7 @@ while true; do
 
         # Derive output-name from PBS to check landed
         out=$(grep -oE "(flores|wmt15|wmt22|iwslt17|iwslt15)_stream_v6b[a-zA-Z0-9]+_checkargmax_(low_medium|medium_high|low|medium|high)_[a-z]{2}-[a-z]{2}_n[0-9]+\.json" "$pbs" | head -1)
-        if [ -n "$out" ] && [ -f "/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/extrinsic/$out" ]; then
+        if [ -n "$out" ] && [ -f "/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic/$out" ]; then
             SUBMITTED[$pbs]=DONE
             continue
         fi

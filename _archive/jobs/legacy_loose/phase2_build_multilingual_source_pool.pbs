@@ -1,0 +1,43 @@
+#!/bin/bash
+#PBS -N phase2_build_multilingual_source_pool
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=48GB
+#PBS -l jobfs=20GB
+#PBS -l walltime=00:20:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_build_multilingual_source_pool.log
+
+# Sample ~10K rows per direction across 10 directions ({de,ar,ru,zh,vi}↔en)
+# from SiMT-Multi-90K + TED2020 raw parallel data. CPU-only; ~5 min real work.
+# copyq for high-memory JSON load (Multi-90K 90K rows + TED2020 raw files).
+
+set -eo pipefail
+mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
+
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export HF_DATASETS_CACHE=/g/data/po67/dipankar/cache/datasets
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+python -u scripts/phase2_build_multilingual_source_pool.py \
+    --n_per_direction 10000 \
+    --max_src_tokens 80 \
+    --seed 42 \
+    --output results/phase2/multilingual_source_pool_v5.json

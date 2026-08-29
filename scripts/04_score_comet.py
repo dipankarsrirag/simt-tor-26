@@ -1,10 +1,10 @@
 """Score all v6b flores extrinsic outputs with wmt22-comet-da (ref-based).
 
-Reads: results/_archive/v6b_gemma_2b/extrinsic/flores_stream_{PREFIX}_checkargmax_{LAT}_{DIR}_n50.json
+Reads: _archive/results/v6b_gemma_2b/extrinsic/flores_stream_{PREFIX}_checkargmax_{LAT}_{DIR}_n50.json
 For each JSON, reads `hyps`, `refs`, and the source sentences (re-loaded from
 FLORES devtest since the eval JSONs don't cache the raw src). Computes COMET
 per sentence + mean, writes:
-  results/_archive/v6b_gemma_2b/extrinsic/comet_scores_{PREFIX}.json
+  _archive/results/v6b_gemma_2b/extrinsic/comet_scores_{PREFIX}.json
 
 Runs inside the isolated /g/data/po67/dipankar/venvs/comet venv (comet 2.2.7).
 Model checkpoint: /g/data/po67/dipankar/models/wmt22-comet-da/checkpoints/model.ckpt
@@ -15,7 +15,7 @@ import argparse
 import json
 from pathlib import Path
 
-EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/extrinsic")
+EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic")
 FLORES = Path("/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest")
 LANG_FILE = {
     "en": "eng_Latn.devtest", "de": "deu_Latn.devtest", "ar": "arb_Arab.devtest",

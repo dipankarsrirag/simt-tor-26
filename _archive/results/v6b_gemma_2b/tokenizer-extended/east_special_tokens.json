@@ -1,0 +1,20 @@
+{
+  "base_tokenizer": "/g/data/po67/dipankar/models/gemma-4-E2B",
+  "base_vocab_size": 262144,
+  "added_tokens": [
+    "<|end-of-read|>",
+    "<|end-of-write|>",
+    "<|low-latency|>",
+    "<|medium-latency|>",
+    "<|high-latency|>"
+  ],
+  "new_vocab_size": 262149,
+  "n_added": 5,
+  "special_token_ids": {
+    "<|end-of-read|>": 262144,
+    "<|end-of-write|>": 262145,
+    "<|low-latency|>": 262146,
+    "<|medium-latency|>": 262147,
+    "<|high-latency|>": 262148
+  }
+}

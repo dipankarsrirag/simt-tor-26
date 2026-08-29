@@ -98,4 +98,4 @@ Recorded so nobody spends a month rediscovering why:
 
 - **Wait-k-specific LoRA adapters with an information-theoretic gate.** Per-step adapter switching invalidates the KV cache and self-penalises under AL-CA; adjacent-k adapters are probably not distinct enough to mix; a single multipath LoRA with a latency token likely matches it.
 - **Distilling full-context confidence into a prefix model.** Already done — Future-Guided Incremental Transformer (AAAI 2021), FAST (EMNLP 2023). Also risks training the model to be confidently wrong where information is genuinely absent from the prefix.
-- **The commit criterion as an inference-time policy.** Requires the full source at test time. Fatal. This is precisely why the method lives in data construction instead — see `docs/_archive/method-formal.md` §1.
+- **The commit criterion as an inference-time policy.** Requires the full source at test time. Fatal. This is precisely why the method lives in data construction instead — see `_archive/docs/method-formal.md` §1.

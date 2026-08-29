@@ -4,13 +4,13 @@ v6 pivot: chat template + natural-language instruction replaces the vocab-token
 latency indicators. Only EAST specials (end-of-read, end-of-write) need to be
 in the vocab; latency and direction are natural-language in the user turn.
 
-Output: /g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/tokenizer-extended-v6
+Output: /g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/tokenizer-extended-v6
 """
 from pathlib import Path
 from transformers import AutoTokenizer
 
 SRC_TOK = "/g/data/po67/dipankar/models/gemma-4-E2B-it"
-OUT_DIR = Path("/g/data/ba39/dipankar/simt-tor-26/results/_archive/v6b_gemma_2b/tokenizer-extended-v6")
+OUT_DIR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/tokenizer-extended-v6")
 
 # v6 special tokens (only EOR/EOW — latency is NL now)
 NEW_SPECIALS = ["<|end-of-read|>", "<|end-of-write|>"]

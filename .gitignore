@@ -18,9 +18,9 @@ runs/
 # Phase-2 trained-model output dirs — regeneratable via src/train/sft.py.
 # Keep only sft_summary.json / train_indices.json per run (staged explicitly).
 results/train/**/checkpoint-*/
-results/_archive/**/checkpoint-*/
+_archive/results/**/checkpoint-*/
 results/train/**/final/
-results/_archive/**/final/
+_archive/results/**/final/
 # Phase-2 in-progress annotation — commit after all shards complete.
 # (old n2k paths archived)
 
@@ -91,23 +91,23 @@ results/**/tokenizer-*/tokenizer.json
 # src/eval/extrinsic.py. Score/config JSONs may be added back explicitly
 # once the numbers are paper-ready.
 results/eval/**/*.json
-results/_archive/**/extrinsic/
+_archive/results/**/extrinsic/
 
 # Annotator matrices — 100-300MB each, regeneratable via src/annotator/annotate.py.
 # HOUSEKEEPING §7.1 <10MB rule.
 results/annotate/**/matrices.jsonl
-results/_archive/**/annot_ot_*/matrices.jsonl
+_archive/results/**/annot_ot_*/matrices.jsonl
 
 # SFT training datasets — 44-89MB each, regeneratable via scripts/phase2_build_sft_dataset.py.
 results/sft_dataset/**/*.json
-results/_archive/**/sft_dataset_*.json
+_archive/results/**/sft_dataset_*.json
 
 # Multilingual source pool — 38MB, regeneratable via scripts/phase2_build_multilingual_source_pool.py.
 
 
 
 # Extended tokenizer — 31MB tokenizer.json regeneratable via scripts/phase2_build_tokenizer_v6.py.
-results/_archive/**/tokenizer-extended-v6/
+_archive/results/**/tokenizer-extended-v6/
 
 
 # Live per-tag log dirs — everything except placeholder .gitkeep.

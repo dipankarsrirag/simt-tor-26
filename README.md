@@ -8,7 +8,7 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 
 **Falsifiable claim:** backbone-derived tag placement matches or beats GPT-4-derived placement, with the margin growing on word-order-divergent pairs (e.g. German verb-final).
 
-**Empirical status (as of 2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `results/_archive/v6b_gemma_2b/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
+**Empirical status (as of 2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `_archive/results/v6b_gemma_2b/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
 
 ## Repo tour (top level)
 
@@ -24,11 +24,12 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 ├── results/           outputs (annotate/, sft_dataset/, train/, eval/)
 ├── logs/              PBS stdout/stderr (per-tag)
 ├── docs/              method, hypotheses, data, setup, refactor, etc.
+├── _archive/          everything from prior runs; one subdir per source dir (docs/, scripts/, jobs/, results/, src/, logs/)
 ├── data → …           symlink to /g/data/po67/dipankar/data/simt-tor-26/
 └── figures/           paper output PNGs
 ```
 
-Every user-facing subtree (`jobs/`, `results/`, `logs/`) has three live subdirs — `annotate/`, `train/`, `eval/` — plus an `_archive/`. Prior runs live under `_archive/v6b_gemma_2b/`. Everything a new experiment produces goes under `.../annotate/{tag}/`, `.../train/{tag}/`, `.../eval/{tag}/` for that experiment's tag (e.g. `east_8b_curated`, `gemma_4b_curated`). This keeps output namespaces separate across contributors and easy to collate.
+Every live user-facing subtree (`jobs/`, `results/`, `logs/`) has three subdirs — `annotate/`, `train/`, `eval/` — for per-tag outputs. All prior runs live under `_archive/{jobs,results,logs}/v6b_gemma_2b/`. Everything a new experiment produces goes under `.../annotate/{tag}/`, `.../train/{tag}/`, `.../eval/{tag}/` for that experiment's tag (e.g. `east_8b_curated`, `gemma_4b_curated`). This keeps output namespaces separate across contributors and easy to collate.
 
 ## Quickstart
 
@@ -72,7 +73,7 @@ Additional utilities (all in `bin/`, no extension):
 
 Override with `SIMT_VENV=/path`, `SIMT_HF_CACHE=/path`, `PYTHON=python3.11`. `SIMT_ENV_VERBOSE=1` logs which paths got picked.
 
-Reproduce the current headline (v6b Gemma-2B): follow the flow above with `tag = v6b_gemma_2b` — the completed run's artifacts already live under `results/_archive/v6b_gemma_2b/`.
+Reproduce the current headline (v6b Gemma-2B): follow the flow above with `tag = v6b_gemma_2b` — the completed run's artifacts already live under `_archive/results/v6b_gemma_2b/`.
 
 ## Where to read next
 

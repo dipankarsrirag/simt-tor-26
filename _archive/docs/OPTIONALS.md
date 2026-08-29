@@ -1,0 +1,655 @@
+# docs/_archive/OPTIONALS.md — improvements ranked by paper impact
+
+The plan and method as written are **IWSLT-publishable** if the Stage-I primary lands. For **ACL/EMNLP Findings**, three blockers stand between us and a defensible submission — none of them fatal, all of them addressable within the 14-week window if scheduled now. **ICLR is the wrong venue** and should not be optimised for (representation-learning / algorithmic-breadth story, not what we have).
+
+This document is ordered by paper impact, not by effort. Each item states the change, cites the closest prior work I read directly (not just the abstract), and says what the change adds over that prior work.
+
+## Venue verdict (updated 2026-08-18 — Blocker 4 added; see `LOG.md` `[DECISION] 2026-08-18 — Venue targeting` for probability accounting)
+
+| Venue | Verdict | Precondition |
+|---|---|---|
+| **IWSLT** | Yes as-framed (90-95%) | Stage-I lands, RWTH intrinsic result is positive |
+| **ACL/EMNLP/NAACL Findings** | Plausible (55-85% depending on gates) after §Blockers 1–4 | Scale framing fixed, REINA distinction sharp, exposure-bias measured, **Cond-C/D reproduced at matched conditions (Gate B)** |
+| **COLING main** | Plausible (70-92% depending on gates) | Same as Findings, slightly softer bar |
+| **ACL/EMNLP main track** | No (10-30%) | Would need 8B replication + multi-language pairs + top-decile empirical gap |
+| **ICLR** | No | Wrong shape — this is applied SiMT, not representation learning |
+
+## The trivial insight everyone missed — sharpened after PDF-depth verification
+
+An earlier draft of this section claimed "every prior SiMT pipeline reaches outside the training loop for the annotation signal." **On verification against AlignAtt (Papi et al. ACL 2023), AlignAtt4LLM (Fuxa & Macháček IWSLT 2026), DOA (Papi & Bentivogli, arXiv 2605.31432), DaP-SiMT (Zheng et al. IJMLC 2025 / arXiv 2310.14853), DiG-SST, REINA, HMT (Zhang & Feng ICLR 2023), and the wait-if-diff / wait-if-worse family — that claim is too strong.** Multiple prior methods do use the model itself as the signal source. The correct, defensible version of the insight is more precise and, once stated correctly, actually stronger.
+
+### The 2×2 of adaptive SiMT — where the gap is
+
+|  | External-oracle signal | Model-native signal |
+|---|---|---|
+| **Runtime policy** | Wang et al. 2024 (`fast_align`), Agent-SiMT (Guo et al. 2024b) | AlignAtt, EDAtt, MMA, MoChA, MILk, AlignAtt4LLM, DOA, DaP-SiMT, DiG-SST, REINA, HMT, wait-if-diff, wait-if-worse |
+| **Data-construction annotation** | **EAST (Fu et al. 2025)** | **← we go here (the empty cell)** |
+
+Every prior "model-native" method (top-right, populated by two subcultures — attention-inspection and distributional-comparison) keeps the read/write decision as a **runtime component**: an attention-inspection routine (AlignAtt-family), a distributional comparison per step (wait-if-diff), a lightweight policy head trained on top of the translation model (DaP-SiMT, DiG-SST, REINA), or a marginalised hidden variable (HMT). Every prior "data-construction" method (bottom-left, populated by exactly one paper — EAST) uses an external oracle for the annotation.
+
+**Nobody has occupied the bottom-right.** That's our contribution.
+
+### The one-line technical delta, over each family
+
+**Over EAST (bottom-left → bottom-right):**
+```python
+annotator = "gpt-4"     # EAST
+annotator = self.model  # us
+```
+
+**Over the model-native runtime-policy families (top-right → bottom-right):**
+```python
+# All prior model-native methods (attention-based OR distribution-based):
+def infer(source_stream, model, policy):        # <- policy component at inference
+    while streaming:
+        if policy(state) == WRITE: emit_next_token()
+        else: read_more_source()
+
+# Us:
+def infer(source_stream, tagged_model):
+    for token in tagged_model.generate(source_stream):
+        yield token                             # <- tags emerge autoregressively
+```
+
+**No policy function at inference.** Not lightweight, not trained, not present at all. The signal that prior work computes per-step at runtime, we compute once, offline, and freeze into training-data tags.
+
+### Why the two-cell move was missed — two separate research subcultures
+
+- The **adaptive-policy subculture** (encoder-decoder tradition, MMA/AlignAtt lineage, ~2019 onwards) treated read/write as a runtime decision problem by architectural convention. Once you're committed to runtime, you're committed to keeping the signal available at runtime — which means either a policy module (DaP/DiG-SST/REINA style, or MMA's attention parameters) or an inference-inspection routine (AlignAtt/DOA style). Moving the decision to data-construction was never in scope.
+
+- The **data-construction subculture** is essentially one paper (EAST, ACL Findings 2025). Their framing was "offline chunk-segmented SFT can match adaptive policies" — the annotator being external (GPT-4) was assumed because prompt engineering was the tool they were showcasing. They did not ask whether the annotator could be the model itself, because that question belongs to the *other* subculture.
+
+The two subcultures do not overlap much in cite graphs or reviewer pools. Our contribution is a two-cell diagonal move in a 2×2 that neither subculture had reason to survey.
+
+### What the two-cell move eliminates in the deployed system
+
+- **No attention-inspection machinery.** AlignAtt4LLM (Fuxa & Macháček 2026) explicitly notes their policy "cannot inspect a Python-visible attention matrix: self-attention is hidden inside fused kernels" when running on vLLM, forcing them to reconstruct query/key tensors via a bespoke `qk-fast-replay` mechanism. We don't touch attention.
+- **No policy-head forward pass per step.** DaP-SiMT, DiG-SST, REINA all pay this cost at every commit decision.
+- **No re-decoding across chunks.** Local-Agreement / hold-n / SP-n family pay this.
+- **No wait-k fallback ceiling.** DaP-SiMT extends a frozen wait-k model; DiG-SST hybridises with wait-k explicitly because "the divergence-based policy model is trained with the reference translation as history, [so] there is inherent exposure bias during inference." Neither can drop wait-k. We have no policy to hybridise with — the tags are the policy.
+- **No exposure-bias mismatch in a runtime component.** DiG-SST §Inference Policy admits this openly. It is a runtime problem for them because their policy runs at runtime; it is an offline problem for us and shows up (if at all) in tag placement, not in a component that error-accumulates over a stream.
+- **KV-cache reuse preserved.** Inherited from EAST — the interleaved-format autoregressive inference is intrinsically KV-cache-friendly. Attention-inspection methods often struggle to co-exist with fused-kernel KV caches.
+
+### "LLM-only" as defense — partially valid but not primary
+
+The framing "this is for LLMs only" would be defensible around 2023 (when attention-based methods were encoder-decoder speech) but **is no longer defensible in 2026:**
+
+- AlignAtt4LLM (IWSLT 2026) explicitly extends AlignAtt to decoder-only LLMs (Gemma-4 E4B-it — same family we are considering as our backbone).
+- DOA (Papi & Bentivogli, arXiv 2605.31432) targets decoder-only speech LLMs.
+- DaP-SiMT, DiG-SST, REINA, HMT are architecture-agnostic (they attach a policy head or hidden-variable to any autoregressive translation model, LLM included).
+
+**The primary defense is not "LLM-only" but "data-construction, not runtime policy."** That claim survives all the counter-examples above. LLM adaptability is a nice-to-have consequence, not the differentiator.
+
+### Restated: what is genuinely novel
+
+Not "use the model itself" — attention and distribution families both do that.
+
+Not "offline annotation" — EAST does that.
+
+**The specific combination: distributional-convergence signal computed offline at data-construction time, baked into training-data tags, with no runtime policy component of any kind.** This is the empty cell in the 2×2. It survives verification against every close published work I could find.
+
+## The same "textbook tools in a new domain" shape applies to the method improvements
+
+Once the two-cell move above is accepted, the improvements M1–M7 in §Method improvements are all instances of applying a standard tool from adjacent literature to the freshly-created data-construction surface:
+
+1. **The tool exists in adjacent literature for decades.** Scheduled sampling (Bengio 2015), dynamic programming for optimal segmentation (Viterbi 1967), sequential probability ratio testing (Wald 1947), Jensen-Shannon divergence (textbook), inverse-frequency loss weighting (also textbook).
+
+2. **SiMT never applied it here** because SiMT never had a "data-construction with a continuous per-token oracle" surface until we constructed one. EAST's per-chunk discrete GPT-4 output doesn't admit these tools; our per-token continuous divergence does.
+
+3. **Once the two-cell move is accepted, sixty-plus years of standard tools drop in naturally.** Each M-item is one such drop-in.
+
+That's the paper. **The core claim is a two-cell move in a 2×2** — trivially small in code, disproportionately large in what it opens up, and missed for interpretable reasons (two disjoint research subcultures). State it in the abstract as a 2×2 diagram. Defend it in Related Work with the four-family taxonomy above. Illustrate it in the ablation grid with the M-items that only became applicable after the move.
+
+## Blockers for ACL/EMNLP Findings
+
+### 1. Scale framing — preregister "at 2B" or add an 8B replication
+
+**Problem.** EAST's headline numbers (Fu et al. 2025, Table 2) are on Llama-3-8B-Instruct. Ours are on Qwen3.5-2B (`docs/setup.md` §5). Two soft-punt lines in the current docs — "matched comparison holds at any scale" (`CLAUDE.md`) and "matched comparison is still valid as long as both conditions use our pipeline" (`docs/experiments.md` §Baselines) — will not survive a Findings review. Reviewers expect either (a) scale-matched evidence or (b) explicit scale-conditioned claim.
+
+**Two clean paths, pick one:**
+
+- **Option A — "At 2B" framing.** Rewrite the abstract, intro, and results section to say *"at the 2B scale we can afford"*. Add one paragraph in §Discussion explicitly limiting the claim's scope. All the ablations then live at 2B and require no additional compute. Cheapest and honest. If we run this, `LOG.md` gets a DECISION entry saying "declined scale replication; scoped to 2B" with the reasoning.
+- **Option B — one 8B replication after Gate 3.** Rerun both conditions (A = GPT-4 chunks, B = ours) at `Llama-3.1-8B-Instruct` (on disk at `MODEL_BASE/Llama-3.1-8B-Instruct`) on the *same* WMT15 De→En test. This is ~4× the compute of a 2B run but on one job. Two H200s should suffice via `tensor_parallel_size=2`. This is the strongest version of the paper.
+
+**Recommendation.** Option A during the 14 weeks. Add Option B as a post-writeup follow-up if time. Do not attempt B before Gate 3 passes — it burns SU on a story that doesn't yet exist.
+
+### 2. REINA distinction — a full subsection, not a bullet
+
+**Problem.** REINA (Hirschkind et al., AAAI 2026, arXiv 2508.04946) is structurally the closest published idea. `docs/related-work.md` flags it in one sentence. Findings reviewers who read REINA and our paper back-to-back will not see the distinction unless we make it explicit at section level.
+
+**What REINA actually does (§3.1 of the paper, page 3):**
+
+Their criterion is the mutual-information gain of waiting for the rest of the audio:
+
+```
+F(a, S, n, t) := I(s_{n+1}; a_T, S_n) − I(s_{n+1}; a_t, S_n)
+              = H(s_{n+1} | a_t, S_n) − H(s_{n+1} | a_T, S_n)
+              = E[log p(s_{n+1} | a_T, S_n) − log p(s_{n+1} | a_t, S_n)]
+```
+
+That is: **the log-probability-of-the-next-token ratio under full vs partial input**, computed from the non-streaming translation model. They then train a policy head `q_θ` on top of the decoder to *predict* whether `F` is above a threshold, with monotonicity and L2 regularisation. At inference, the policy head runs per step; full audio access is training-only.
+
+**Where we differ, in one paragraph:**
+
+> REINA supervises a per-step *policy head* at training time with a full-vs-partial log-probability signal and queries that head during streaming inference. Our criterion uses the same underlying full-vs-partial signal, but we apply it **one stage earlier — during training-data construction**. Tag placement is decided offline once per sentence; at inference there is no policy head to query, no per-step supervised prediction, and no exposure-bias gap between the training-time oracle (reference-conditioned) and inference-time behaviour (self-conditioned). The KV-cache reuse that EAST inherits from its interleaved-format inference (~49 ms/word vs ~977 ms/word for prompt-updating wait-k, EAST §4.1) is preserved without modification.
+
+**Additional rhetorical wins:**
+- REINA's log-prob-ratio estimator is **exactly the KL-with-uniform-prior special case** of our distributional distance. If our OT-vs-KL ablation shows KL matches OT, we ship *REINA's signal applied to data construction* — a strictly cheaper and cleaner variant of a known-good criterion. If OT beats KL, our criterion is strictly stronger than what REINA uses.
+- REINA needs their policy head to hit an accuracy ceiling to be useful (their §Inference Policy explicitly notes tuning difficulties around threshold α). Our decision quality caps at oracle quality, not policy-head quality.
+
+**Effort:** ~2 pages of prose, one comparison diagram. Do this before submission, not during rebuttal.
+
+### 3. Exposure bias — measure it on dev, do not just admit it
+
+**Problem.** `docs/_archive/method-formal.md` §9 says "measure if time allows; state regardless." That's not enough. The gap between reference-conditioned `P_pre[i][j] = p(y_j | S_≤i, T_<j)` (data-construction) and self-conditioned `p(y_j | S_≤i, ŷ_<j)` (inference) is directly quantifiable on dev — no ablation grid, just one forward pass at a handful of `tau` values.
+
+**Concrete diagnostic to add to Phase 1** (after Gate 1, before Phase 2):
+
+1. Sample 500 dev sentences.
+2. For each, compute `i*[j]` under reference forcing (our data-construction protocol).
+3. For each, run the trained model in inference mode, capture the model's *self-conditioned* commit points, call them `i*_hat[j]`.
+4. Report `mean |i*[j] − i*_hat[j]|` and the fraction of tokens where the two disagree.
+
+**Interpretation.** If the gap is small (say <10% of tokens diverge by more than 1 source token), state it and move on — this is a strength paragraph. If large, the paper reframes: "annotation quality is easier than policy learning; here is how much of the observed BLEU gain comes from that." Either result is publishable; the current "we admit it" line is not.
+
+**Comparison to prior work.** DiG-SST (Chen et al., AAAI 2024, arXiv PDF §5 Inference Policy) explicitly cites this exposure bias as the reason they combine their adaptive policy with wait-k as a ceiling: *"the divergence-based policy model is trained with the reference translation as history, [so] there is inherent exposure bias during inference, which makes accurate prediction more challenging."* They mitigate it structurally by falling back to wait-k. **We sidestep it by moving the decision to data construction** — the exposure-bias failure mode affects one-shot annotation, not runtime, so the policy-network exposure-bias literature does not directly apply. Making that argument requires the measurement above; without it, it's a claim, not evidence.
+
+**Existing exposure-bias literature to cite for context:**
+- Bengio et al. 2015 (scheduled sampling) — the original diagnosis, RNN-era, teacher-forcing-vs-inference mismatch.
+- Ranzato et al. 2016 (MIXER) — sequence-level REINFORCE as fix.
+- Zhang et al. 2019 (Confidence-Aware Scheduled Sampling, arXiv 2107.10427) — LLM-era treatment, uses model confidence to gate teacher forcing. Their diagnostic can be adapted; their fix (scheduled sampling on the annotator) is orthogonal to us since our annotator runs once, offline.
+
+### 4. Baseline within-framework ablations — Cond-C (wait-k chunking) and Cond-D (`<wait>`-token variant)
+
+**Problem.** As of 2026-08-18, `docs/related-work.md` argues we beat Simul-LLM (Agostinelli et al., ACL 2024) and TransLLaMa (Koshkin et al., Findings EMNLP 2024) by construction. Findings reviewers will demand a matched-conditions comparison to at least one competitor's *mechanism* transposed into our framework — otherwise the "our chunking is better" claim is defended purely by argument, not experiment.
+
+**Scope caveat (advisor 2026-08-18).** Cond-C is NOT a full Simul-LLM reproduction — Simul-LLM trains on plain `(src_prefix, tgt_prefix)` pairs with no special tokens; ours keeps the full EAST format (`<latency>`, `<|end-of-read|>`, `<|end-of-write|>`) but replaces OT-derived chunk boundaries with a wait-k=5 procedural rule. This is a **within-framework chunking-rule ablation** — cleaner for the mechanism claim (framework held constant, only chunking rule varies) but not a framework-free reproduction. See `docs/hypotheses.md` H15 for the reframed scope statement.
+
+**Cond-C (wait-k procedural chunking within EAST) — Gate B, Week 1.** Same 9,567 sentences, same tokens, same SFT recipe. Chunks: first 5 src words → 1 tgt; then 1 src / 1 tgt until exhaustion. `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` (built 2026-08-18) + `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` (submitted as job 176560794). Pass: cond-B ≥ +2 BLEU over Cond-C averaged over wait_k∈{3,5,7}. Failure kills the within-framework chunking-rule claim and forces IWSLT retreat.
+
+**Cond-D (`<|wait|>`-token within EAST) — Week 2.** Single `<|wait|>` token trained at OT-derived commit points; drops full EAST interleave. Under check_argmax at inference: cond-D should give chunks/sent > 1 (cond-B under check_argmax does not — H9); BLEU-at-that-AL expected ≤ cond-B under wait-k at matched AL.
+
+**Rebuttal-cycle framework-free reproductions (Cond-C', Cond-D').** If a reviewer demands plain-Simul-LLM or plain-TransLLaMa reproductions (no EAST tokens), we build them in the rebuttal window. ~2 days each. Not part of initial submission because framework confound would let the reviewer argue *against* our contribution.
+
+**Effort.** Cond-C: done (dataset built, SFT queued). Cond-D: 1 day scripting + ~40min SFT + ~5h streaming eval. Fits inside Weeks 1-2 of `docs/next-steps.md`.
+
+**Why this became a blocker only recently.** Original docs/_archive/OPTIONALS.md framed cond-C/D as "nice-to-have"; 2026-08-18 advisor pass flagged that competing SFT-based SiMT methods must be compared at matched conditions or reviewers reject on baseline coverage. Cond-C/D moved from OPTIONALS to CRITICAL. Corresponding `[DECISION]` entry in `LOG.md`.
+
+## Strengthening (non-blocking, real paper-impact per hour)
+
+### 4. Reordering-correlation Figure 1 — schedule as Phase 0, not "if time"
+
+`CLAUDE.md` outlines this — Kendall's tau on the alignment permutation as the x-axis, plot drop rate and mean chunk length as the y-axis, stratified by reordering statistic. The doc estimates half a day. It's currently unscheduled.
+
+**Why it's the paper's motivation figure.** Without it, the intro's core claim — *"EAST's data construction is biased against reordering examples"* — is an assertion. With it, it's evidence. Reviewers read Figure 1 first; if it lands the motivation, the rest of the paper coasts.
+
+**Recommendation.** Move it from `CLAUDE.md`'s "half a day's work, no training" aside to `docs/_archive/TIMELINE.md` Phase 0 as a concrete deliverable, alongside the data-format sanity check. It doesn't need the annotator built — it only needs `SiMT-De-En-660K` (already fetched) + awesome-align or fast_align for the alignment stat.
+
+### 5. Multiple seeds + paired bootstrap
+
+Standard at Findings; currently unspecified. The `LOG.md` template mentions `seed` but not multi-seed protocol.
+
+**Concrete change:** every headline number in `RESULTS.md` (the table format is TBD) runs on **3 seeds** minimum (`42, 43, 44`). Report mean ± std. For the primary A-vs-B comparison, run **paired bootstrap on 1000 resamples of the test set** for BLEU/COMET/BLEURT differences; report p-value and 95% CI on the delta.
+
+Add to `docs/experiments.md` §Guardrails: *"Single-seed results are debugging output. Anything in a table gets three seeds and a paired bootstrap."*
+
+Cost: 3× annotation and 3× SFT for the primary comparison. That is significant. Restrict multi-seed to the headline table + the divergence ablation; single-seed is fine for the top-k support / data-size sweeps.
+
+### 6. Data-efficiency reframing — the "10K, no API cost" story
+
+**Current framing** (implicit in `docs/_archive/method-formal.md` §7): *"Annotate a subset (10K–50K) — EAST Fig. 6 shows most benefit at 10K."*
+
+**Better framing for the paper:** *"Zero API cost. 10K sentences. Matched or better than EAST's 10K GPT-4-annotated."*
+
+This is the same experiment, framed differently. Reviewers love a data-efficiency story with a cost narrative attached. The GPT-4 API cost for annotating 10K WMT15 De-En sentences at EAST's three-latency-level prompt is not zero — public GPT-4 pricing gives roughly *$X per 10K annotations* (the student should compute this from OpenAI's current pricing at write-up time). Ours is one full-source forward pass + `n` prefix passes on a H200, i.e., wall time not spend, and repeatable at zero marginal cost per re-annotation.
+
+**Add to `docs/experiments.md` §Primary result:** a single sentence in the abstract / intro paragraph that frames the win as "cost + quality", not just quality. The 10K-vs-660K data-size ablation stays as-is; only the framing changes.
+
+### 7. Catchy name — 30 minutes, real impact
+
+"Teacher-Free Read/Write Annotation" is descriptive and forgettable. EAST, DiG-SST, FAST, REINA all have three-to-five-letter acronyms. Ours doesn't.
+
+**Candidates from the method mechanics** (backbone-derived commit-point annotation via distributional convergence):
+
+- **TROT** — Teacher-free Read-Or-Type. Ugly.
+- **SELF** — Self-annotated Efficient Latency-adaptive Fine-tuning. Overloaded.
+- **DRIFT** — Distributional Read/write Inference-Free Training. Fits: our criterion measures when the predictive distribution has stopped drifting from the full-source distribution.
+- **STAMP** — Self-Tagged Adaptive Machine-translation Policy. Fits: we stamp the tag on the data offline.
+- **CADT** — Convergence-based Adaptive Data Tagging. Precise, hard to say.
+
+Recommendation: **DRIFT** — matches the mechanic (predictive distribution stops drifting), and "no-drift → commit" is a memorable one-liner.
+
+30 minutes to workshop; put on the Week-12 checklist alongside the abstract draft.
+
+## Closest-work distinctions (deep-read, for the Related Work section)
+
+These are the paragraphs to draft during Phase 4 writeup. Each is derived from reading the actual paper (not the abstract) so the technical distinction is precise.
+
+### AlignAtt family: AlignAtt (Papi et al. 2023), AlignAtt4LLM (Fuxa & Macháček 2026), DOA (Papi & Bentivogli 2026)
+
+**What they do.** *AlignAtt* (Interspeech 2023, Papi et al.) is the canonical model-native inference-time policy. On an offline-trained encoder-decoder speech translation model, at each inference step, inspect the cross-attention weights over the last `f` source frames — if the target token being decoded attends primarily to frames beyond the currently-consumed audio, wait; otherwise emit. No training modification. Wins IWSLT 2023 SimulST and remained SOTA through IWSLT 2025 (used by top-performing submission).
+
+*AlignAtt4LLM* (Fuxa & Macháček, IWSLT 2026 system description, arXiv 2606.03967) is the first application of AlignAtt to a decoder-only LLM. Because there is no encoder-decoder cross-attention in a decoder-only LLM, they (1) expose the source transcript as a labelled prompt span, (2) select translation-specific alignment heads offline via a small annotated set, (3) implement a `qk-fast-replay` mechanism to inspect attention scores despite vLLM's fused kernels, and (4) apply the same "attends past the frontier ⇒ wait" logic to that recovered attention signal. Uses Gemma-4 E4B-it as backbone.
+
+*DOA* (Papi & Bentivogli, arXiv 2605.31432) is the training-free decoder-only-attention counterpart for long-form SimulST with speech-LLMs.
+
+**Where we differ — same model, different signal, different pipeline stage.** AlignAtt uses **attention weights** at **inference**; we use **next-token distributions** at **data construction**. Attention weights encode "which source position is this target token looking at," which is an alignment-flavour signal. Next-token distributions encode "how much has my prediction changed given more source," which is a convergence-flavour signal. The two are complementary — one is about *who* the token depends on, one is about *whether* the dependency has settled. Additionally: AlignAtt has an inference-time inspection routine (which AlignAtt4LLM explicitly notes is expensive to implement on vLLM); we have none.
+
+**Rhetorical use.** Cite the AlignAtt family as the state-of-the-art model-native runtime-policy line. Position our contribution as the diagonal move: same-model-signal + move-to-data-construction. The AlignAtt4LLM paper's "we cannot inspect fused-kernel attention" complaint is direct evidence that inference-time model-inspection is a fragile deployment strategy on the LLM stack we all now use; data-construction tags do not have this fragility.
+
+### DaP-SiMT (Zheng et al., IJMLC 2025 / arXiv 2310.14853)
+
+**What they do.** Divergence-based adaptive policy: "statistical divergence between two conditional distributions for any prefix-to-prefix pair given a translation model as an informative criterion for making read/write decisions." Design decoupling the policy module from the translation model. They extend a **frozen wait-k translation model** with lightweight parameters that estimate the divergence at inference from partial input alone. Memory- and compute-efficient at inference by keeping the extension small.
+
+**Where we differ — nearly-identical signal, opposite pipeline stage.** DaP-SiMT is the closest published work to ours in criterion (their statistical divergence between prefix-to-prefix conditional distributions is essentially the same quantity we use). What differs entirely is *where the criterion lives*: DaP computes it at inference via a trained lightweight regressor that estimates the divergence from partial input alone. We compute it once, offline, using the *actual* full-source distribution as oracle, and freeze the decision into training-data tags. Consequences:
+
+- DaP inherits the exposure-bias problem of its regressor (predicts divergence from partial input; trained with reference-conditioning; DiG-SST explicitly names this in their §Inference Policy for the same architecture). We inherit the same problem in tag placement, but not in a runtime component that error-accumulates over the stream.
+- DaP requires wait-k as the underlying model — the divergence estimator is an add-on. We do not require wait-k anywhere in the pipeline.
+- DaP's lightweight parameters are a runtime overhead (small, but present per step). We have zero runtime policy overhead.
+- DaP is architecture-neutral (works on any translation model). So are we (works on any autoregressive LM). Not a differentiator.
+
+**Rhetorical use.** DaP-SiMT is the paper that has to be cited first, alongside REINA, in Related Work. Both use full-vs-partial distributional comparison as the criterion. Both keep it in a runtime component. Ours moves it offline. That is the paragraph.
+
+### DiG-SST (Chen et al., AAAI 2024, arXiv PDF read)
+
+**What they do.** Speech translation on MuST-C En→{De, Es, Fr}. Divergence definition: KL between `p(y_j | full audio)` and `p(y_j | partial audio)` for the next target word (§Divergence-based Policy Module). Full-vs-partial divergences are computed offline as *oracle scores*; a separate **3-layer transformer + FC policy module** is trained to *predict* the divergence from partial input alone (MSE loss). At inference: predicted divergence ≤ threshold λ → WRITE; else READ. Combined with wait-k as ceiling. Fixed λ.
+
+**Where we differ.** Same underlying divergence idea, one stage earlier. DiG-SST predicts divergence at inference from a trained regressor — inheriting the exposure-bias problem they explicitly admit. We compute the oracle divergence *once* during data construction, use it to place `<|eor|>` / `<|eow|>` tags in the SFT data, and then throw the divergence machinery away. Inference is a plain autoregressive decoder emitting tags; no regressor, no threshold at inference, no exposure-bias gap between training-time oracle and inference-time prediction. Modality difference (speech vs text) is secondary — the mechanistic difference is *where in the pipeline the criterion lives*.
+
+### FAST (Fu et al., EMNLP 2023, arXiv 2303.07914 — same group as EAST)
+
+**What they do.** Speech translation. Observation: streaming encoder representations diverge from full-utterance representations, worst at the final frame (cosine similarity ~0.2 for the last frame; ~0.8 by 10 frames back). Solution: (a) **FAI** — append `m` mask tokens to the streaming input, exploit Wav2Vec2's pretraining to synthesise pseudo-future context; (b) **FAD** — distillation: teacher gets oracle future audio, student gets mask tokens, minimise KL between their encoder outputs. Combined with wait-k. No policy module.
+
+**Where we differ.** FAST solves the mismatch at the **representation level** by manufacturing future context. We solve it at the **decision level** by moving the commit decision to training-data construction. FAST's fix still leaves a wait-k policy making the actual read/write choice; we replace wait-k with the model's own tag prediction. The mask-token trick is speech-specific (Wav2Vec2 pretraining) and doesn't port to text — but the point isn't porting, it's that they and we target orthogonal failure modes. **We should acknowledge FAST as motivating same-group work** (their EAST paper builds directly on FAST's mismatch observation) but not conflate the mechanisms.
+
+### Local Agreement / hold-n (Polak et al., IWSLT 2022, aclanthology 2022.iwslt-1.24 — read directly)
+
+**What they do.** Pure inference-time policies, no training, no policy module. **LA-n:** longest common prefix (LCP) of top-1 hypotheses from `n` consecutive chunks of streaming input. Commit the prefix that agrees across re-decodes. **hold-n:** commit all-but-the-last-`n` tokens of the current best hypothesis, trimming instability at the end. **SP-n:** LCP across all beam items of `n` chunks. LA-2 is the sweet spot (same trade-off as LA-n>2, cheaper). Won IWSLT 2022 medium and high latency regimes.
+
+**Where we differ.** LA detects stability from **surface-string agreement across re-decodes**. Our criterion detects stability from **distributional convergence to the full-source distribution**. LA is model-agnostic and computationally cheap but loses signal — it treats every disagreement as equally decisive, and cannot distinguish "committed on semantically-near candidates" (should commit) from "flipped between semantically-distant candidates" (should wait). Our OT criterion has this structure by construction. LA works at inference; ours works offline at data construction, then the trained model runs plain autoregressive decoding — the LA re-decoding overhead vanishes.
+
+**Rhetorical use.** Cite LA-n as the classical baseline for streaming-stability policies. If our OT-vs-KL ablation collapses (KL ≈ OT), we can additionally cite LA-n to say "we've shown even the crudest stability signal, given enough training-time compute, can drive competitive tag placement." That's a nice paragraph.
+
+### REINA (Hirschkind et al., AAAI 2026 Oral, arXiv 2508.04946)
+
+See §Blocker 2 above. **The distinction is the paper.** If we get this wrong, the paper reads as "REINA-for-text with data-construction instead of a policy head" — which is actually accurate *and* a defensible contribution, but only if we say it clearly and up front. Do not hide it in Related Work.
+
+### CCPS — LLM confidence via representation-stability perturbations (arXiv 2505.21772, EMNLP 2025)
+
+**What they do.** Perturb the LLM's final hidden states adversarially, measure how much the next-token distribution changes. Train a lightweight classifier to predict calibration from the perturbation-response features. Result: 55% reduction in Expected Calibration Error vs prior methods.
+
+**Why it's on our radar.** They also measure "stability of the predictive distribution" — but under *representation perturbation*, not under *input-length variation*. Their signal is: "does this token survive a shove?" Ours is: "does this token converge as we read more source?" Different perturbations, similar spirit.
+
+**Where we differ.** CCPS is a general-purpose confidence-calibration method, model-generic. It doesn't answer the SiMT commit question — perturbation stability doesn't tell you whether the token would change under longer source context. But CCPS *could* be an ablation baseline: replace our full-vs-partial distributional distance with CCPS's perturbation-stability score. If they match, our criterion is decomposable into a general confidence signal. If ours wins, the full-source signal carries specific information that generic confidence doesn't. **Add as a low-priority ablation** — nice for the paper, not required.
+
+**Related literature to reference (do not deep-dive):** self-consistency (Wang et al. 2023), temperature calibration (Guo et al. 2017), semantic calibration in LLMs (Ye et al. 2025, arXiv 2511.04869). All support the general "LLMs know when they're ready" thesis. Cite for framing, not for method.
+
+## Method improvements — concrete algorithmic changes
+
+The blockers and strengthening items above are about framing, measurement, and positioning. This section is about the algorithm itself. Seven candidate changes, ordered by paper impact. Each has a concrete change to `docs/_archive/method-formal.md`, a distinction from prior work read directly, and a specific "does the paper get stronger" test.
+
+**Reading `docs/_archive/method-formal.md` §§2–4 as the baseline:** commit at `i*[j] = min { i : D(P_full[j], P_pre[i][j]) < tau }`, then enforce greedy monotonicity `i*[j] = max(i*[j], i*[j-1])`, then emit EAST's interleaved format. The improvements below sit on top.
+
+### M0. τ selection provenance — pin the primary choice, don't leave it floating
+
+**Current provenance.** `τ=0.30` is used as the primary threshold in Phase 2's
+cond-B dataset construction (`scripts/phase2_build_sft_dataset.py --tau 0.30`,
+2026-08-16). It is the Config D-ext winning point from Phase 1 (`docs/experiments.md`
+§Config D-ext table): 90% fire, chunk-count 4.67 (vs GPT-4's 4.06), positional
+Pearson med 0.81. This provenance is currently one line in the build script's
+docstring and one line in `LOG.md`'s 2026-08-16 cond-B dataset entry — for the
+paper it needs to land in `docs/_archive/method-formal.md` §3 (criterion + threshold) with a
+one-sentence justification, and any sensitivity ablation over `τ ∈ {0.20, 0.30, 0.50}`
+in Phase 2 SFT would be worth ~2 GPU-hours on n=2K.
+
+### M1. Scheduled-sampling annotation — fix exposure bias at the source
+
+**Current.** `P_pre[i][j] = p(y_j | S_≤i, T_<j)` teacher-forces the reference target prefix `T_<j`. Same for `P_full[j]`. The tags placed by comparing these two are therefore reference-conditioned. At inference the model sees its own outputs, not the reference — this is the exposure-bias gap `docs/_archive/method-formal.md` §9 admits.
+
+**Change.** During annotation, replace `T_<j` with a mixed prefix that samples between the reference and the annotator's own greedy prediction. Concretely, use a Bengio-style scheduled-sampling schedule with mixing rate `ρ` that varies per sentence (not per token to avoid trace incoherence). At `ρ=0` we recover the current teacher-forced criterion. At `ρ=1` we get pure self-conditioning at annotation time — closing the gap but adding annotator variance.
+
+Sweep `ρ ∈ {0.0, 0.25, 0.5}` as an ablation axis. Report tag divergence between `ρ=0` and `ρ=0.5`, and the downstream BLEU/AL of models trained on each variant.
+
+**Closest prior work.** Bengio et al. (2015) scheduled sampling and Ranzato et al. (2016) MIXER apply the mismatch fix during *model training*, not data construction. Confidence-Aware Scheduled Sampling (Zhang et al. 2021, [arXiv 2107.10427](https://arxiv.org/abs/2107.10427)) uses model confidence to gate teacher-forcing at training. On-policy distillation (recent LLM literature) samples from the *student* during KD to remove exposure bias in distillation.
+
+**Distinction.** All prior work targets exposure bias inside a trained parametric model whose predictions will be consumed downstream. Our annotator runs *once, offline*, producing tags that are then baked into SFT data. We are the first (to our knowledge) to apply scheduled sampling to a one-shot data-construction pipeline for SiMT tag placement. The methodological argument is: if scheduled-sampling annotation *doesn't* change tags much, we have empirical support for the exposure-bias gap being small, which strengthens Blocker 3's measurement result. If it *does* change tags, `ρ` becomes a defensible ablation axis showing our design decision has semantic content.
+
+**Paper story.** Turns the exposure-bias limitation from a §Discussion paragraph into a method contribution. Real ACL/EMNLP win.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* one hyperparameter, one line in the annotator loop (`prefix = T[:j] if random() > ρ else self.generate(T[:j])`).
+- *Story delta:* an entire subsection with an ablation axis. Every scheduled-sampling paper since 2015 fixes exposure bias *inside a model being trained*. Nobody applied it to a data-construction pipeline because until EAST 2025 there wasn't a data-construction pipeline where reference-conditioning was a *design choice*. **We are literally the first paper that could have this problem, and we solve it in the standard way.**
+
+**Effort.** One extra annotation pass per `ρ` value; each annotation pass is the compute-dominant step. ~2 extra `ρ` values × 10K sentences × one full-source + N prefix passes each = ~one weekend on gpuhopper.
+
+### M2. Horizon-averaged convergence criterion — commit on window stability, not per-token
+
+**Current.** `i*[j]` is set token-by-token: for each target token `j`, find the smallest `i` where `D(P_full[j], P_pre[i][j]) < tau`. This is per-token noisy; a single low-probability outlier at `j` can trigger a commit that would be reversed had we looked one token later.
+
+**Change.** Replace per-token criterion with a **horizon-averaged** one:
+
+```
+i*[j] = min { i : (1/h) Σ_{k=0}^{h-1} D(P_full[j+k], P_pre[i][j+k]) < tau }
+```
+
+for a small horizon `h ∈ {3, 5}`. A tag lands at `i` only when the *chunk* starting at `j` has collectively converged. This is closer to the semantic-unit intuition EAST invokes in their §3.1 prompt design.
+
+**Ablation:** `h ∈ {1, 3, 5}`. `h=1` recovers current method.
+
+**Closest prior work.** WhisperPipe (streaming ASR, IEEE 2024) uses a two-tier "some utterances converge quickly, others require additional confirmation" commit strategy — surface-string based. LEAP (diffusion LLM, arXiv 2605.10980) uses "early convergence" with "prediction invariance with respect to future context updates" — a related idea. Multi-criterion stopping-rule literature (Wald 1947 SPRT foundations, and modern LLM-consistency work like ConSol [arXiv 2503.17587](https://arxiv.org/abs/2503.17587)) proposes windowed convergence detection.
+
+**Distinction.** The windowed-stability idea is not novel per se. What is novel is (a) applying it to *distributional-convergence-based tag placement in SFT data*, and (b) using the same underlying full-source oracle to define both the per-token and the horizon-averaged variants, letting the ablation cleanly isolate the effect of the window.
+
+**Expected paper impact.** Likely a modest AL improvement at fixed BLEU (fewer noise-driven early commits) and a smoother BLEU-AL curve. Also the natural response to the reviewer question *"why the token, not the phrase?"*
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* `h=1` → `h=3` inside the criterion loop. Six characters of code.
+- *Story delta:* multi-criterion stopping rules go back to Wald's *Sequential Analysis* (1947). WhisperPipe uses two-tier stability for ASR. LEAP uses windowed early-convergence for diffusion LLMs. **Nobody applied windowed convergence to SFT tag placement because SFT tag placement has been a research object for less than 18 months** (EAST is Findings ACL 2025). We inherit Wald's insight into a domain where it hadn't landed yet.
+
+**Effort.** Trivial code change; no additional annotation compute (compute the horizon-average from the same per-token distances you already have).
+
+### M3. DP-based globally-optimal tag placement — replace greedy monotonicity
+
+**Current.** Tag placement is a two-step greedy procedure: (1) per-token `i*[j]`, then (2) greedy monotonicity enforcement `i*[j] = max(i*[j], i*[j-1])`. Step (2) can be far from optimal — it monotonises after the fact, which means a poorly-placed early commit forces all subsequent commits to be at least as late.
+
+**Change.** Formulate tag placement as **minimum-lag chunking under a convergence constraint**, solved by dynamic programming:
+
+```
+min  Σ_j (i*[j] - j)                    # total lag (proxy for AL)
+s.t. D(P_full[j], P_pre[i*[j]][j]) < tau  ∀j
+     i*[j] ≥ i*[j-1]                    # monotonicity
+     i*[j] ≤ n                          # source-bounded
+```
+
+The DP has state `(j, i)` and runs in `O(m·n)` — same order as the current criterion pass; the DP is on top of already-computed `D` values, so no extra model forwards. Optionally add a chunk-length regulariser to prevent 1-token chunks.
+
+**Ablation.** Greedy vs DP on the same criterion. Same tau. Report AL/BLEU delta.
+
+**Closest prior work.** HMT (Hidden Markov Transformer, Zhang & Feng, NeurIPS 2023) uses DP to marginalise the read/write timing as a latent variable during *training*. IEEE 2024 "Chunk Size Scheduling" (Chen et al.) does dynamic chunk-size scheduling during *inference* — greedy, not DP. The dynamic-sentence-boundary-detection literature (Lin et al., AutoSimTrans 2020) uses DP for boundary detection in streaming source, not for target-side tag placement.
+
+**Distinction.** DP for globally-optimal offline tag placement on the target side, given a per-token oracle convergence measure, is (to our knowledge) not standard in the SiMT data-construction literature. HMT solves a superficially similar DP but at the model-parameter learning level; ours is a data-preprocessing step with no gradient flow.
+
+**Expected paper impact.** Same tau, strictly ≤ AL under DP than under greedy (theorem-level: DP is optimal for the constrained min-lag problem, greedy is a lower bound). BLEU should not degrade if the DP respects the convergence constraint. Cleanest small algorithm improvement in the paper.
+
+**Risk.** If the constraint set has few feasible solutions, DP output ≈ greedy output. Worth measuring at three tau values before over-claiming.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* replace two lines of greedy `for j: i*[j] = max(i*[j], i*[j-1])` with a standard `O(m·n)` DP table. This is a textbook Viterbi variant (1967).
+- *Story delta:* a **provable** guarantee. Greedy monotonisation is a lower bound; DP is the constrained optimum. Reviewers love provable statements even when the absolute number moves modestly. The reason nobody in SiMT does this: **every prior data-construction pipeline uses a black-box oracle (GPT-4, alignment tool) whose outputs are already discrete chunk boundaries — there's nothing continuous to optimise DP over.** Move the oracle inside (M0, our core insight) and DP is suddenly applicable. That's the entire delta from prior work: not the DP itself, but the fact that our criterion is continuous enough to admit it.
+
+**Effort.** Half a day of code + one re-run of the primary comparison.
+
+### M4. Sequential-probability-ratio-test formalism for tau
+
+**Current.** `tau` is a scalar threshold on the divergence. Its selection is empirical — sweep on dev, pick where BLEU-AL trade-off looks best. The number has no principled statistical interpretation.
+
+**Change.** Frame the commit decision as a sequential hypothesis test. At each `i` for each target token `j`:
+
+- H_0: `P_pre[i][j] = P_full[j]` (converged, safe to commit)
+- H_1: `P_pre[i][j] ≠ P_full[j]` (not converged, must read more)
+
+SPRT (Wald 1947) accumulates log-likelihood ratio evidence across `i` and commits when the ratio crosses one of two thresholds `A`, `B` derived from user-specified false-alarm rate `α` and miss rate `β`. Setting `α = β = 0.05` gives calibrated Type-I / Type-II error rates that translate to a target commit-quality guarantee: "with 95% probability, a committed token's distribution matches the full-source distribution within test tolerance."
+
+**Ablation.** SPRT vs single-threshold tau. Same underlying divergence.
+
+**Closest prior work.** ConSol ([arXiv 2503.17587](https://arxiv.org/abs/2503.17587)) applies SPRT to LLM self-consistency reasoning to early-stop sampling. mSPRT (mixture SPRT) is standard in online A/B testing (Statsig, Optimizely). SPRT-inspired early-exit in classifier cascades is standard in fast-inference literature. **No prior SiMT / SFT-annotation work uses SPRT for commit decisions** — this is a clean transfer of a well-understood statistical tool into a new domain.
+
+**Distinction from ConSol.** ConSol uses SPRT to decide whether to *stop sampling more reasoning traces* — sequential stopping on i.i.d. samples. Our sequential structure is different: we accumulate evidence across *increasing prefix lengths*, which are not i.i.d. — later `P_pre[i][j]` are conditioned on strictly more information than earlier ones. Applying SPRT correctly here requires the mSPRT variant that handles nested-information filtrations. State this precisely; a reviewer familiar with SPRT will spot handwaving.
+
+**Expected paper impact.** Turns a knob-tuned threshold into a principled statistical criterion. Findings reviewers love this kind of formalism because it gives the "here's why we picked this value" answer that ad-hoc tau doesn't have. Downside: SPRT tau values won't align with EAST's `low`/`medium`/`high` prompt tokens as neatly, complicating comparison — mitigable by binning post-hoc.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* replace `if D < tau: commit` with `while running-log-likelihood-ratio inside (A, B): keep-reading`. SPRT is undergraduate statistics; the implementation is a running sum with two thresholds.
+- *Story delta:* seventy-eight years of established sequential-analysis theory annotating tag placements. **The SiMT literature has never touched SPRT**; the closest is ConSol (arXiv 2503.17587) which uses SPRT for LLM self-consistency early-stop, a very different sequential structure (i.i.d. samples vs nested-information filtrations — see distinction paragraph above). We are the first paper to use SPRT for a sequential-*prefix* decision in NLP. The framework was there, hasn't been picked up, and slots straight in.
+
+**Effort.** SPRT derivation is a paragraph; implementation is a few lines. Ablation is one extra annotation pass.
+
+### M5. JSD alongside OT and KL in the divergence ablation
+
+**Current.** `docs/experiments.md` §Ablation grid tests OT / KL / entropy-only / random-at-matched-latency.
+
+**Change.** Add **JSD** as a fourth row. Same criterion pipeline, just swap `D`. JSD is symmetric, bounded in [0,1], and typically better-behaved numerically than KL. If KL is asymmetric-fragile, JSD will notice.
+
+**Closest prior work.** JSD is used in RLVR fine-tuning shift analysis (arXiv 2603.22446), decoding-step analysis (LLama3-70B on TofuEval), and policy distillation as the JSD-based teacher-student loss (JSDT-style methods). It is a *standard* choice in distributional-comparison contexts; leaving it out of the ablation is a paper-review liability.
+
+**Distinction.** None methodologically — JSD is a textbook variant. The distinction is empirical: does JSD's symmetry buy anything on our specific criterion pattern? If yes, argue the direction. If no, argue that both KL variants collapse to similar tag placement (bonus: cheaper).
+
+**Expected paper impact.** Removes the "why not JSD?" reviewer objection at essentially zero cost. Also gives us three distributional distances to plot, which is more visually credible than two.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* one function definition (`D = 0.5*KL(P||M) + 0.5*KL(Q||M)` where `M = 0.5*(P+Q)`).
+- *Story delta:* small — this is a standard variant, not a novelty. But the *absence* of JSD in a divergence ablation is a defensive gap; adding it removes the gap. Cheap paper-hygiene, not paper-contribution.
+
+**Effort.** One line of code (`D = 0.5*KL(P||M) + 0.5*KL(Q||M)`), one annotation re-run.
+
+### M6. Confidence-gated commit — safety against low-probability commits
+
+**Current.** Commit at `i*[j]` whenever `D(P_full[j], P_pre[i][j]) < tau`. This can fire even when *both* `P_full[j]` and `P_pre[i][j]` are broadly diffuse — the distributions agree that "we don't know what token comes next." Committing under diffuse agreement is meaningless.
+
+**Change.** Add a **target-token confidence gate**: commit only when
+
+```
+D(P_full[j], P_pre[i][j]) < tau  AND  P_pre[i][j][y_j*] > eta
+```
+
+where `y_j*` is the reference target token and `eta` is a small floor (say 0.1). Prevents committing to tokens the model can't actually predict.
+
+**Ablation.** With / without gate. Report the fraction of would-be commits vetoed by the gate.
+
+**Closest prior work.** Confidence thresholding is universal in early-exit literature (Schwartz et al. 2020 "The Right Tool for the Job"; DeeBERT; PABEE). CCPS (arXiv 2505.21772) is the recent confidence-calibration counterpart. Confidence-Aware Scheduled Sampling (arXiv 2107.10427) uses confidence to gate teacher forcing.
+
+**Distinction.** Our gate is a *conjunction* with a distributional criterion, not a standalone confidence threshold. The distributional criterion tests convergence to full-source; the confidence gate tests that the converged distribution actually predicts *something*. Together, they distinguish "know the answer, know we know it" from "don't know the answer, know we don't know it." Prior work uses one or the other but not both in the tag-placement setting.
+
+**Expected paper impact.** Small AL improvement (fewer over-eager commits on diffuse tokens), potentially a BLEU improvement on low-frequency tokens. Removes a reviewer footgun where a critic constructs an example of "criterion committed to garbage."
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* an `AND` clause. Six characters.
+- *Story delta:* early-exit literature uses confidence *alone*; distributional-agreement work uses divergence *alone*. **We're the first to combine both** — and the argument for combining them is trivially clean ("committing to garbage requires low divergence *and* low target probability, which our gate forbids"). Nobody combined them before because the two literatures (early-exit, distributional decoding) don't cross-cite each other; ours sits at the intersection and inherits both.
+
+**Effort.** One extra condition in the criterion; no additional compute.
+
+### M7. Non-monotone loss upweighting — amplify the mechanism we claim to win on
+
+**Current.** All examples in SFT data are equally weighted. `CLAUDE.md` claims our win is disproportionately on the reordering-divergent sentences that EAST discards.
+
+**Change.** In the SFT loss, upweight examples by a reordering-severity score. Concrete scoring: **Kendall's τ on the awesome-align permutation between source and target chunks**, mapped to a weight `w ∈ [1, 3]` where τ near 1 (monotone) gets `w=1` and τ near 0 (heavily reordered) gets `w=3`. Cap the weight to prevent overfitting to outliers.
+
+**Ablation.** Weighted vs uniform loss on Stage-I SFT. Report BLEU/COMET stratified by reordering-severity bin.
+
+**Closest prior work.** "Monotonic Simultaneous Translation with Chunk-wise Reordering and Refinement" (Kano et al. 2021, arXiv 2110.09646) monotonises the *training corpus* to remove reordering — the opposite direction. REINA uses monotonicity regularisation on the *policy output*, not on the training-data weighting. Non-monotonic latent alignments (Shao & Feng, arXiv 2210.03953) address reordering in non-autoregressive MT via latent variables. **No SiMT work upweights the reordering-divergent examples in SFT loss** — everyone is trying to make them go away, we are trying to lean into them.
+
+**Distinction.** This is genuinely different in direction. If our tags are the tool that unlocks the reordering-divergent examples EAST discards, then the SFT loss should reward the model for learning them — and equal weighting under-invests in exactly the signal that drives our reported win.
+
+**Expected paper impact.** If it works, the stratified table shows the win concentrating on the reordering bins — direct empirical support for the mechanism claim. If it doesn't work, that's a *counterexample* to the mechanism story, which weakens the paper's motivation — so run this early (Phase 2), not late.
+
+**Risk.** Upweighting could over-fit to the small non-monotone tail and hurt the monotone majority. Set a cap and monitor validation loss per-bin.
+
+**Δ prior work (technical vs paper).**
+- *Technical delta:* per-example loss weight from `1.0` to `1 + f(Kendall's τ)`. Textbook re-weighting; the code is a `.to(weights)` on the loss tensor.
+- *Story delta:* **direction-reversal from the entire SiMT literature.** Kano et al. 2021 (arXiv 2110.09646) monotonises the training corpus by *reordering targets*. EAST §3.1 filters non-monotone examples via the equal-chunk-count constraint. REINA regularises the policy *toward* monotonicity. Everyone else is trying to make the non-monotone examples go away because their pipelines can't handle them. **We're the only ones who want them because our tags do handle them** — and the loss-weighting is the direct empirical test that we win where the mechanism predicts. If the stratified BLEU-by-reordering-bin table shows the win concentrating on the reordering side, the paper's motivation stops being an assertion and becomes evidence.
+
+**Effort.** Alignment score assembly + weighting in the SFT loss = ~one day. Kendall's τ on awesome-align permutations reuses infra from Blocker 4 (Reordering Figure 1). Score once at data-prep time, cache.
+
+### M8. Word-level OT annotator — source at word-level, target at BPE
+
+**Current.** Annotator indexes both source prefix and target position at BPE level. `D[i, j]` is defined for BPE-position i on source, BPE-position j on target. Chunks are BPE-derived then snapped to whitespace-word boundaries by `_chunks_from_commit`.
+
+**Problem.** BPE-level convergence is **strictly stronger** than word-level convergence. To satisfy `D(P_full[j], P_pre[i][j]) < τ` at BPE level, the model must have converged on the specific subword at position j. A word split into multiple BPEs (e.g., 'Erwärmung' = ' Er' 'wärm' 'ung') requires convergence on each subword. On rows where the *word* is confidently predictable ("Global warming" is a near-certain bigram) but the *subword sequence* has residual noise, BPE-level OT may refuse to commit — producing the single-chunk-collapse rows that ~28% of cond-B/n=10K exhibits. **The collapse-fallback ladder shipped 2026-08-18 patches this at dataset-build time; M8 would solve it at annotation time.**
+
+**Change.** Rewrite the annotator loop to index source prefix by word-boundary BPE positions only (i ∈ {word-boundary offsets in `src_ids`}). Cost: fewer rows in the OT matrix (n_words vs n_bpe). Target remains BPE-indexed — the target-side subword granularity is where the divergence signal lives. Matrix shape becomes `(n_words × m_bpe)` — smaller, cheaper, natively aligned with inference wait-k which is word-indexed.
+
+**Closest prior work.** Wait-k policies (Ma 2019) are word-indexed at inference; alignment-based methods (fast_align, awesome-align) operate on word units. No prior SFT-annotation work has explicitly aligned annotation granularity to inference granularity because the annotation-vs-inference decoupling was implicit — every prior LLM-SiMT method that uses tokens uses them at whatever the model's tokenizer natively produces.
+
+**Distinction.** Ours is not "word-level LLM" (impossible — LLMs are BPE-native) but "word-level *convergence-check on top of BPE-native distributions*." The next-token logits stay BPE. What changes is *which source-prefix lengths we evaluate* — only at word boundaries.
+
+**Expected paper impact.** Resolves the collapse-row cause at source rather than treating the symptom. If Tests A/B/C (soft-criterion, loss-upweight, collapse-skip) all fail to induce adaptivity on cond-B/n=10K, M8 is the next intervention worth trying. Adds one more "method contribution beyond backbone-derived tags" to the paper — the word-alignment claim.
+
+**Effort.** Rewrite ~50 lines of `annotate.py`. Reannotate n=10K (~10-15 GPU-hours on E2B; cheaper than current annotator since fewer prefix passes). Rebuild dataset. Retrain. ~2-3 days end-to-end.
+
+**Δ prior work.**
+- *Technical delta:* index source prefix at word-boundary positions only; unchanged for target.
+- *Story delta:* first SFT-annotation method to align annotation granularity to inference granularity. Wait-k is word-indexed at inference; every prior LLM-SiMT method (EAST included) annotates at token-level and ignores the mismatch. Explicit fix.
+
+---
+
+### M9. KV-cache reuse across source-prefix forward passes  *(priority ↑ 2026-08-20)*
+
+**Current.** Annotator's inner loop is `for i in range(1, n+1): model(input_ids)` — n separate forward passes on `<bos> src[:i] \n target[:m]`. Each iteration starts from scratch. Verified in `src/annotator/annotate.py:398`.
+
+**Problem.** `<bos> src[:i]` and `<bos> src[:i+1]` share the first i+1 positions. Recomputing attention K/V for those positions on every iteration is redundant. On a 24-word source, we redo ~65% of the attention compute unnecessarily.
+
+**Measured cost (2026-08-20 multilingual annotation).** Gemma-4-E2B on H200 achieves ~74 sents/min = **~0.8s/sent** on 10K-row directions. Multilingual v5 (10 directions × 10K rows) takes ~22 GPU-hours end-to-end. Any bigger scale-up (50K per direction, or 660K single-direction) becomes GPU-week rather than GPU-day territory.
+
+**Change.** Two-tier KV cache. Encode source incrementally with `past_key_values`:
+```
+past = model(prompt_ids, use_cache=True).past_key_values  # <bos> + latency token
+for i in range(1, n + 1):
+    # Extend by one source token, save the KV state at prefix length i
+    ext = model(src_ids[i-1:i], past_key_values=past, use_cache=True)
+    past_at_i = ext.past_key_values
+
+    # Teacher-force target using a COPY of past_at_i so we don't pollute
+    # the next iteration's src extension with target-token KV entries
+    tgt_out = model(tgt_ids, past_key_values=deepcopy_kv(past_at_i), use_cache=False)
+    p_pre_i = softmax(tgt_out.logits[at target positions])
+    # ... compute divergence vs p_full, check commit criterion, etc.
+
+    past = past_at_i  # advance for next iteration
+```
+
+**Complexity comparison** (n=20, m=20 typical):
+- Current: n forward passes on (i+m) tokens each → sum ≈ 610 token-equivalents processed
+- KV-cache: n forward passes on (1+m) ≈ 21 tokens each → sum ≈ 420 token-equivalents
+- **Attention cost** (dominant for L≥40): current O(n·(i+m)²) ≈ 320K; optimized O(n·m²) ≈ 8K → **~40× on attention alone**
+- **Realistic wall-clock speedup after FFN overhead + Python loop overhead:** **2-5×**
+
+**Combined with cross-sentence batching** (M9b, below): 5-10× realistic.
+
+**Expected wall.** Current multilingual v5 annotation: ~22 GPU-hours. Post-M9: ~5-10 GPU-hours. Post-M9 + M9b: ~2-3 GPU-hours. Scale-up to 50K per direction becomes tractable in one overnight run.
+
+**Distinction.** No paper contribution — pure engineering optimization. Ships as a code-quality improvement, not a method claim.
+
+**Effort.** ~1 day of code (both tiers) + regression tests to verify identical `D` matrices vs the naïve implementation.
+
+**Verification protocol** (before shipping):
+1. Run KV-cache version on 50 sentences from `annot_ot_n10k` (already-annotated DE-EN subset).
+2. Compare divergence matrices row-by-row against the stored `matrices.jsonl`. L∞ diff must be < 1e-4 (bfloat16 numerical noise floor).
+3. Verify commit points identical for τ ∈ {0.30, 0.50, 0.70}.
+4. Run 500-sentence end-to-end smoke; verify no walltime regression (should be strict speedup).
+
+**M9b. Cross-sentence batching.** After M9 lands, add a bucketed batching layer: group sentences by source-length bucket (±2 tokens), pad within bucket, process 4-8 sentences per forward pass. Requires an attention-mask patch to isolate rows within the batch. Additional 2-4× on top of M9. Non-trivial (~2 days) — worth it only if scaling to 100K+ per direction.
+
+**Priority.** Was "future work" until 2026-08-20. Multilingual v5 annotation demonstrated the cost curve (22 GPU-hours for 100K rows). Now recommended as **prerequisite for any scale-up experiment** (H14 data curve, additional-language extensions, or Multi-90K-scale replication of the full 90K).
+
+---
+
+### M10. vLLM-based annotation refactor
+
+**Current.** Annotator uses HuggingFace `AutoModelForCausalLM` for full-vocab softmax at each target position.
+
+**Change.** Rewrite annotator to use vLLM (0.5+). vLLM's `SamplingParams(prompt_logprobs=N)` returns top-N logprobs at each prompt position — exactly what we need (only top-128 are used in OT support). vLLM has automatic prefix caching across requests — the n source-prefix growth pattern hits the cache perfectly (M9's benefit for free). PagedAttention gives another 2-3× on top of that.
+
+**Expected speedup.** 5-10× on annotation vs current HF-transformers path.
+
+**Non-trivial checks (must verify before committing):**
+- (a) `prompt_logprobs` supports N ≥ 128 (our OT support size). Recent vLLM versions do, but check.
+- (b) Prefix caching works across separate `generate()` calls when the KV cache is served by the same engine process.
+- (c) Reproducibility: vLLM's numerics differ subtly from HF transformers (fused kernels + fp16 accumulation). Verify OT `D` values match within ~1e-3 L∞ on 100-sentence smoke.
+
+**Distinction.** No paper contribution. Pure infrastructure. Enables scale-up experiments (H14 data curve at 50K/100K/660K) which would otherwise be walltime-prohibitive.
+
+**Effort.** ~3-5 days of refactor + validation. Higher risk than M9 due to vLLM's opinionated API.
+
+**Priority ordering:** M9 first (safe, in-tree change, immediate 2-5× win). M10 second (if we need scale-up to 50K+ AND M9 is insufficient). Skip M10 for the initial Findings submission — M9 gets us to 50K comfortably.
+
+---
+
+### M11. Labelled-role prompt in annotator (`Source: ... \n Translation: ...`)
+
+**Current.** Annotator uses raw concat: `<bos> {source} \n {target}`. This is the primary path (`--prompt_mode raw`) chosen for base-LLM matching per H3.
+
+**Problem.** Without a role label, the base LLM may treat the sequence as a mixed-language document rather than as translation. P_pre[i][j] at mid-source positions may favour more source tokens (natural continuation of a German document) over English translation continuations. Subtle bias — likely one of the contributors to the collapse-row rate.
+
+**Change.** Add `--prompt_template` argument to `phase1_tau_sweep.py` and `annotate.py`. Template: `Source:\n{source}\n\nTranslation:\n{target}`. Still raw-concat (no chat template — matches H3), but with explicit role labels.
+
+**Ablation.** Reannotate n=500 smoke on E2B with each template; compare chunk-count distribution + Pearson-med + collapse rate. If labelled prompt reduces collapse rate substantially, roll out to full n=10K.
+
+**Distinction from H2 (chat template).** H2 rejected chat template because -it models under chat gave degenerate Pearson. This is NOT chat template — this is a labelled raw-concat prompt on a base LLM. Different intervention, different signal.
+
+**Expected paper impact.** If it reduces collapse rate by >50%, roll into cond-B pipeline as the default. Adds one line to the paper's method §: "annotator uses labelled raw-concat prompt for role disambiguation."
+
+**Effort.** ~2 GPU-hours on 500-sent smoke; 1 day if rolled out to full n=10K reannotate.
+
+---
+
+## Method-improvement priority summary
+
+| # | Change | Prior work | Delta over prior | Effort | Priority |
+|---|---|---|---|---|---|
+| M1 | Scheduled-sampling annotation (`ρ` sweep) | Bengio 2015 / MIXER 2016 / OPD (training-time) | First application at data-construction stage | Weekend of compute | **High** — turns Blocker 3 into method contribution |
+| M2 | Horizon-averaged criterion (`h`) | Multi-criterion stopping (Wald 1947, LEAP, WhisperPipe) | First to apply to SFT tag placement | Trivial code, free | **High** — cheap, defensible, natural |
+| M3 | DP-based tag placement | HMT (Zhang & Feng 2023) — training-time DP | First DP for offline tag placement | Half day + one re-run | **Medium-high** — provably ≤ greedy AL |
+| M4 | SPRT formalism for tau | ConSol (LLM self-consistency), Wald 1947 | First SPRT in SFT tag placement | Half day + one re-run | **Medium** — formalism win, reviewer safety |
+| M5 | JSD alongside OT/KL | Standard in distillation literature | Empirical robustness check | One line + one re-run | **Low but cheap — do it** |
+| M6 | Confidence-gated commit | Early-exit literature (Schwartz 2020, etc.) | Conjunction with distributional criterion | Trivial code | **Medium** — safety mechanism |
+| M7 | Non-monotone loss upweighting | Kano 2021 (opposite direction), REINA (monotonicity reg) | First upweighting for reordering-divergent SFT | 1 day + Phase 2 re-run | **Medium-high, run early** |
+
+**If all High-priority items get done:** M1 (scheduled-sampling annotation), M2 (horizon), M3 (DP), and M7 (loss upweighting) collectively give the paper four defensible method contributions on top of the core "backbone-derived tags" claim. That is more than enough new-method surface for Findings.
+
+**If only one High-priority item can be done:** M2 (horizon-averaged criterion). Trivial to implement, gives a natural response to the token-vs-phrase reviewer objection, and costs no additional annotation compute.
+
+**If the paper needs a big narrative anchor:** M1 (scheduled-sampling annotation). Transforms the exposure-bias admission from a §Discussion paragraph into a method contribution with its own subsection, its own ablation, and its own story arc.
+
+## The paper's contribution in one paragraph — after verification
+
+Earlier drafts pitched this as "we use the model itself as the annotation signal." Verification found that framing is unsafe — the AlignAtt family, DaP-SiMT, DiG-SST, REINA, HMT, and the wait-if-diff family all use the model itself in one form or another. The corrected pitch, for the abstract / intro / rebuttal, is a **2×2 diagonal-move claim**:
+
+> *Adaptive SiMT policies live on a 2×2: {external oracle, model-native signal} × {runtime policy, data-construction annotation}. The three populated cells are attention-based / distribution-based runtime policies (AlignAtt, EDAtt, MMA, DaP-SiMT, DiG-SST, REINA, HMT, wait-if-diff — all model-native, all runtime), fast-align / GPT-4-annotator data construction (Wang et al. 2024, Agent-SiMT — all external, all runtime; EAST — external, data-construction), and the empty fourth cell: model-native distributional-convergence signal, computed offline at data-construction time, baked into training-data tags, with no runtime policy component. We occupy the empty cell. Over EAST the change is a one-line annotator swap. Over the runtime-policy families the change eliminates the runtime policy entirely — the tags emerge autoregressively from the fine-tuned model with no attention inspection, no policy head, no re-decoding, no wait-k fallback. Consequences: no exposure-bias mismatch in a runtime component (DiG-SST §Inference Policy names this openly), no vLLM fused-kernel attention-inspection hack (AlignAtt4LLM's Deployment §), KV-cache reuse preserved, deploy footprint is a plain autoregressive LM. The empty cell was empty because the runtime-policy subculture and the data-construction subculture do not overlap — two disjoint research communities, and the diagonal move requires standing in both.*
+
+**One-liner for the abstract:** *"We fill the empty cell in the 2×2 of adaptive SiMT: model-native signal × data-construction annotation."*
+
+Every improvement in this document is either (a) the direct consequence of the diagonal move (the M0 core method), (b) a textbook tool from an adjacent literature that becomes applicable only after the move (M1–M7 — scheduled sampling, DP, SPRT, JSD, confidence gating, reordering-weighted loss), or (c) a positioning fix so reviewers can see (a) and (b) for what they are (Blockers 1–3, Strengthening 4–7).
+
+The paper is a demonstration that two well-populated adjacent subcultures each solved half of a 2×2 and neither noticed the empty cell. Frame it as such. Do not oversell — the empirics still need to land — but do not undersell either. **"Two-cell diagonal move, missed because it required standing in both subcultures at once, quantifiably eliminates the runtime policy overhead the top-right cell was built around"** is one of the cleanest paper stories a Findings reviewer can encounter, and it is more precise and more defensible than the earlier "trivial change" pitch that verification broke.
+
+## Rejected optionals (do not do these)
+
+- **ICLR reframing.** Wrong venue, wrong effort. Would require reframing as representation-learning / algorithmic-breadth. Don't.
+- **en-es / en-vi / en-ar as originally proposed.** No shipped GPT-4 cond-A baseline; would need API re-annotation (~$50 + calibration risk). Replaced 2026-08-18 with SiMT-Multi-90K's 4 pairs (en-de/en-zh/en-cs/en-ru — GPT-4 chunks shipped, zero API cost, direct match to EAST Table 2). See `../LOG.md` `[DECISION] 2026-08-18 — Multi-lingual expansion via SiMT-Multi-90K`. en-ar as appendix stretch if time.
+- **Speech extension.** EASiST (Fu et al., AAAI 2026) already covers the speech version by the same group. Any speech move is scope creep on top of scope creep.
+- **Multi-token span decisions** (commit to a phrase rather than a token). Interesting research direction, but changes the method beyond "backbone-derived tag placement." Save for follow-up work.
+- **Curriculum learning on the annotation.** Unrelated to the commit criterion claim; would confound the primary A-vs-B comparison.
+- **RLHF / DPO on the annotated data.** Same problem — moves the paper away from "the annotator is the contribution" and into "the training recipe is the contribution."
+- **Comparing against Agent-SiMT (Guo et al. 2024b).** EAST already dismisses this baseline; re-running it costs time and adds no argument.
+
+## Priority summary — which optionals actually get done
+
+| # | Item | Effort | Impact | Do? |
+|---|---|---|---|---|
+| 1 | Scale framing (Option A) | 1 hr text | Blocker → resolved | **Yes, week 12** |
+| 2 | REINA distinction subsection | 4 hr writing | Blocker → resolved | **Yes, week 13** |
+| 3 | Exposure-bias dev diagnostic | 1 day compute + 1 hr text | Blocker → resolved | **Yes, week 5** (before Phase 2) |
+| 4 | **Cond-C (Simul-LLM) + Cond-D (TransLLaMa) reproductions** | 2 days scripting + ~90 min GPU each | **Blocker → resolved (Gate B)** | **Yes, Weeks 1-2** (critical path) |
+| 4 | Reordering Figure 1 | Half day | Motivation figure | **Yes, Phase 0 upgrade** |
+| 5 | 3-seed + paired bootstrap on headline | 3× SFT for primary comparison | Standard credibility | **DROPPED 2026-08-18** — signal is +5 BLEU vs ~0.5 BLEU seed noise; add in rebuttal if raised. See `../LOG.md` `[DECISION] 2026-08-18 — Multi-seed protocol dropped`. |
+| 6 | Data-efficiency framing | 1 hr text | Story win | **Yes, week 12** |
+| 7 | Catchy name | 30 min | Memorability | **Yes, week 12** |
+| REINA ablation (KL matches OT) | Already in `docs/experiments.md` §Ablation grid | Amplifies REINA distinction | Already scheduled |
+| CCPS ablation | 1–2 days compute | Nice-to-have | Skip unless week 11 has slack |
+| 8B replication (Option B) | Post-writeup | Paper stronger | Only if Gate 3 passes with margin |
+
+If all "Yes" items get done, the Findings blocker list is empty. The remaining risk is the Stage-I result itself — no amount of optionals fixes a null primary.
+
+## What this document changes about the plan
+
+Concretely, the following existing docs need touch-ups to reflect the docs/_archive/OPTIONALS.md decisions once accepted:
+
+- `docs/_archive/TIMELINE.md` Phase 0 — add reordering Figure 1 as a deliverable.
+- `docs/_archive/TIMELINE.md` Phase 1 — add exposure-bias dev diagnostic as a Gate-1 add-on.
+- `docs/_archive/TIMELINE.md` Phase 2 — mark headline runs as 3-seed + paired bootstrap.
+- `docs/experiments.md` §Guardrails — 3-seed rule.
+- `docs/experiments.md` §Ablation grid — optional CCPS row.
+- `CLAUDE.md` — soften "any scale" wording; add "at 2B" framing note pointing at this file.
+- `LOG.md` — DECISION entry recording the scale-framing choice once made.
+
+These are cheap edits after docs/_archive/OPTIONALS.md is agreed. Do not make them now — read the file first, decide which items are in and which are out.

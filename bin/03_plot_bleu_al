@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stage 6 — plot BLEU-vs-AL curves for the landed eval matrix.
-# Reads: results/eval/*/*.json (or results/_archive/*/extrinsic/*.json)
+# Reads: results/eval/*/*.json (or _archive/results/*/extrinsic/*.json)
 # Writes: figures/{tag}/*.png
 #
 # Usage: bin/03_plot_bleu_al [--config configs/plots.yaml]
