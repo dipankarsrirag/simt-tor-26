@@ -91,7 +91,7 @@ simt-tor-26/
 │   ├── env.sh                     # ← pbs/env.sh
 │   ├── reproduce_v6b.sh           # NEW — end-to-end reproducer (calls 01→06 in order)
 │   └── _archive/
-│       ├── v2bal_full/            (40 PBS — pre-htgt)
+│       ├── v2bal_full/            (40 PBS — pre-curated)
 │       ├── rb_fw_full/            (40 PBS — abandoned rebucket-forward)
 │       ├── condA_full/            (20 PBS — cond-A baseline, one-time reference)
 │       ├── v2bal_v3_wmt15/        (5 PBS — subsumed by eval/gemma_2b)
@@ -219,9 +219,9 @@ Full reproduction takes ~325 GPU-h on H200:
 ```
 bash jobs/reproduce_v6b.sh                    # end-to-end
 # or step by step:
-python scripts/01_build_source_pool.py --config configs/htgt.yaml
+python scripts/01_build_source_pool.py --config configs/curated.yaml
 qsub jobs/annotate/annot_ot_multi_htgt_de-en.pbs   # × 8 directions
-python scripts/02_build_sft_dataset.py --config configs/htgt.yaml
+python scripts/02_build_sft_dataset.py --config configs/curated.yaml
 qsub jobs/train/sft_multilingual_v6b_v2bal_v3_htgt.pbs
 qsub jobs/eval/gemma_2b/wmt15_v2balv3htgt_medium.pbs   # × per-latency-per-dir
 python scripts/03_plot_bleu_al.py
@@ -332,7 +332,7 @@ When I push, anything CLAUDE related will need to be gitignored.
 
 Yes.
 
-5. **New `configs/` directory for YAML configs?** Currently every entry-point script has hardcoded paths (per Explore §Big findings #3). Adding `configs/htgt.yaml` etc. is a genuine improvement for reproducibility but adds ~4 hours of work. **Default: defer — not in this refactor.**
+5. **New `configs/` directory for YAML configs?** Currently every entry-point script has hardcoded paths (per Explore §Big findings #3). Adding `configs/curated.yaml` etc. is a genuine improvement for reproducibility but adds ~4 hours of work. **Default: defer — not in this refactor.**
 
 Yes YAML configs and the scripts should stay.
 

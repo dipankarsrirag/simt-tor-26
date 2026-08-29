@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# COMET rescoring — post-hoc metric addition on landed eval JSONs.
+# Reads: results/eval/{tag}/*.json (hypothesis + reference arrays)
+# Writes: results/eval/{tag}/comet_scores_*.json
+#
+# Usage: bash scripts/04_score_comet.sh --tag {tag} [additional args]
+#
+# Note: COMET model download ~2.3GB on first run; cached under
+# ${HF_HOME}/hub/models--Unbabel--wmt22-comet-da/.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${DIR}/04_score_comet.py" "$@"

@@ -7,14 +7,14 @@ One YAML per experiment tag. Every pipeline stage reads its parameters from the 
 `{backbone}_{corpus}_{policy_suffix}.yaml` — lowercase, underscore-separated.
 
 Examples matching the follow-up experiment plan (`docs/followup-experiments.md`):
-- `v6b_gemma_2b.yaml` — the current baseline (Gemma-4-E2B-it + htgt + OT).
-- `east_8b_htgt.yaml` — EAST-8B backbone, htgt corpus, self-annotated (Fig 1, 2, 3, 4).
+- `v6b_gemma_2b.yaml` — the current baseline (Gemma-4-E2B-it + curated + OT).
+- `east_8b_curated.yaml` — EAST-8B backbone, curated corpus, self-annotated (Fig 1, 2, 3, 4).
 - `east_8b_east_matched.yaml` — EAST-8B backbone, east-corpus proportion-matched (Fig 2 line 3).
-- `east_8b_waitk.yaml` — EAST-8B backbone, htgt corpus, wait-k policy (Fig 2, 3 line 4).
-- `east_8b_conv.yaml` — EAST-8B backbone, htgt corpus, Conv-SiMT policy (Fig 2, 3 line 5).
-- `gemma_4b_htgt.yaml` — Gemma-4-E4B-it, htgt, self-annotated (Fig 4 middle).
-- `gemma_4b_from_2b_annot.yaml` — Gemma-4-E4B-it, htgt, tags from Gemma-2B (Fig 5 middle).
-- `east_8b_from_2b_annot.yaml` — EAST-8B, htgt, tags from Gemma-2B (Fig 5 right).
+- `east_8b_waitk.yaml` — EAST-8B backbone, curated corpus, wait-k policy (Fig 2, 3 line 4).
+- `east_8b_conv.yaml` — EAST-8B backbone, curated corpus, Conv-SiMT policy (Fig 2, 3 line 5).
+- `gemma_4b_curated.yaml` — Gemma-4-E4B-it, curated, self-annotated (Fig 4 middle).
+- `gemma_4b_from_2b_annot.yaml` — Gemma-4-E4B-it, curated, tags from Gemma-2B (Fig 5 middle).
+- `east_8b_from_2b_annot.yaml` — EAST-8B, curated, tags from Gemma-2B (Fig 5 right).
 
 ## Structure
 

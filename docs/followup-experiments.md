@@ -14,11 +14,11 @@ Three questions, one per results-section story.
 
 ### RQ1. Recipe comparison (Figs 1, 2, 3)
 
-Given the same backbone (EAST-8B), the same htgt training corpus, and the same test sets, does self-annotation (backbone-derived OT chunks) beat every alternative training recipe — GPT-4 chunks (EAST as-shipped), machine-translated targets, wait-k, and Conversational SiMT (Wang et al. 2024)?
+Given the same backbone (EAST-8B), the same curated training corpus, and the same test sets, does self-annotation (backbone-derived OT chunks) beat every alternative training recipe — GPT-4 chunks (EAST as-shipped), machine-translated targets, wait-k, and Conversational SiMT (Wang et al. 2024)?
 
 ### RQ2. Backbone scaling (Fig 4)
 
-Does the self-annotation → SFT recipe hold across backbone scale? Concretely: does moving from 2B (Gemma-4-E2B-it) → 4B (Gemma-4-E4B-it) → 8B (EAST-8B) monotonically improve simultaneous translation quality on the same htgt-corpus with each backbone self-annotating?
+Does the self-annotation → SFT recipe hold across backbone scale? Concretely: does moving from 2B (Gemma-4-E2B-it) → 4B (Gemma-4-E4B-it) → 8B (EAST-8B) monotonically improve simultaneous translation quality on the same curated-corpus with each backbone self-annotating?
 
 ### RQ3. Annotator portability (Fig 5)
 
@@ -30,7 +30,7 @@ Is the OT annotation a portable preprocessing step across backbones — i.e., ca
 
 Answers to the three ambiguities from the previous draft (see git history for the raw options).
 
-- **Q1 → Q1b.** `EAST↺east` = same htgt sources with EAST-style (machine-translated) targets. Operational definition: sub-sample SiMT-660K + SiMT-Multi-90K stratified to match the htgt-corpus row counts per direction (drop ar/vi since EAST corpus lacks them → effective total ~118K rows). This uses EAST's actual training targets as the "machine-target" reference; no additional retranslation cost.
+- **Q1 → Q1b.** `EAST↺east` = same curated sources with EAST-style (machine-translated) targets. Operational definition: sub-sample SiMT-660K + SiMT-Multi-90K stratified to match the curated-corpus row counts per direction (drop ar/vi since EAST corpus lacks them → effective total ~118K rows). This uses EAST's actual training targets as the "machine-target" reference; no additional retranslation cost.
 - **Q2 → Fig 1 keeps the existing WMT-15 plot lines AND adds two EAST-family lines** (`EAST↺ours`, `EAST↺east`). Total 6 lines. If too crowded at render time, drop `Gemma-2B CondA` (superseded by `Gemma-2B Ours` in the paper narrative).
 - **Q3 → Q3a.** Fig 3 = 3 lines (`EAST↺ours`, `EAST↺waitk`, `EAST↺conv`). Gemma-2B lines *not* on Fig 3 (would muddle the fixed-backbone-recipe-comparison story). Coverage story lives in Fig 4/5.
 - **Q3 hedge (user note).** The backbone-comparison story may need additional plots for ar/vi if Fig 3 is EAST-only. Parked — decide after Fig 3 lands.
@@ -42,7 +42,7 @@ Answers to the three ambiguities from the previous draft (see git history for th
 | Symbol | Meaning |
 |---|---|
 | **Backbone** | The LM used both as annotator (offline) and as the SFT starting point. |
-| **Corpus** | The parallel-text pool used to derive training rows. Two options: `east-corpus` (SiMT-660K + SiMT-Multi-90K, GPT-4 chunks shipped) or `htgt-corpus` (europarl + news-comm + TED2020, our human-target curation; see `docs/data.md`). |
+| **Corpus** | The parallel-text pool used to derive training rows. Two options: `east-corpus` (SiMT-660K + SiMT-Multi-90K, GPT-4 chunks shipped) or `curated-corpus` (europarl + news-comm + TED2020, our human-target curation; see `docs/data.md`). |
 | **Annotator** | The model whose distributions decide OT chunk boundaries. Usually the same as **Backbone** (self-annotation) but can differ (cross-annotation). |
 | **Policy** | The SFT-time chunking recipe: `ot` (ours), `wait-k` (fixed), `conv-simt` (Wang 2024), `gpt4-chunks` (EAST-shipped). |
 
@@ -50,10 +50,10 @@ A run is fully specified by `(Backbone, Corpus, Annotator, Policy)`.
 
 Compact figure tags:
 - **EAST** — released checkpoint `biaofu-xmu/EAST-8B` = `(EAST-8B, east-corpus, GPT-4, gpt4-chunks)`.
-- **EAST↺ours** — `(EAST-8B, htgt-corpus, EAST-8B, ot)`.
-- **EAST↺east** — `(EAST-8B, east-corpus[N-matched to htgt per-direction], EAST-8B, ot)`. Isolates target quality (human vs machine-generated) with source-pool + annotator + policy held fixed.
-- **EAST↺waitk** — `(EAST-8B, htgt-corpus, —, wait-k[k=k_wk])`.
-- **EAST↺conv** — `(EAST-8B, htgt-corpus, —, conv-simt[k=k_cv])`.
+- **EAST↺ours** — `(EAST-8B, curated-corpus, EAST-8B, ot)`.
+- **EAST↺east** — `(EAST-8B, east-corpus[N-matched to curated per-direction], EAST-8B, ot)`. Isolates target quality (human vs machine-generated) with source-pool + annotator + policy held fixed.
+- **EAST↺waitk** — `(EAST-8B, curated-corpus, —, wait-k[k=k_wk])`.
+- **EAST↺conv** — `(EAST-8B, curated-corpus, —, conv-simt[k=k_cv])`.
 
 The `↺` glyph reads "self-trained on"; policy suffix disambiguates.
 
@@ -61,7 +61,7 @@ The `↺` glyph reads "self-trained on"; policy suffix disambiguates.
 
 ## Corpus sizes (pre-registered)
 
-**htgt-corpus** (from `results/_archive/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
+**curated-corpus** (from `results/_archive/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`, checked 2026-08-29):
 
 | Direction | Rows |
 |---|---|
@@ -110,8 +110,8 @@ Rationale: matches EAST §4.2 wait-k grid; single value per bin prevents post-ho
 | EAST | EAST-8B | east-corpus | GPT-4 | gpt4-chunks | ✓ landed |
 | Gemma-2B CondA | Gemma-4-E2B-it | multi-90k | GPT-4 | gpt4-chunks | ✓ landed |
 | Gemma-2B CondB | Gemma-4-E2B-it | multi-90k | Gemma-4-E2B-it | ot | ✓ landed |
-| Gemma-2B Ours | Gemma-4-E2B-it | htgt-corpus | Gemma-4-E2B-it | ot | ✓ landed |
-| **EAST↺ours (new)** | EAST-8B | htgt-corpus | EAST-8B | ot | ✗ needs training + eval |
+| Gemma-2B Ours | Gemma-4-E2B-it | curated-corpus | Gemma-4-E2B-it | ot | ✓ landed |
+| **EAST↺ours (new)** | EAST-8B | curated-corpus | EAST-8B | ot | ✗ needs training + eval |
 | **EAST↺east (new)** | EAST-8B | east-corpus[N-matched] | EAST-8B | ot | ✗ needs training + eval |
 
 **Cost delta.** 2 new EAST-8B checkpoints × 5 latencies = 10 new eval cells on WMT15 alone.
@@ -133,10 +133,10 @@ Rationale: matches EAST §4.2 wait-k grid; single value per bin prevents post-ho
 | Line | Corpus | Annot. | Policy | What it isolates |
 |---|---|---|---|---|
 | EAST | east-corpus (full) | GPT-4 | gpt4-chunks | published SoTA reference |
-| EAST↺ours | htgt-corpus | EAST-8B | ot | **full recipe** — new data + self-annotation + OT |
-| EAST↺east | east-corpus[N-matched] | EAST-8B | ot | **target quality** — human htgt targets vs machine EAST targets, holding annotator+policy fixed |
-| EAST↺waitk | htgt-corpus | — | wait-k (k per latency, pre-reg above) | **policy** — is the win the OT annotation or does any streaming training on htgt help? |
-| EAST↺conv | htgt-corpus | — | conv-simt (k_cv=4) | **policy alternative** — vs current LLM-SiMT competitor |
+| EAST↺ours | curated-corpus | EAST-8B | ot | **full recipe** — new data + self-annotation + OT |
+| EAST↺east | east-corpus[N-matched] | EAST-8B | ot | **target quality** — human curated targets vs machine EAST targets, holding annotator+policy fixed |
+| EAST↺waitk | curated-corpus | — | wait-k (k per latency, pre-reg above) | **policy** — is the win the OT annotation or does any streaming training on curated help? |
+| EAST↺conv | curated-corpus | — | conv-simt (k_cv=4) | **policy alternative** — vs current LLM-SiMT competitor |
 
 **Conv-SiMT recipe (Wang et al., 2024).** Segment parallel sentences with `awesome-align` → format as multi-round dialogue → SFT. Inference reads *k_cv* tokens per step and incrementally decodes. Net-new module `src/train/conv_simt.py`.
 
@@ -154,9 +154,9 @@ Rationale: matches EAST §4.2 wait-k grid; single value per bin prevents post-ho
 
 | Line | Corpus | Annot. | Policy |
 |---|---|---|---|
-| EAST↺ours | htgt-corpus | EAST-8B | ot |
-| EAST↺waitk | htgt-corpus | — | wait-k |
-| EAST↺conv | htgt-corpus | — | conv-simt |
+| EAST↺ours | curated-corpus | EAST-8B | ot |
+| EAST↺waitk | curated-corpus | — | wait-k |
+| EAST↺conv | curated-corpus | — | conv-simt |
 
 **Omitted intentionally.**
 - No `EAST` — released weights untrained on ar/vi.
@@ -173,13 +173,13 @@ Rationale: matches EAST §4.2 wait-k grid; single value per bin prevents post-ho
 
 **Layout.** 2×4 grid. Top row: En→{De, Ru, Ar, Vi}. Bottom row: {De, Ru, Ar, Vi}→En.
 
-**Lines per subplot (3 backbones, each self-annotated on htgt-corpus with OT policy).**
+**Lines per subplot (3 backbones, each self-annotated on curated-corpus with OT policy).**
 
 | Line | Backbone | Corpus | Annot. | Policy | Status |
 |---|---|---|---|---|---|
-| Gemma-2B Ours | Gemma-4-E2B-it | htgt-corpus | Gemma-4-E2B-it | ot | ✓ landed |
-| Gemma-4B Ours | Gemma-4-E4B-it | htgt-corpus | Gemma-4-E4B-it | ot | ✗ annotate + train |
-| EAST↺ours | EAST-8B | htgt-corpus | EAST-8B | ot | ✗ annotate + train |
+| Gemma-2B Ours | Gemma-4-E2B-it | curated-corpus | Gemma-4-E2B-it | ot | ✓ landed |
+| Gemma-4B Ours | Gemma-4-E4B-it | curated-corpus | Gemma-4-E4B-it | ot | ✗ annotate + train |
+| EAST↺ours | EAST-8B | curated-corpus | EAST-8B | ot | ✗ annotate + train |
 
 **Reads.**
 - Monotone-up in backbone size → self-annotation is real, scales.
@@ -204,9 +204,9 @@ The paper should hedge cause (2) explicitly — otherwise a flat Fig 4 gets over
 
 | Line | Backbone | Corpus | Annot. | Policy | Status |
 |---|---|---|---|---|---|
-| Gemma-2B (self) | Gemma-4-E2B-it | htgt-corpus | Gemma-4-E2B-it | ot | ✓ landed (Fig 4 line 1) |
-| Gemma-4B ← 2B annot | Gemma-4-E4B-it | htgt-corpus | Gemma-4-E2B-it | ot | ✗ train (reuse 2B annotation) |
-| EAST-8B ← 2B annot | EAST-8B | htgt-corpus | Gemma-4-E2B-it | ot | ✗ train (reuse 2B annotation) |
+| Gemma-2B (self) | Gemma-4-E2B-it | curated-corpus | Gemma-4-E2B-it | ot | ✓ landed (Fig 4 line 1) |
+| Gemma-4B ← 2B annot | Gemma-4-E4B-it | curated-corpus | Gemma-4-E2B-it | ot | ✗ train (reuse 2B annotation) |
+| EAST-8B ← 2B annot | EAST-8B | curated-corpus | Gemma-4-E2B-it | ot | ✗ train (reuse 2B annotation) |
 
 **Reads.** Fig 5 tracking Fig 4 within ~1 BLEU per cell → **annotation is a portable preprocessing step**: run once with the smallest model, reuse tags for any downstream backbone. Big deployment story. Fig 5 significantly below Fig 4 → self-annotation is essential and per-backbone annotation cost cannot be amortised.
 
@@ -218,7 +218,7 @@ The paper should hedge cause (2) explicitly — otherwise a flat Fig 4 gets over
 
 Counting only runs not already landed.
 
-### New annotations (offline, on htgt-corpus)
+### New annotations (offline, on curated-corpus)
 
 | Annotator | Directions | Purpose | Cost (est.) |
 |---|---|---|---|
@@ -277,7 +277,7 @@ Not yet computed at scale — see `docs/next-steps.md` §COMET rescoring.
 ## Parked ambiguities / low-priority
 
 - **Q4 (reverse cross-annotation).** Big-annotator + small-SFT. Interesting but not a figure. Appendix table row: `Gemma-2B ← 8B annot` vs the Fig-5 pairs.
-- **Q5 (EAST-8B on ar/vi).** EAST-8B pretraining was on de/zh/cs/ru; ar/vi rely on Llama-3-Instruct base coverage only. Default plan: train EAST↺{ours,waitk,conv} on the full 8-direction htgt-corpus and let pretraining carry ar/vi. If Fig 3 shows EAST-8B collapses on ar/vi, either (a) note this as a hard limit of the recipe, or (b) drop ar/vi from Fig 3 and add a Gemma-vs-EAST comparison plot per Q3 hedge.
+- **Q5 (EAST-8B on ar/vi).** EAST-8B pretraining was on de/zh/cs/ru; ar/vi rely on Llama-3-Instruct base coverage only. Default plan: train EAST↺{ours,waitk,conv} on the full 8-direction curated-corpus and let pretraining carry ar/vi. If Fig 3 shows EAST-8B collapses on ar/vi, either (a) note this as a hard limit of the recipe, or (b) drop ar/vi from Fig 3 and add a Gemma-vs-EAST comparison plot per Q3 hedge.
 - **Q3 hedge (backbone-comparison on ar/vi).** If the reader wants to see how Gemma-2B compares to EAST-8B on ar/vi (per Fig 3's omitted Gemma line), that lives in Figs 4/5 subplots (c/d bottom row / g/h top row). If those don't tell the story clearly, add a dedicated 1×4 plot (ar-en, en-ar, vi-en, en-vi) comparing all three backbones at fixed self-annotation. Decide after Fig 4 lands.
 
 ---
@@ -289,7 +289,7 @@ Not yet computed at scale — see `docs/next-steps.md` §COMET rescoring.
 | EAST-8B self-annotation is prohibitively slow (8B forward passes per token) | High — blocks Figs 1-3 | Prototype on 100 sentences first; if >8× E2B, consider distilled annotator or subset |
 | EAST↺ours matches or loses to EAST | Terminal for the headline | Report faithfully; pivot to "Gemma-2B Ours is efficient at 4× fewer params" story |
 | Wait-k / Conv-SiMT reimplementation is buggy | Fig 2 line 4-5 unusable | Sanity-check against published wait-k numbers on WMT15 De→En; require ±1 BLEU match |
-| htgt-corpus target quality is uneven across directions | Cross-direction comparisons look noisy | Sample-inspect 20 rows/direction before large SFT runs |
+| curated-corpus target quality is uneven across directions | Cross-direction comparisons look noisy | Sample-inspect 20 rows/direction before large SFT runs |
 | GPU quota exhaustion mid-run | Delays 1-2 weeks | Resubmit-loop already handles queue saturation (`jobs/loop_resubmit.sh`) |
 | Fig 4 flat because 8B is data-bound at 30K rows/direction | Weakens scaling story | Note explicitly in analysis; add a smaller-N and larger-N point per backbone if the initial run is flat |
 | Fig 1 with 6 lines is unreadable | Headline harder to parse | Drop `Gemma-2B CondA` (superseded by `Gemma-2B Ours`) — falls back to 5 lines |

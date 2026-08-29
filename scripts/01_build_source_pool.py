@@ -1,5 +1,5 @@
 """
-Build the v6b-htgt multi-direction source pool with HUMAN-translated targets
+Build the v6b-curated multi-direction source pool with HUMAN-translated targets
 only. Drops the GPT-4-translated Multi-90K pool for de/ru pairs and replaces
 with europarl / news-commentary / TED2020 (all human translations).
 
@@ -41,7 +41,7 @@ VIEN_TED = {
 DEEN_CORPORA = ["news-commentary", "ted2020", "europarl"]  # smallest first for domain diversity
 RUEN_CORPORA = ["news-commentary", "ted2020"]              # opensubtitles avoided (informal)
 
-# 8 directions to sample (10 in v5, but zh dropped in v6b + not needed for htgt)
+# 8 directions to sample (10 in v5, but zh dropped in v6b + not needed for curated)
 DIRECTIONS = [
     ("de", "en"), ("en", "de"),
     ("ar", "en"), ("en", "ar"),

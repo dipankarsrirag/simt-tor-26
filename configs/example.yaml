@@ -17,7 +17,7 @@ backbone:
 # (Stage 1 — scripts/01_build_source_pool.py)
 source_pool:
   # Which corpus to pull raw parallel data from.
-  corpus: htgt         # one of: htgt (europarl+news-comm+TED2020), east (SiMT-660K+Multi-90K)
+  corpus: curated         # one of: curated (europarl+news-comm+TED2020), east (SiMT-660K+Multi-90K)
   directions:          # per-direction row targets
     en-de: 30000
     de-en: 30000
@@ -28,7 +28,7 @@ source_pool:
     en-vi: 30000
     vi-en: 30000
   # Human-target requirement: drop pairs where target text was machine-generated.
-  # Only meaningful for corpus=htgt.
+  # Only meaningful for corpus=curated.
   human_target_only: true
 
 # ─────────── annotation ───────────
