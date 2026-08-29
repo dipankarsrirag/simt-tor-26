@@ -22,7 +22,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import torch
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM

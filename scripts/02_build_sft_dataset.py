@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.annotator.annotate import _chunks_from_commit, _enforce_monotone, _is_cjk_lang
 from src.config import DATA_ROOT, MODEL_BASE, REPO_ROOT

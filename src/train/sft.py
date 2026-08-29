@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import torch
 import torch.nn.functional as F

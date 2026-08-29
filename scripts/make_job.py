@@ -51,7 +51,8 @@ QUEUE_SPECS = {
 
 PROJECT = "po67"
 STORAGE = "gdata/ba39+gdata/po67"
-WORK_DIR = "/g/data/ba39/dipankar/simt-tor-26"
+import os
+WORK_DIR = os.environ.get("SIMT_REPO_ROOT", str(Path(__file__).resolve().parents[1]))
 VENV = "/scratch/po67/ds9561/.venv-fil/bin/activate"
 LOG_DIR = f"{WORK_DIR}/logs"
 # Shared po67 cache — same as ../arabic-dial-mt/pbs/env.sh. Not scratch.

@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
 EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic")
-FIG = Path("/g/data/ba39/dipankar/simt-tor-26/figures/phase2")
+FIG = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/figures/v6b_gemma_2b")
 FIG.mkdir(parents=True, exist_ok=True)
 
 LAT = ["low", "low_medium", "medium", "medium_high", "high"]
