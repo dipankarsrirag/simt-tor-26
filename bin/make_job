@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Utility — generate PBS wrappers under jobs/{stage}/{tag}_*.pbs from a
+# config's parameter grid.
+#
+# Usage: bin/make_job --config configs/{tag}.yaml --stage {annotate,train,eval}
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/make_job.py" "$@"

@@ -17,7 +17,8 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 ├── LOG.md             append-only run + decision log — the primary record
 ├── create-venv.sh     bootstrap the Python environment
 ├── src/               the library (annotator, train, eval)
-├── scripts/           pipeline entry-points, numbered 01→04 in run order
+├── scripts/           Python entry-points, numbered 01→04 in run order
+├── bin/               shell launchers — run these; they call scripts/*.py with the right env
 ├── configs/           YAML configs — one per experiment tag
 ├── jobs/              PBS wrappers for Gadi (annotate/, train/, eval/)
 ├── results/           outputs (annotate/, sft_dataset/, train/, eval/)
@@ -42,32 +43,34 @@ Full setup, paths, HF cache, Gadi PBS conventions, and account onboarding: **`do
 
 Pick a tag (short lowercase-with-underscores, e.g. `east_8b_curated`). Create `configs/{tag}.yaml` describing the run (see `configs/example.yaml`). Then run each stage.
 
-**Every stage has a `.py` (import-friendly) and a `.sh` (portable launcher) sibling.** Use the `.sh` on laptops or when you don't want to think about venv activation and HF cache paths — it auto-detects Gadi vs. laptop and does the right thing. `.py` is fine if you already have the venv active.
+**Two directories, one role each.** `scripts/*.py` = the actual Python implementations. `bin/*` = extension-less shell launchers you actually run — they source `bin/_env.sh` for portable venv/cache handling and dispatch to `scripts/*.py`.
 
 | Stage | On laptop / no venv | On Gadi (cluster) | Output |
 |---|---|---|---|
-| 1. Build source pool | `bash scripts/01_build_source_pool.sh --config configs/{tag}.yaml` | same (or `qsub` a PBS you generate) | `results/sft_dataset/{tag}/source_pool.json` |
-| 2. Annotate (OT chunk placement) | `bash scripts/02_annotate.sh --config configs/{tag}.yaml --direction {pair}` | `qsub jobs/annotate/{tag}_<dir>.pbs` × per direction | `results/annotate/{tag}/matrices.jsonl` |
-| 3. Build SFT dataset | `bash scripts/02_build_sft_dataset.sh --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
+| 1. Build source pool | `bin/01_build_source_pool --config configs/{tag}.yaml` | same (or `qsub` a PBS) | `results/sft_dataset/{tag}/source_pool.json` |
+| 2. Annotate (OT chunk placement) | (per-direction; slow on laptop) | `qsub jobs/annotate/{tag}_<dir>.pbs` × per direction | `results/annotate/{tag}/matrices.jsonl` |
+| 3. Build SFT dataset | `bin/02_build_sft_dataset --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
 | 4. SFT training | (needs GPU — Gadi only) | `qsub jobs/train/{tag}.pbs` | `results/train/{tag}/final/` + `sft_summary.json` |
 | 5. Extrinsic eval | (needs GPU — Gadi only) | `qsub jobs/eval/{tag}_<test>_<lat>_<dir>.pbs` (many) | `results/eval/{tag}/*.json` |
-| 6. Plot | `bash scripts/03_plot_bleu_al.sh` | same | `figures/{tag}/*.png` |
+| 6. Plot | `bin/03_plot_bleu_al` | same | `figures/{tag}/*.png` |
 
-Stages 1, 3, and 6 are laptop-runnable (no GPU); stages 2, 4, 5 need CUDA and are meant for Gadi (the .sh wrappers still work on any machine with the right compute).
+Stages 1, 3, and 6 are laptop-runnable (no GPU). Stages 2, 4, 5 need CUDA — the same launchers work on any GPU box, but you'll typically `qsub` on Gadi.
 
-Additional utilities:
-- `bash scripts/04_score_comet.sh --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
-- `bash scripts/prepare_tokenizer.sh --backbone {hf_id}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
-- `bash scripts/probe_east_8b_compat.sh --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
-- `bash scripts/rebucket_latency.sh --input {file} --output {file}` — post-annotation latency-bin recomputation.
+Additional utilities (all in `bin/`, no extension):
+- `bin/04_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
+- `bin/prepare_tokenizer --backbone {hf_id}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
+- `bin/probe_east_8b_compat --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
+- `bin/rebucket_latency --input {file} --output {file}` — post-annotation latency-bin recomputation.
+- `bin/download_data`, `bin/download_vi_en_test_sets` — one-time data fetches.
+- `bin/make_job --config configs/{tag}.yaml --stage {annotate|train|eval}` — generate PBS wrappers.
 - `jobs/loop_resubmit.sh` — queue-cap-aware batch resubmitter for large eval matrices.
 
-The shell wrappers source `scripts/_env.sh`, which:
-- Auto-activates the venv (`/scratch/po67/ds9561/.venv-fil` on Gadi, `./.venv` on laptop, or falls back to system Python).
-- Points HF cache at `/g/data/po67/dipankar/cache` on Gadi or `$HOME/.cache/huggingface` on laptop.
-- Sets `PYTHONPATH` to the repo root.
+`bin/_env.sh` (sourced by every launcher) handles:
+- Venv activation: `/scratch/po67/ds9561/.venv-fil` on Gadi, `./.venv` on laptop, or falls back to system Python.
+- HF cache: `/g/data/po67/dipankar/cache` on Gadi, `$HOME/.cache/huggingface` on laptop.
+- `PYTHONPATH` = repo root.
 
-Override any of these with `SIMT_VENV=/path`, `SIMT_HF_CACHE=/path`, `PYTHON=python3.11`, etc. Set `SIMT_ENV_VERBOSE=1` to log which paths got picked.
+Override with `SIMT_VENV=/path`, `SIMT_HF_CACHE=/path`, `PYTHON=python3.11`. `SIMT_ENV_VERBOSE=1` logs which paths got picked.
 
 Reproduce the current headline (v6b Gemma-2B): follow the flow above with `tag = v6b_gemma_2b` — the completed run's artifacts already live under `results/_archive/v6b_gemma_2b/`.
 
