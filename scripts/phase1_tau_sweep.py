@@ -130,7 +130,14 @@ def main():
                          "processed indices, append to the same file. Enables sharded "
                          "annotation across multiple PBS submissions. Line-flushes per "
                          "sentence so a mid-sentence kill loses at most one row.")
+    ap.add_argument("--lookahead_k", type=int, default=0,
+                    help="Divergence reference selector. 0 (default) = current "
+                         "behaviour D(P_full, P_pre[i]). k>=1 uses local look-ahead "
+                         "D(P_pre[i], P_pre[min(i+k, n)]) — commits when reading k "
+                         "more source tokens does not shift the target distribution. "
+                         "Negative values are clamped to 0.")
     args = ap.parse_args()
+    args.lookahead_k = max(0, int(args.lookahead_k))
 
     taus = [float(x) for x in args.taus.split(",")]
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -237,6 +244,7 @@ def main():
                         return_full_matrix=True,
                         record_entropy=args.record_entropy,
                         prompt_mode=args.prompt_mode,
+                        lookahead_k=args.lookahead_k,
                     )
                 except Exception as e:
                     print(f"  [{k+1}/{len(remaining)}] idx={r['index']} FAILED: "
@@ -364,6 +372,7 @@ def main():
             "prompt_mode": args.prompt_mode,
             "record_entropy": args.record_entropy,
             "indices_file": str(args.indices_file) if args.indices_file else None,
+            "lookahead_k": args.lookahead_k,
         },
         "sweep": sweep,
         "env": {

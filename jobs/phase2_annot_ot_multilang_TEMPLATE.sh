@@ -24,16 +24,27 @@ DIRECTIONS=("de-en" "en-de" "ar-en" "en-ar" "ru-en" "en-ru" "zh-en" "en-zh" "vi-
 
 # Optional: control what to do
 SUBMIT="${SUBMIT:-1}"   # set SUBMIT=0 to just generate PBS files without qsubbing
+LOOKAHEAD_K="${LOOKAHEAD_K:-0}"   # 0 = current (D vs P_full); k>=1 = look-ahead
+
+# Namespace suffix keeps k=0 artefacts (annot_ot_multi_<dir>) untouched
+# while k>0 lands in annot_ot_multi_la<k>_<dir>.
+if [ "$LOOKAHEAD_K" -gt 0 ]; then
+    NS_SUFFIX="_la${LOOKAHEAD_K}"
+    JOB_NS="la${LOOKAHEAD_K}_"
+else
+    NS_SUFFIX=""
+    JOB_NS=""
+fi
 
 for DIR in "${DIRECTIONS[@]}"; do
-    PBS_FILE="${REPO}/jobs/phase2_annot_ot_multilang_${DIR}.pbs"
-    LOG_FILE="${REPO}/logs/phase2_annot_ot_multilang_${DIR}.log"
-    OUT_DIR="${REPO}/results/phase2/annot_ot_multi_${DIR}"
+    PBS_FILE="${REPO}/jobs/phase2_annot_ot_multilang${NS_SUFFIX}_${DIR}.pbs"
+    LOG_FILE="${REPO}/logs/phase2_annot_ot_multilang${NS_SUFFIX}_${DIR}.log"
+    OUT_DIR="${REPO}/results/phase2/annot_ot_multi${NS_SUFFIX}_${DIR}"
     INPUT_JSON="${REPO}/results/phase2/multilingual_source_pool_v5_per_direction/${DIR}.json"
 
     cat > "$PBS_FILE" <<EOF
 #!/bin/bash
-#PBS -N annot_ml_${DIR}
+#PBS -N annot_ml_${JOB_NS}${DIR}
 #PBS -P po67
 #PBS -q gpuhopper
 #PBS -l ncpus=12
@@ -108,6 +119,7 @@ python -u scripts/phase1_tau_sweep.py \\
     --taus 0.30 \\
     --model_path /g/data/po67/dipankar/models/gemma-4-E2B \\
     --output_dir \$OUT_DIR \\
+    --lookahead_k ${LOOKAHEAD_K} \\
     --resume
 
 # Mark DONE only if the DONE marker was written by the tau sweep itself
@@ -132,8 +144,8 @@ EOF
         fi
         # Skip submit if a job for this direction is already Q/R/H — prevents
         # duplicate qsubs when re-running the template to just add missing dirs.
-        if qstat -u "$USER" 2>/dev/null | grep -q "annot_ml_${DIR}[[:space:]]"; then
-            echo "  SKIP: annot_ml_$DIR already in queue"
+        if qstat -u "$USER" 2>/dev/null | grep -q "annot_ml_${JOB_NS}${DIR}[[:space:]]"; then
+            echo "  SKIP: annot_ml_${JOB_NS}$DIR already in queue"
             continue
         fi
         JOB_ID=$(qsub "$PBS_FILE")

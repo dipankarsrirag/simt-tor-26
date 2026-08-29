@@ -89,16 +89,23 @@ def main():
     with open(MULTI90K) as f:
         m90 = json.load(f)
 
-    # Index Multi-90K by (direction, source)
-    m90_lookup = {}
+    # Index Multi-90K by (direction, source) -> LIST of rows (not single row).
+    # Each source in Multi-90K appears at up to 3 latency variants; the prior
+    # `m90_lookup[key] = row` overwrote earlier variants, silently keeping
+    # only the LAST one (which is always "high" per EAST's file ordering).
+    # See LOG.md 2026-08-23 for the diagnostic.
+    from collections import defaultdict
+    m90_lookup = defaultdict(list)
     for r in m90:
         src_code = FULL_TO_CODE.get(r["src_lang"])
         tgt_code = FULL_TO_CODE.get(r["tgt_lang"])
         if src_code is None or tgt_code is None:
             continue
-        m90_lookup[(f"{src_code}-{tgt_code}", r["source"])] = r
+        m90_lookup[(f"{src_code}-{tgt_code}", r["source"])].append(r)
 
-    print(f"Multi-90K indexed: {len(m90_lookup)} rows across covered dirs", flush=True)
+    total_variants = sum(len(v) for v in m90_lookup.values())
+    print(f"Multi-90K indexed: {len(m90_lookup)} unique (dir, source) tuples across "
+          f"{total_variants} rows", flush=True)
 
     kept = []
     stats = {d: {"pool": 0, "matched": 0, "snap_ok": 0, "final": 0} for d in TARGET_DIRS}
@@ -107,37 +114,39 @@ def main():
         if d not in TARGET_DIRS:
             continue
         stats[d]["pool"] += 1
-        m = m90_lookup.get((d, r["source"]))
-        if m is None:
+        matches = m90_lookup.get((d, r["source"]))
+        if not matches:
             continue
         stats[d]["matched"] += 1
-        src_chunks_str = m["source_chunks"]
-        tgt_chunks_str = m["target_chunks"]
-        if not src_chunks_str or len(src_chunks_str) != len(tgt_chunks_str):
-            continue
-        src_chunk_ids = snap_chunks_to_tokens(m["source"], src_chunks_str, tok)
-        tgt_chunk_ids = snap_chunks_to_tokens(m["target"], tgt_chunks_str, tok)
-        if src_chunk_ids is None or tgt_chunk_ids is None:
-            continue
-        stats[d]["snap_ok"] += 1
-        # Latency: use Multi-90K's shipped label
-        kept.append({
-            "index": r["index"],
-            "source": m["source"],
-            "target": m["target"],
-            "src_lang": d.split("-")[0],
-            "tgt_lang": d.split("-")[1],
-            "latency": m["latency"],
-            "source_chunks": src_chunks_str,
-            "target_chunks": tgt_chunks_str,
-            "source_chunk_ids": src_chunk_ids,
-            "target_chunk_ids": tgt_chunk_ids,
-            "_annotator_meta": {
-                "chunks_source": "GPT-4 (Multi-90K)",
-                "augmented_from_base": False,
-            },
-        })
-        stats[d]["final"] += 1
+        # Emit ALL latency variants of this source (EAST's design ships up to 3)
+        for m in matches:
+            src_chunks_str = m["source_chunks"]
+            tgt_chunks_str = m["target_chunks"]
+            if not src_chunks_str or len(src_chunks_str) != len(tgt_chunks_str):
+                continue
+            src_chunk_ids = snap_chunks_to_tokens(m["source"], src_chunks_str, tok)
+            tgt_chunk_ids = snap_chunks_to_tokens(m["target"], tgt_chunks_str, tok)
+            if src_chunk_ids is None or tgt_chunk_ids is None:
+                continue
+            stats[d]["snap_ok"] += 1
+            kept.append({
+                "index": r["index"],
+                "source": m["source"],
+                "target": m["target"],
+                "src_lang": d.split("-")[0],
+                "tgt_lang": d.split("-")[1],
+                "latency": m["latency"],
+                "source_chunks": src_chunks_str,
+                "target_chunks": tgt_chunks_str,
+                "source_chunk_ids": src_chunk_ids,
+                "target_chunk_ids": tgt_chunk_ids,
+                "_annotator_meta": {
+                    "chunks_source": "GPT-4 (Multi-90K)",
+                    "augmented_from_base": False,
+                    "m90_latency_variant": m["latency"],
+                },
+            })
+            stats[d]["final"] += 1
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(kept, ensure_ascii=False))

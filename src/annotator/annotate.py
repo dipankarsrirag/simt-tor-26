@@ -325,6 +325,7 @@ def annotate_pair(
     return_full_matrix: bool = False,
     record_entropy: bool = False,
     prompt_mode: str = "raw",
+    lookahead_k: int = 0,
 ) -> AnnotatedPair:
     """Annotate one parallel pair. Returns the AnnotatedPair with EAST-
     interleaved string populated.
@@ -346,7 +347,16 @@ def annotate_pair(
       "chat" — Gemma-style chat template with an explicit translation
                instruction (`make_prompt_chat`). Use for instruction-
                tuned backbones like `gemma-4-E2B-it`.
+
+    `lookahead_k` selects the reference distribution for the divergence:
+      k = 0 (default) — current behaviour, D(P_full, P_pre[i]).
+      k >= 1          — D(P_pre[i], P_pre[min(i+k, n)]); commit when
+                        reading k more source tokens does not shift the
+                        target distribution. Trailing positions (where
+                        i + k >= n) fall back to P_full = P_pre[n].
+    Negative values are clamped to 0.
     """
+    lookahead_k = max(0, int(lookahead_k))
     if criterion_name == "ot":
         # Bind the model's input embeddings for the OT ground cost.
         emb = model.get_input_embeddings().weight
@@ -408,44 +418,83 @@ def annotate_pair(
     commit = [n] * m  # fallback: if criterion never fires, commit at end
     fired_div = [float("inf")] * m
     active = list(range(m))  # target-token indices still searching
-    # Optional: full (n, m) matrix, row i-1 = divergence at prefix length i.
-    full_matrix: List[List[float]] = [] if return_full_matrix else []
-    entropy_matrix: List[List[float]] = [] if record_entropy else []
+    # Full (n, m) matrix — row i-1 = divergence at source-prefix length i.
+    # For k=0: div = D(P_full, P_pre[i]).
+    # For k>0: div = D(P_pre[i], P_pre[min(i+k, n)]).
+    full_matrix: List[List[float]] = []
+    entropy_matrix: List[List[float]] = []
+    if return_full_matrix:
+        full_matrix = [[float("nan")] * m for _ in range(n)]
+    if record_entropy:
+        entropy_matrix = [[float("nan")] * m for _ in range(n)]
+
+    # Ring buffer of source-prefix distributions, used only when lookahead_k > 0.
+    # Holds at most k+1 entries; entry evicted immediately after its decision fires.
+    prefix_probs_ring: dict[int, torch.Tensor] = {}
+
+    def _apply_decision(position: int, div_tensor: torch.Tensor) -> None:
+        """Commit-search + optional matrix write for a divergence row at
+        source-prefix length `position` (1-indexed)."""
+        div_cpu = div_tensor.detach().cpu()
+        if return_full_matrix:
+            full_matrix[position - 1] = [float(x) for x in div_cpu.tolist()]
+        still = []
+        for j in active:
+            d = float(div_cpu[j].item())
+            if d < tau:
+                commit[j] = position
+                fired_div[j] = d
+            else:
+                still.append(j)
+        active[:] = still
 
     for i in range(1, n + 1):
-        if not active and not return_full_matrix and not record_entropy:
+        # Early-break is safe only when there is no delayed lookahead work
+        # pending — with k>0 we must reach i=n so trailing decisions can fire.
+        if (
+            not active
+            and not return_full_matrix
+            and not record_entropy
+            and lookahead_k == 0
+        ):
             break
         if i != n and ((i - 1) % prefix_stride != 0):
-            if return_full_matrix:
-                full_matrix.append([float("nan")] * m)
-            if record_entropy:
-                entropy_matrix.append([float("nan")] * m)
             continue
 
         pre_input, pre_prefix_len = build_input(i)
         pre_positions = target_positions_from_prefix_len(pre_prefix_len)
         p_pre = _prob_at_positions(model, pre_input, pre_positions)  # (m, V)
 
-        # Divergence at every j; check the currently-searching ones.
-        div = divergence(p_full, p_pre)  # (m,)
-        div_cpu = div.detach().cpu()
-        if return_full_matrix:
-            full_matrix.append([float(x) for x in div_cpu.tolist()])
         if record_entropy:
             ent = _entropy(p_pre).detach().cpu().tolist()
-            entropy_matrix.append([float(x) for x in ent])
-        still_active = []
-        for j in active:
-            d = float(div_cpu[j].item())
-            if d < tau:
-                commit[j] = i
-                fired_div[j] = d
-            else:
-                still_active.append(j)
-        active = still_active
+            entropy_matrix[i - 1] = [float(x) for x in ent]
+
+        if lookahead_k == 0:
+            div = divergence(p_full, p_pre)  # (m,)
+            _apply_decision(i, div)
+        else:
+            # Buffer this prefix's probs; decide for position (i - k) if it
+            # has fully materialised — the natural reference at (i-k) is
+            # exactly P_pre[i]. Guard on ring membership so prefix_stride > 1
+            # (which skips iterations) never KeyErrors.
+            prefix_probs_ring[i] = p_pre
+            decision_i = i - lookahead_k
+            if decision_i >= 1 and decision_i in prefix_probs_ring:
+                div = divergence(prefix_probs_ring[decision_i], p_pre)
+                _apply_decision(decision_i, div)
+                del prefix_probs_ring[decision_i]
 
         if verbose:
             print(f"  i={i:>3d}/{n}  active_left={len(active)}")
+
+    # Trailing decisions for k>0: positions in {n-k+1, ..., n} still sit in the
+    # ring buffer. Their reference should be P_pre[min(pos+k, n)] = P_pre[n],
+    # which is exactly p_full.
+    if lookahead_k > 0 and prefix_probs_ring:
+        for decision_i in sorted(prefix_probs_ring.keys()):
+            div = divergence(prefix_probs_ring[decision_i], p_full)
+            _apply_decision(decision_i, div)
+        prefix_probs_ring.clear()
 
     # Monotonicity: i*[j] = max(i*[j], i*[j-1])
     commit_mono = _enforce_monotone(commit)

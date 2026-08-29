@@ -168,9 +168,9 @@ def main():
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    fig.savefig(args.output, dpi=200)
-    fig.savefig(args.output.with_suffix(".png"), dpi=200)
-    print(f"Wrote {args.output} and {args.output.with_suffix('.png').name}")
+    out_png = args.output.with_suffix(".png")
+    fig.savefig(out_png, dpi=200)
+    print(f"Wrote {out_png}")
 
     # Print a paper-copy table.
     print("\n=== OT-SFT data (LaTeX-ready) ===")

@@ -30,6 +30,850 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-28 — Extrinsic eval matrix complete (4 models × 4 clean test sets)
+
+**Config.** Streaming check_argmax on Gemma-4-E2B-it checkpoints
+(v6bcondA, v6bv2balv3, v6bv2balv3htgt) + EAST-8B (Llama-3-8B). 5-latency
+ladder for v6b (low, low-medium, medium, medium-high, high), 3-latency
+for EAST-8B (low, medium, high — matches EAST paper). No FLORES (dropped
+per Multi-90K contamination finding).
+
+**Landed cells (all clean/uncontaminated eval sets):**
+- WMT15 newstest2015 De→En (n=2169): 15 v6b + 3 east8b = **18/18** ✓
+- WMT22 {de,ru}↔en (4 dirs): 60 v6b + 12 east8b = **72/72** ✓
+- IWSLT17 {de,ar} × 2 dirs + en-de add-on: 55 v6b + 6 east8b = **61/61** ✓
+- IWSLT15 vi × 2 (Ours+CondB only; CondB hidden in plot per training-data scope): **20/20** ✓
+
+Total: **171 cells**. Plots at `figures/phase2/bleu_al_{wmt15_de-en,wmt22,iwslt17,iwslt15_vi}.png`.
+
+**EAST-8B integration.** Zero code changes needed — our v6 codepath is
+already chat-template + natural-language latency, exactly EAST's paradigm.
+`<|end-of-read|>` / `<|end-of-write|>` are literal same strings (ids
+128256/128257 in EAST-8B tokenizer). Default system prompt matches
+verbatim ("You are a helpful assistant."). Ran with
+`--use_chat_template --model_dir=/g/data/po67/dipankar/models/EAST-8B
+--tokenizer_dir=/g/data/po67/dipankar/models/EAST-8B --latency=low|medium|high`.
+Canary (wmt15 medium de-en): **AL=3.13, BLEU=32.02** — inside EAST paper
+Fig. 3 range (28-32).
+
+**Headline observations.**
+- **IWSLT17 de-en**: Ours (purple) Pareto-dominant across the AL range.
+  Beats CondA and CondB throughout; +3 BLEU at high AL vs CondB.
+  EAST-8B (green) sits between the 2B models — no scale advantage on
+  this out-of-domain talk-corpus.
+- **IWSLT17 en-de**: Ours ties CondA at high AL (~25 BLEU), beats CondB
+  and EAST-8B at every AL.
+- **WMT22 x→en**: Ours *underperforms* CondA/CondB/EAST-8B by ~5 BLEU on
+  de-en and ~10 BLEU on ru-en. This is the human-target eval-set regime
+  Ours was trained on but WMT22 news-domain reference style may not
+  match the europarl/news-comm/TED2020 htgt training mix. Worth flagging
+  in the paper as a domain-transfer caveat.
+- **WMT22 en→x**: Ours competitive on en-de and en-ru.
+- **WMT15 De→En**: EAST-8B is Pareto-best at low AL (BLEU 31 @ AL 2.5).
+  Ours matches CondA/CondB at high AL. Consistent with 8B vs 2B scale
+  gap on WMT15 — the classic SiMT benchmark EAST optimises for.
+
+**Read.** The IWSLT17 result is the strongest evidence for htgt+OT
+annotation: Ours wins clearly against both a same-scale baseline (CondB)
+and a same-annotator+different-target baseline (CondA), on genuinely
+out-of-distribution talk data. WMT22 x→en asymmetry needs a target-domain
+explanation in the paper — likely the europarl/news-comm/TED2020 register
+mismatch with WMT22 news test.
+
+---
+
+### [DECISION] 2026-08-25 — Cleanup: delete 8 deprecated model checkpoints + intermediate SFT datasets (~117GB → 34GB)
+
+**Context.** After the FLORES-contamination finding, the paper story
+crystallises to a 3-way head-to-head: CondA (Multi-90K + GPT-4 chunks),
+CondB (v2bal_v3 = Multi-90K sources + our OT chunks), Ours (v2bal_v3_htgt
+= europarl/news-comm/TED2020 + our OT chunks + human targets). Every
+other trained checkpoint from the v6b family is superseded and not cited
+in the paper.
+
+**Preserved.**
+- `sft_multilingual_v6b_condA/final/` — CondA (9.6 GB)
+- `sft_multilingual_v6b_v2bal_v3/final/` — CondB (9.6 GB)
+- `sft_multilingual_v6b_v2bal_v3_htgt/final/` — Ours (9.6 GB)
+- All eval JSONs from prior runs (small) — kept intact
+- `results/phase2/DELETED_MODELS_ARCHIVE/` — sft_v6_summary.json +
+  trainer_state.json + inventory listing for each deleted model
+  (training metrics preserved)
+
+**Deleted checkpoints (7 × 9.6GB + 1 × 15GB ≈ 86GB freed):**
+- `sft_multilingual_v6b_ctrl` (raw OT baseline, dropped from all plots)
+- `sft_multilingual_v6b_ctrl_merged` (EAST §3.1 min=2 intermediate)
+- `sft_multilingual_v6b_ctrl_merged3` (prior "ship" — superseded by v2bal_v3)
+- `sft_multilingual_v6b_ctrl_merged3_rb_fw` (prior BLEU champ — superseded)
+- `sft_multilingual_v6b_ctrl_merged3_rb_fw_aug` (aug variant — superseded)
+- `sft_multilingual_v6b_ctrl_merged3_rebucketed` (intermediate)
+- `sft_multilingual_v6b_ctrl_e4b` (E4B backbone ablation — not in current story)
+- `sft_multilingual_v6b_v2bal` (τ_high=0.20 — superseded by v2bal_v3)
+
+**Deleted intermediate SFT datasets (~1.9 GB total):**
+- 5 x `sft_dataset_multilingual_v6b_merged*.json` (superseded)
+- 3 x `sft_dataset_multilingual_v6b_final_v2bal_v3_tau*.json` shards
+  (superseded by the concatenated final)
+- 3 x `sft_dataset_multilingual_v6b_htgt_tau*.json` shards
+- 3 x `sft_dataset_multilingual_v6b_final_v2{bal,rlx,uni,uni3}.json` variants
+- 1 x `sft_dataset_multilingual_v6b.json` (pre-recipe v6b)
+
+**Retained datasets:**
+- `sft_dataset_multilingual_v6b_condA.json` (104 MB) — CondA training data
+- `sft_dataset_multilingual_v6b_final_v2bal_v3.json` (265 MB) — CondB training data
+- `sft_dataset_multilingual_v6b_htgt_final.json` (280 MB) — Ours training data
+- `multilingual_source_pool_{htgt,v5}.json` — provenance JSONs (35-38 MB)
+- Historical n2k/n10k datasets from early experiments (~50 MB total)
+
+**Queue cleanup.** No eval jobs cancelled from OUR project — all 68
+currently-queued/running evals target CondA/CondB/Ours on clean test sets
+(WMT15/WMT22/IWSLT17) and are all valuable for the paper. Sibling arabic-
+dial-mt project (~3 jobs) left alone — not our compute to cancel.
+
+**Total phase2 disk after cleanup:** 34 GB (down from 117 GB — 83 GB freed).
+
+**Revisit if:** paper reviewers request historical ablations (rb_fw vs
+merged3, ctrl_e4b scaling); the eval JSONs suffice for numeric answers,
+but we'd need to retrain from source pool + matrices (all preserved) to
+regenerate model outputs on new test sets.
+
+---
+
+### [RUN] 2026-08-25 — Multi-90K ↔ FLORES contamination: 40-76% source-side leakage (3-tier fuzzy match)
+
+**CRITICAL FINDING.** Multi-90K's source sentences overlap heavily with FLORES-200 dev and devtest. Every method trained on Multi-90K sees 40-76% of its own eval set at training time.
+
+**Alnum normalization alone underestimates.** Multi-90K also contains lightly-edited paraphrases (word reordering, added/removed "that" complementizer, German verb-position swap) that exact-string and alnum-normalized matching miss. A **3-tier fuzzy matcher** (alnum-exact → 8-token prefix jaccard≥0.75 → 5-token prefix jaccard≥0.85) catches these too. Paraphrase examples: `"wurde entdeckt von Dr. Tony Moll"` (M90K) vs `"wurde von Dr. Tony Moll ... entdeckt"` (FLORES).
+
+**Full contamination table (3-tier fuzzy):**
+```
+direction  side  lang  split      FLORES_n  alnum  +8tok  +5tok  TOTAL  % FLORES
+──────────────────────────────────────────────────────────────────────────────
+de-en      src   de    dev            997    512    48    16    576    57.8%
+de-en      src   de    devtest       1012    481    61    15    557    55.0%
+de-en      tgt   en    dev            997    129    69     6    204    20.5%
+de-en      tgt   en    devtest       1012    136    51    15    202    20.0%
+en-de      src   en    dev            997    436    17     2    455    45.6%
+en-de      src   en    devtest       1012    443    21     4    468    46.2%
+en-de      tgt   de    dev            997     46    42    15    103    10.3%
+en-de      tgt   de    devtest       1012     49    37    13     99     9.8%
+ru-en      src   ru    devtest       1012    387    20     5    412    40.7%
+ru-en      tgt   en    devtest       1012     51    22    13     86     8.5%
+en-ru      src   en    devtest       1012    453    25     7    485    47.9%
+en-ru      tgt   ru    devtest       1012     34    20     4     58     5.7%
+en-cs      src   en    devtest       1012    739    28     4    771    76.2%  ← worst
+zh-en      src   zh    devtest       1012    423     0     0    423    41.8%
+zh-en      tgt   en    devtest       1012    244    28    10    282    27.9%
+```
+
+**Multi-90K source-string provenance (composition breakdown per direction):**
+- WMT17-21 news test sets: ~55% (matches EAST/ALMA declared derivation)
+- **FLORES dev + devtest: ~11-16%** (leakage — appears to be by design, not accident)
+- Unknown (probably additional WMT variants or edited sentences): ~25-38%
+
+**Our htgt build is CLEAN — 0/1012 overlap** at every direction × side × split, verified.
+
+**Contamination map across evaluation sets** (Multi-90K sources ∩ test):
+```
+                de-en   en-de   ru-en   en-ru
+FLORES devtest    55%     46%     41%     48%    ← contaminated
+WMT15             0%      0%      -       -      CLEAN ✓
+WMT17            26%     34%     32%     47%     Multi-90K derived from here
+WMT18            37%     44%     27%     43%     ↕
+WMT19            27%     31%     32%     34%     ↕
+WMT20            35%     23%     31%     23%     ↕
+WMT21             0%     20%      0%     24%     mixed
+WMT22             0%      0%      0%      0%     CLEAN ✓
+IWSLT17           0.1%    0%      -       -      CLEAN ✓
+```
+
+**Our htgt build is CLEAN — 0/1012 overlap** (europarl+NC+TED for de/ru; TED2020 for ar/vi; no Multi-90K sources or targets anywhere). Verified on all 8 htgt source-pool directions.
+
+**Contamination map across evaluation sets** (Multi-90K sources ∩ test):
+```
+                de-en   en-de   ru-en   en-ru
+FLORES devtest    45%     40%     34%     37%    ← heavy
+WMT15             0%      0%      -       -      CLEAN ✓
+WMT17            26%     34%     32%     47%     Multi-90K derived from here
+WMT18            37%     44%     27%     43%     ↕
+WMT19            27%     31%     32%     34%     ↕
+WMT20            35%     23%     31%     23%     ↕
+WMT21             0%     20%      0%     24%     mixed
+WMT22             0%      0%      0%      0%     CLEAN ✓
+IWSLT17           0.1%    0%      -       -      CLEAN ✓
+```
+
+**Read.** Every FLORES BLEU number reported for CondA (Multi-90K + GPT-4 chunks) and CondB (Multi-90K sources + our OT chunks) is inflated by training-data memorization. The ~0.5-0.9 BLEU "gap" between Ours and CondA/CondB on FLORES is at least partly memorization advantage for CondA/CondB.
+
+**Reframe the paper.** WMT15, WMT22, IWSLT17 become the primary clean-eval story. FLORES becomes an appendix showing contamination effects. Coverage advantage on ar/vi (where CondA can't reach) is unchanged.
+
+**Implication for CondA/CondB reported literature numbers.** EAST-8B's own reported FLORES numbers are similarly inflated. If we compare Ours vs EAST-8B on WMT15/WMT22 rather than FLORES, we're comparing on a level playing field.
+
+**Artifact.** `results/phase2/m90k_flores_contamination.txt` (produced inline; regenerate anytime via the check script). Reproducibility: exact-match, whitespace-normalized, and alnum-normalized overlap counts per direction × (dev, devtest) all logged.
+
+**Next actions.**
+1. Ensure WMT15 De→En eval cells complete for CondA + CondB + Ours (5 latencies each = 15 cells). Currently queued as Strategy B.
+2. Ensure WMT22 ru↔en cells complete (already queued).
+3. Add WMT22 de↔en cells (analogous to ru — clean, matches CondB training register).
+4. Update paper draft to make WMT15/WMT22 the headline table; FLORES becomes appendix "contamination discussion".
+
+**Revisit if:** re-inspection with different normalization changes the contamination %. Rate here is on alnum-normalized comparison; NFKC+whitespace-normalization gives essentially the same numbers (verified).
+
+---
+
+### [RUN] 2026-08-25 — Multi-90K → WMT source-string recovery: 72% via 3-tier fuzzy matching
+
+**Context.** After v2bal_v3_htgt trained and evaluated, we identified a
+confound: the htgt build changed BOTH target teacher (GPT-4 → human) AND
+source domain (Multi-90K/WMT-test-derived → europarl/news-comm/TED). The
+cleanest possible ablation is: keep Multi-90K sources (identical to CondB),
+only swap the target from GPT-4 rewrite to the original WMT human reference.
+Multi-90K sources are derived from Off-Multi-120K = ALMA-assembled WMT17-21
+test data, so references SHOULD exist for each Multi-90K source string.
+
+**Approach.**
+1. Fetched WMT17-21 De/Ru bidirectional test sets via sacrebleu +
+   supplementary (wmt14/full, wmt18/test-ts, wmt23, wmt24).
+2. Tried exact-string overlap → 34-45% hit rate. Suspicious variance
+   across directions (en-de 44.8%, de-en 34.6%) suggested normalization
+   issues, not truly missing data.
+3. Ladder of increasingly aggressive matching:
+   - **Tier 1** (`norm_alnum`): NFKC + quote/dash/space unification +
+     lowercase + alnum-only tokens. Corrects punctuation-only preprocessing
+     differences.
+   - **Tier 2** (8-token-prefix + jaccard≥0.75): catches trailing-clause
+     paraphrases (Multi-90K sometimes truncates/edits sentence tails).
+   - **Tier 3** (5-token-prefix + jaccard≥0.85): last-resort near-match.
+
+**Result.**
+```
+direction    m90k    tier1_alnum   +tier2   +tier3   total    hit%
+─────────────────────────────────────────────────────────────────
+de-en       6,283      3,904        310      105    4,319   68.7%
+en-de       6,186      4,619        134       40    4,793   77.5%
+ru-en       5,625      3,890        126       48    4,064   72.2%
+en-ru       8,153      5,678        144       49    5,871   72.0%
+─────────────────────────────────────────────────────────────────
+AVERAGE                                                      72.6%
+```
+
+**Semantic verification** (5 de-en samples): matched sources give WMT refs
+that are *meaningfully different* from Multi-90K's GPT-4 targets, exactly
+as expected — GPT-4 output is systematically more literal (e.g.
+"classified as murder" vs "ruled a homicide"; "it was a premiere" vs
+"a first for the 58-year-old"). This confirms the recovery is doing the
+right thing and validates the target-teacher-swap ablation.
+
+**Where the ~28% still-missing come from (unresolved).** Multi-90K may
+include material beyond WMT test sets (edited/paraphrased sources, or
+sources from WMT training corpora not in sacrebleu's test-set collection).
+Not worth pushing further with expensive edit-distance matching for a ~10%
+gain.
+
+**Artifacts.**
+- `results/phase2/m90k_wmt_recovery.pkl` — dict `{direction → {m90k_src →
+  wmt_ref}}`, 19,047 (multi90k_source, wmt_ref) pairs total across 4 dirs.
+- WMT17-24 De/Ru test sets on disk at
+  `/g/data/ba39/dipankar/simul-mt/data/eval/{de-en,ru-en}/wmt{yy}.*`.
+
+**Options for htgt2 build:**
+1. Sample ~4000/direction from recovered → 16K de/ru + 40K ar/vi = 56K.
+   Uniform per-direction; matches CondB shape at ~half the de/ru volume.
+2. Use ALL recovered → ~19K de/ru + 40K ar/vi = 59K. Uneven per-direction
+   counts (4-6K each).
+3. Ship current htgt as-is (has source-domain confound). Reframe paper as
+   "trained on any human-translated corpora" rather than clean CondB
+   ablation.
+4. Push harder on the 28% via edit-distance fuzzy match (~1h compute for
+   possibly +10% recovery).
+
+**Chose (2026-08-25):** [pending user decision].
+
+**Revisit if:** paper story crystallizes and one option becomes clearly
+better than the others. Currently blocking: nothing — htgt (with source-
+domain confound) is already trained and evaluated.
+
+---
+
+### [DECISION] 2026-08-24 — Add lookahead_k flag: local-convergence divergence criterion
+
+**Context:** v2bal_v3 sits 0.21 BLEU behind cond-A on matched 20 cells. Next
+lever per handoff §8 ideas backlog is a new commit criterion; look-ahead
+OT (D(P_pre[i], P_pre[i+k]) instead of D(P_full, P_pre[i])) preserves the
+teacher-free story and doesn't require full-source access at annotation
+time either.
+
+**Change:**
+- `src/annotator/annotate.py::annotate_pair` gains `lookahead_k: int = 0`.
+  Clamped to `max(0, k)`. k=0 = current behavior. k>=1 uses a ring buffer
+  with delayed decisions so cost stays ~1× (not the 2× the handoff estimated).
+  Trailing positions {n-k+1..n} fall back to p_full (natural because
+  `min(pos+k, n) = n` for those).
+- `scripts/phase1_tau_sweep.py` gains `--lookahead_k` and threads it
+  through; records in `summary.json` for provenance.
+- `jobs/phase2_annot_ot_multilang_TEMPLATE.sh` gains `LOOKAHEAD_K` env
+  var; when set, namespaces PBS files + output dirs to `_la{k}` suffix
+  so k=0 matrices already on disk stay intact.
+
+**Compute plan:**
+1. Smoke (177159955 Q) — 3 sentences × k∈{0,1,2,3} + byte-identity check
+   against on-disk pre-refactor k=0 matrix (Sinkhorn noise floor ~1e-3).
+2. Pilot (177159956 afterok:177159955) — 100 de-en sentences × k∈{0,1,2,3};
+   reports commit shift, chunk-count Δ, per-τ fire fractions. Picks k.
+3. Re-pick τ grid at chosen k so latency marginals match v2bal's 33/33/33
+   under the new divergence distribution.
+4. Full 80K annotation (8 dirs × ~10K), build (v2bal-recipe), SFT,
+   40-cell N=1012 FLORES extrinsic.
+
+**Revisit if:** pilot shows commit-point shift < 5% vs k=0 aggregate,
+i.e. look-ahead is essentially the same criterion. Then fall back to
+another idea from the backlog (attention-mass salience, syntactic
+constraints).
+
+
+
+**HANDOFF ENTRY FOR NEW CHAT.** Session started with rb_fw as the best OT-derived model (BLEU 31.16 mean at N=1012, ~1.4 short of "cond-A" at 32.07 on matched 20 cells). Session ended with v2bal and v2bal_v3 as our unified-method candidates and a rebuilt cond-A that's the correct reference.
+
+#### 1. Design pivot: tau-sweep as latency-policy generator
+
+**Insight.** Instead of a single τ + post-hoc latency-rebucketing, generate 3 variants per source at 3 different τ values, force-label each with its policy. The τ IS the label. Achieves EAST-Multi-90K-style balanced marginals (33/33/33) by construction.
+
+**Concrete pipeline (v2bal):**
+```
+For each source × latency ∈ {(τ=0.20, high), (τ=0.40, medium), (τ=0.60, low)}:
+  1. OT commit at τ (no fallbacks, keep_collapsed for cc=1 rows)
+  2. Boundary voting refinement (α=1, β=1, window=3)
+  3. EAST §3.1 merge with PER-τ min_src_words: 4 (high), 3 (medium), 2 (low)
+  4. Stranded-function-word post-emit merge
+  5. force_latency label from τ (deterministic, no cc/sw rule)
+```
+Total 240K rows (3× 80K).
+
+**v2bal_v3 variant (currently training):** same as v2bal but τ_high loosened 0.20 → 0.30 to reduce cc=1 collapse (was 82% cc=1 in v2bal high bucket, now 57%). Aim: eliminate AL=50 max-cap collapse observed at inference on some long sentences.
+
+#### 2. Cond-A dedup bug (CRITICAL — fixed)
+
+**Bug found 2026-08-23 in `scripts/phase2_build_condA_dataset.py`.** Multi-90K ships 3 latency variants of each source (EAST's design). Sources with 3 variants are laid out such that "high" is last in file order. Old cond-A build did `m90_lookup[(dir, source)] = row` iteratively → last-write-wins → **100% of triple-variant sources had only their "high" version kept**. Resulted in buggy cond-A having 6/9/85 marginals (heavily skewed high) with only 40K rows.
+
+**Fix (line 92-100).** Changed to `m90_lookup = defaultdict(list)` and emit ALL variants per source. Rebuilt cond-A: 95,349 rows (2.4× larger), marginals 30.3/34.0/35.8 — matches Multi-90K 4-DIR shape (29.2/33.1/37.7).
+
+**Implication for all prior "vs cond-A" comparisons in this repo:** they were vs a high-latency-collapsed subset, not real GPT-4 chunks. Every "we match cond-A" claim I made before 2026-08-23 should be re-read as "we match cond-A_high-only". The rebuilt cond-A is the correct reference going forward.
+
+#### 3. OT-guided boundary voting refinement — implemented + bug found + fixed
+
+**New module: `src/annotator/boundary_refine.py`.** For each OT-chosen boundary at position p, search a ±window (default 3) source tokens and pick the position maximizing `α · ot_confidence(τ − D[i][j]) + β · syntactic_score(source_prefix)`. syn = +1 at sentence-end punct, +0.5 at comma, -1 at stranded function word. Preserves monotonicity. Opt-in via `--refine_boundaries` flag in `scripts/phase2_build_sft_dataset.py`.
+
+**Bug 1 (fixed):** loop started at `k=1`, skipping the FIRST chunk's end boundary refinement (implicit boundary when commit[0] equals chunk-0-end).
+
+**Bug 2 (fixed, deeper):** `upper` bound was `commit[boundary_js[k+1] - 1]` — which returns the CURRENT chunk's own commit value, NOT the next chunk's. This meant the search window couldn't extend beyond the raw OT boundary. **Every boundary had a broken upper limit for its entire history until this fix.**
+
+**Effect after fix:** on de-en example idx=7, 4/5 boundaries now shift to punctuation-ending positions (0/5 before fix).
+
+**Impact on aggregate:** modest — ~5-15% of internal boundaries move by 1-3 tokens. Corpus-level punctuation-boundary rate stays around 20% (below cond-A's 53%), because merge_small_chunks then re-fuses some of the punct-ending boundaries. The voting IS a fine-tuning pass, not a redesign.
+
+#### 4. Extrinsic BLEU at N=1012 (the definitive comparison)
+
+**Zigzag was N=50 noise.** At N=1012, rb_fw shows 0/8 significant zigzag directions (was 3/8 at N=50), 16% dips vs 41% at N=50. Cond-A: 0 dips. **The paper's zigzag concern is essentially resolved by using proper eval size.**
+
+**Full 40-cell aggregate (N=1012):**
+
+| condition | BLEU | AL |
+|---|---:|---:|
+| ctrl (raw OT) | 24.98 | 3.4 |
+| rb_fw (prior best) | 31.16 | 5.3 |
+| **v2bal (new)** | 30.76 | 7.2 |
+| cond-A (fixed) | 31.92 (20 cells only) | 5.1 |
+
+**Matched-to-cond-A (20 cells, 4 dirs de-en, en-de, ru-en, en-ru):**
+
+| condition | BLEU |
+|---|---:|
+| ctrl | 26.68 |
+| rb_fw | 31.43 |
+| **v2bal** | **31.71** |
+| cond-A | **31.92** |
+
+**v2bal within 0.21 BLEU of cond-A on matched cells. Beats cond-A at medium latency (32.56 vs 32.45).** All 5 latencies within 0.55 BLEU. **8-lang coverage vs cond-A's 4-lang.**
+
+**Per-latency (matched):**
+
+| latency | ctrl | rb_fw | v2bal | cond-A |
+|---|---:|---:|---:|---:|
+| low | 23.29 | 29.67 | 29.49 | 29.71 |
+| low_medium | 23.48 | 30.40 | 29.92 | 30.47 |
+| medium | 27.16 | 31.47 | **32.56** | 32.45 |
+| medium_high | 27.42 | 32.23 | 33.00 | 33.10 |
+| high | 32.05 | 33.36 | 33.59 | 33.89 |
+
+#### 5. Observed failure modes in v2bal at extreme high-latency prompt
+
+Quality-per-cell qualitative check on en-X directions revealed:
+- v2bal `high` prompt on some long sentences: AL hits max-cap of 50 → output truncates or code-switches (Arabic→English mid-word, Vietnamese→English)
+- rb_fw shows similar behavior at high on some examples
+- cond-A does NOT do this (its high bucket had a softer cc distribution)
+- **Root cause:** v2bal high bucket was 82% cc=1 rows → model learned "wait for everything, emit in 1 burst". On long inputs, hits max_write_per_chunk cap.
+
+**Fix attempted (v2bal_v3):** loosen τ_high from 0.20 → 0.30. High bucket now 57% cc=1 (was 82%), cc mean 1.81 (was 1.29). Should eliminate the AL=50 collapse without sacrificing latency-separation. Training in progress at session end.
+
+#### 6. Structural chunk-distribution match to Multi-90K 4-DIR
+
+| dataset | marginals L/M/H | L cc | M cc | H cc | L sw/cc | M sw/cc | H sw/cc | L2→M90K-4DIR |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Multi-90K 4-DIR (target) | 29.2/33.1/37.7 | 3.84 | 2.69 | 1.71 | 4.13 | 6.20 | 11.22 | 0 |
+| cond-A (FIXED, 4 dirs) | 30.3/34.0/35.8 | 3.59 | 2.59 | 1.66 | 4.07 | 5.96 | 10.06 | **1.21** |
+| v2bal (τ_high=0.20) | 33.3/33.3/33.3 | 3.62 | 2.74 | 1.29 | 5.19 | 7.17 | 13.76 | 2.96 |
+| **v2bal_v3 (τ_high=0.30)** | 33.3/33.3/33.3 | 3.62 | 2.74 | 1.81 | 5.19 | 7.17 | 10.48 | **1.63** |
+| v2uni (uniform min=2) | 33.3/33.3/33.3 | 3.62 | 3.50 | 1.55 | 5.19 | 6.05 | 12.77 | 2.07 |
+| rb_fw (prior best) | 12/19/69 | 3.79 | 3.85 | 1.64 | 4.65 | 6.25 | 9.54 | — |
+
+**v2bal_v3 has the tightest structural fingerprint of any OT-derived variant** (L2 1.63 vs cond-A's 1.21). But: **structural L2 improvements did NOT reliably translate to BLEU wins in prior variants** (rb_fw → v2bal = +0.28 BLEU on matched cells despite 33% L2 improvement). Structure is proxy; extrinsic BLEU is ground truth.
+
+#### 7. Honest paper narrative
+
+**Original claim:** "Backbone-derived tag placement matches or beats GPT-4-derived placement, with margin growing on word-order-divergent pairs."
+
+**Revised (defensible with N=1012 data):**
+1. **Matches GPT-4 chunks within 0.21 BLEU on 4 shared pairs** (v2bal 31.71 vs cond-A 31.92 matched-cells)
+2. **Wins at medium latency** (v2bal 32.56 > cond-A 32.45)
+3. **Extends the method to 4 additional language pairs** (ar/vi) where GPT-4 chunks don't exist — pure coverage advantage
+4. **Preserves interpolation-effect + monotonicity** at cond-A-competitive levels
+5. **Purely backbone-derived** — teacher-free
+6. **Balanced 33/33/33 latency distribution** (matches Multi-90K structure, unlike unfixed cond-A subset)
+
+#### 8. Ideas backlog — semantic salience (for next iteration)
+
+If OT/merge tuning has hit a plateau, next lever is the annotator's commit criterion itself. Options ordered by cost:
+
+1. **Attention-mass salience.** Extract self-attention over source during annotation; commit when unread-attention < threshold. Same annotator shape, different criterion. ~40 LOC.
+2. **Look-ahead OT.** Change divergence from D(P_full, P_prefix) to D(P_prefix[:i], P_prefix[:i+k]) for small k. Commits when prefix is locally stable. Doesn't require full-source access. ~20 LOC, ~2-3× annotation cost.
+3. **Syntactic parse constraint.** spaCy dep parser vetoes candidate commits mid-phrase. External tool, ~50 LOC. Compromises teacher-free story.
+4. **Bilingual embedding alignment.** LaBSE/XLM-R alignment between source[:i] and target[:j]. Expensive (300M+ param encoder in the loop).
+
+**Recommendation for follow-up: try #2 (look-ahead OT) first.** Smallest change, preserves teacher-free claim.
+
+#### 9. Repository state at end of session
+
+**Trained models kept (in `results/phase2/`):**
+- `sft_multilingual_v6b_ctrl` — raw OT baseline (9.6 GB)
+- `sft_multilingual_v6b_ctrl_merged` — EAST §3.1 min=2 (9.6 GB)
+- `sft_multilingual_v6b_ctrl_merged3` — EAST §3.1 min=4 (9.6 GB)
+- `sft_multilingual_v6b_ctrl_merged3_rebucketed` — + (cc,sw) rule (9.6 GB)
+- `sft_multilingual_v6b_ctrl_merged3_rb_fw` — + stranded-fw merge (9.6 GB) — PRIOR BEST
+- `sft_multilingual_v6b_ctrl_merged3_rb_fw_aug` — + augmentation (9.6 GB)
+- `sft_multilingual_v6b_ctrl_e4b` — E4B backbone ablation (15 GB)
+- `sft_multilingual_v6b_v2bal` — τ-sweep balanced (~9.6 GB) — CURRENT BEST OT
+- `sft_multilingual_v6b_condA` — fixed cond-A, 95K rows (9.6 GB) — CORRECT GPT-4 REFERENCE
+- `sft_multilingual_v6b_v2bal_v3` — τ_high=0.30 variant (in training)
+
+**Datasets kept:**
+- `sft_dataset_multilingual_v6b_condA.json` (95K, fixed cond-A)
+- `sft_dataset_multilingual_v6b_merged3.json` (79K)
+- `sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79K)
+- `sft_dataset_multilingual_v6b_merged3_rb_fw.json` (79K)
+- `sft_dataset_multilingual_v6b_merged3_rb_fw_aug.json` (92K)
+- `sft_dataset_multilingual_v6b_merged.json` (79K)
+- `sft_dataset_multilingual_v6b_final_v2bal.json` (240K)
+- `sft_dataset_multilingual_v6b_final_v2bal_v3.json` (240K)
+- `sft_dataset_multilingual_v6b_final_v2uni.json` (240K)
+- `sft_dataset_multilingual_v6b_final_v2uni3.json` (240K)
+- `sft_dataset_multilingual_v6b_final_v2rlx.json` (240K)
+
+**Deleted (buggy or superseded):**
+- All buggy cond-A artifacts (dataset + model + 40 eval outputs + 2 COMET files + 26 logs + 20+ PBS files)
+- Legacy models: `sft_multilingual_v5`, `sft_multilingual_v6`, `sft_multilingual_v6b`
+- Old datasets: `merged5`, `merged3_rb_aug` (aug flag bug), `v6b_final` (built with buggy voting)
+- Various intermediate tausweep_uniform/relaxed files
+- Old PBS files for cancelled/legacy jobs
+
+**Total disk at session end:** ~104 GB in `results/phase2/`.
+
+**Currently running / queued at end of session:**
+- `177157036` v2bal_v3 training (R at ~10 min elapsed)
+- `177157037-076` v2bal_v3 sanity × 40 cells (H, `afterok:177157036`)
+- Some cond-A extrinsic jobs still finishing (177133239-258) — 20 total, most done
+
+**Extrinsic outputs available (all N=1012):**
+- `flores_stream_v6bctrl_checkargmax_*_n1012.json` — 36/40 cells
+- `flores_stream_v6bm3rbfw_checkargmax_*_n1012.json` — 40/40 cells
+- `flores_stream_v6bv2bal_checkargmax_*_n1012.json` — 40/40 cells
+- `flores_stream_v6bcondA_checkargmax_*_n1012.json` — 20/20 cells (fixed cond-A)
+- `flores_stream_v6bv2balv3_checkargmax_*_n1012.json` — 0/40 (pending v2bal_v3 training)
+
+**Figures updated:**
+- `figures/phase2/bleu_vs_al_all_conditions_flores_n1012.png` — current: ctrl / rb_fw / v2bal / cond-A curves
+
+**COMET intentionally disabled going forward** (per user decision) — BLEU + AL + monotonicity is the metric set.
+
+#### 10. Code changes this session
+
+- `scripts/phase2_build_sft_dataset.py`:
+  - Added `--refine_boundaries`, `--refine_window`, `--refine_alpha`, `--refine_beta` (opt-in voting)
+  - Added `--force_latency` (override latency label from CLI, for τ-sweep)
+  - Added `--keep_collapsed` (keep cc=1 rows instead of dropping — needed for τ-sweep balance)
+  - Escaped `%%` in help strings that were breaking argparse
+- `scripts/phase2_build_condA_dataset.py`: fixed dedup bug (line 92-100) — keep ALL Multi-90K latency variants per source
+- `scripts/phase2_score_comet.py`: added `--n_suffix` flag; XLMR resolution patch for the transformers 4.55+ cache regression
+- `scripts/plot_bleu_vs_al_all_conditions.py`: added `--n_suffix` flag, per-N COMET file fallback, restructured CONDITIONS list
+- `src/annotator/boundary_refine.py`: NEW module — voting refinement + post-emit stranded merge helper
+- `.venv-fil` transformers install rebuilt to `transformers==5.14.1` per `.venv-freeze.txt`
+
+#### 11. Open questions / punchlist for next chat
+
+1. **v2bal_v3 result:** does the loosened τ_high fix the AL=50 collapse? Compare its 5-latency curve to v2bal + cond-A when its 40 sanity outputs land.
+2. **Semantic salience follow-up:** if v2bal_v3 doesn't close the ~0.5 BLEU gap to cond-A, try look-ahead OT (ideas backlog §8).
+3. **v6b main paper table:** freeze the "final ship" configuration once v2bal_v3 results are in.
+4. **Retraining nothing else unless needed** — we've explored the τ+merge design space enough. Bigger levers are annotator-level.
+
+**Everything above is HANDOFF STATE for the new chat. If picking up this project fresh, start by reading this entry.**
+
+---
+
+### [INCIDENT] 2026-08-23 — Silent augmentation-row filter; 177089378 rb_fw_aug trained on 0 aug rows
+
+**Cause.** `src/train/sft_v6.py:54-61`'s `load_rows(...)` filters out
+augmented rows unless `--use_augmentation` is passed:
+```python
+if not use_augmentation:
+    rows = [r for r in rows if not ((r.get("_annotator_meta") or {}).get("augmented_from_base") or False)]
+```
+Our `phase2_sft_multilingual_v6b_ctrl_merged3_rb_fw_aug.pbs` did NOT pass
+the flag → all 17,269 aug rows silently dropped at load time. Training
+was effectively a duplicate of `rb_fw` (79K base rows, max_steps=2356).
+
+**How we caught it.** Both jobs showed identical max_steps=2356 despite
+rb_fw_aug's 97K rows (should have been ~2868 steps). The `Filtered
+augmentation: kept X/Y base rows.` print would have appeared in the log
+had we grep'd for it earlier.
+
+**Fix.** Added `--use_augmentation` to the PBS. Cancelled 177089378
+mid-run (~1h in, just before best-checkpoint copy), cleaned the output
+dir, resubmitted as 177094325.
+
+**Kept from the old run.** `rb_fw` (177089377) completed successfully
+before we caught the bug — its result is valid (base-only, matches
+intended ablation half). Only the aug half needed to be redone.
+
+**Resubmissions.**
+- 177094325 — rb_fw_aug train (with --use_augmentation flag now)
+- 177094326-330 — 5 chained sanity jobs (H, afterok on 177094325)
+- Kept: 177089379/381/383/385/387 — rb_fw sanity (released now that
+  177089377 finished; 379 already running)
+
+---
+
+### [INCIDENT] 2026-08-23 — .venv-fil transformers install got corrupted; jobs 177073247+343 died at import
+
+**Symptoms.** Both training jobs (rb_fw, rb_fw_aug) exited in ~7 seconds with:
+`ModuleNotFoundError: No module named 'transformers.utils'`
+
+Inspection revealed `transformers/utils/` directory missing from
+`/scratch/po67/ds9561/.venv-fil/lib/python3.11/site-packages/`, plus
+orphan `~ransformers` and `~ransformers-5.14.1.dist-info` directories
+(pip's convention for a partially-uninstalled package). The `transformers`
+dir itself was last-modified 02:41 (about 5h before the failed job).
+
+**Not from our code.** No pip/uv command from this session touched the venv.
+Something between the last-successful run (~00:00) and 02:41 clobbered the
+package — most likely a concurrent process from another project on shared
+scratch.
+
+**Fix.** Restored to pinned `transformers==5.14.1` per `.venv-freeze.txt` via uv:
+```
+/g/data/po67/dipankar/uv/bin/uv pip install --python .venv-fil/bin/python \
+  --reinstall-package transformers 'transformers==5.14.1'
+/g/data/po67/dipankar/uv/bin/uv pip install --python .venv-fil/bin/python \
+  'huggingface-hub==1.24.0'
+```
+
+**Transient "keras_nlp backend" red herring.** Initial reinstall of 5.14.1
+after the partial-uninstall corruption threw
+`ValueError: Backend should be defined in the BACKENDS_MAPPING. Offending
+backend: keras_nlp` at `_LazyModule.__init__`. Same error under 5.8.0.
+Tempted to downgrade to 4.57.6 (which imports cleanly, matches sibling
+comet venv) but that would violate the pinned freeze and risk API-drift
+against sft_v6.py which was validated on 5.14.1.
+
+Root-caused instead: the error is triggered when `transformers/models/gpt2/
+tokenization_gpt2_tf.py` uses `@requires(backends=("keras_nlp",))` and the
+package registry hasn't yet defined `is_keras_nlp_available`. A stale-
+bytecode / partial-install state after the flurry of uv reinstalls caused
+the lazy loader to visit gpt2/tokenization_gpt2_tf before the registry was
+fully populated. A CLEAN reinstall in a fresh uv transaction
+(reinstall transformers 5.14.1 → then explicit downgrade of hf-hub to
+pinned 1.24.0) resolved it. Post-fix state matches the freeze exactly:
+transformers 5.14.1, huggingface-hub 1.24.0, tokenizers 0.22.2,
+accelerate 1.14.0, torch 2.11.0. All imports OK (transformers,
+AutoTokenizer, AutoModelForCausalLM, TrainingArguments, trl.SFTTrainer).
+
+**Resubmitted.**
+- `177089377` — rb_fw train
+- `177089378` — rb_fw_aug train
+- `177089379-388` — 10 chained sanity jobs (H state, `afterok` on the trains)
+
+Old failed job ids 177073247, 177073343, 177073415-424 all in F state.
+
+---
+
+### [DECISION] 2026-08-23 — Stranded function-word chunk endings — the biggest chunk-quality gap so far
+
+**Finding.** Counted target-side chunk endings for internal chunks (i.e., every chunk except the last, where sentence-final punctuation is expected). A chunk ending with a determiner / article / conjunction / preposition (`the a an and or but of in on at to for with by from` in English; equivalents in German) is a "mid-NP/PP cutoff": the chunk boundary lands in a syntactic dead-zone.
+
+| dataset | en_tgt internal chunks | ending PUNCT+det (e.g. ", the") | ending bare det/prep | **total mid-phrase cutoffs** |
+|---|---:|---:|---:|---:|
+| **merged3 (ours)** | 59,372 | 1,205 (2.0%) | **10,767 (18.1%)** | **11,972 (20.2%)** |
+| cond-A (GPT-4) | 25,292 | 24 (0.1%) | 392 (1.5%) | **416 (1.6%)** |
+| SiMT-Multi-90K (EAST) | 74,758 | 103 (0.1%) | 2,296 (3.1%) | 2,399 (3.2%) |
+
+Same pattern for German targets: merged3 17.8%, cond-A 2.5% (7× gap). Total actionable surface: **~12,000 en-target internal chunks** in merged3.
+
+**Sample of what we produce:**
+- SRC: `"وكسب وقت أكثر و"` → TGT: `"to take more time and"` ← stranded `and`
+- SRC: `"في الواقع إضفاء لمسة إنسانية مهمة"` → TGT: `"do the important human-touch elements of"` ← stranded `of`
+- SRC: `"بعض منكم الذين مروا بأزمة"` → TGT: `"those of you who have been through a"` ← stranded `a`
+- SRC: `"أوقات صعبة للغاية، وفي"` → TGT: `"highly difficult times, and"` ← stranded `and`
+
+**Root cause (mechanistic).** OT commits when the target next-token distribution has converged. Function words (`the a and of to in for with by from an but or`) are extremely predictable from immediate local context — the distribution collapses immediately regardless of what source is available. So OT commits *right after* emitting a determiner/preposition, because entropy has already dropped.
+
+But committing after "and" strands the boundary in a syntactic dead-zone: the noun the determiner heads is in the next chunk. The model at training sees "commit → generate more" prompts right after emitting a lone function word — this teaches it that "output up-to-the-determiner" is a valid stopping point, so at inference it happily stops there too, forcing awkward completions in the following chunk.
+
+This mechanism naturally explains most of the observed BLEU/COMET regression pattern AND the zigzag: the model has memorised that chunks can end mid-NP, so when the latency prompt shifts, it changes its NP-cutoff density in a way that doesn't align with the prompt semantics.
+
+**Why cond-A doesn't have this.** GPT-4 chunks at syntactic boundaries by design (or via chain-of-thought instruction). It never commits at a function word because those aren't natural syntactic boundaries.
+
+**Priority.** This dwarfs both the Case 1 punctuation issue (~6%) and the Case 2b floating-punct issue (~3%). At 20.2% of en-target internal chunks, this is the single largest chunk-quality gap to cond-A and is very likely the dominant contributor to our BLEU/COMET underperformance and monotonicity zigzag.
+
+**Fix (implementing now).** Post-process step in `phase2_build_sft_dataset.py` after `merge_small_chunks`:
+- If `target_chunk[i]` (i < len-1) ends with a stopword from a per-language function-word list, merge chunk `i` into chunk `i+1` (both source and target sides, plus their token-id lists in lock-step).
+- Iterate until no more merges apply.
+- The rule can chain (chunk i ends with "the", chunk i+1 ends with "of" → merge both into chunk i+2).
+
+Chunk count decreases after this merge → latency labels need reassignment via the (cc, sw) rule. Since `latency_from_chunk_stats` is already the single source of truth, reassignment is a one-liner in the pipeline.
+
+**Files to touch.**
+- `scripts/phase2_build_sft_dataset.py` — add `merge_stranded_function_word_chunks()` + wire into `build_dataset` after EAST §3.1 merge, before latency assignment.
+- New post-hoc script + dataset: apply on `merged3_rebucketed.json` for sanity comparison to merged3_rebucketed (matched-training-config head-to-head).
+- PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_fw.pbs`.
+
+**Function-word lists (English + German + Russian to start, extend for ar/vi later).**
+- en: `the a an and or but of in on at to for with by from that which nor so`
+- de: `der die das den dem des ein eine einen einem einer eines und oder aber in an auf von zu mit für`
+- ru: `и в на с по для но или что это к о от до у`
+- Others: initially skip (target-side function-word lists for ar/vi need separate curation).
+
+**Revisit if.** BLEU-vs-AL and COMET-vs-AL curves after training on merged3_rb_fw don't smooth relative to merged3_rebucketed. Would indicate the stranded-function-word issue was a symptom, not a cause.
+
+**2026-08-23 run submissions (composed pipeline).**
+- `merged3_rb_fw` (stranded-merge only): job **177073247** (submitted 01:47).
+  - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw.json` (79,309 rows, marginals 6.7/14.7/78.6).
+  - Head-to-head with `merged3_rebucketed` (same size, matched training config).
+- `merged3_rb_fw_aug` (stranded-merge + latency augmentation): job **177073343** (submitted 02:00).
+  - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw_aug.json` (96,578 rows = 79K base + 17K aug; marginals **5.5/12.4/82.1** — closest we've been to cond-A target 6.1/9.0/84.9).
+  - Replaces the earlier `rb_aug` (job 177067591, cancelled) which lacked the stranded-function-word fix.
+  - This is the current best-composed candidate: OT + EAST §3.1 merge + (cc,sw) rebucket + stranded merge + latency augmentation.
+
+Both jobs queued; expect ~1h wall each once running. Extrinsic sanity (5 latency × 8 dir) fires after models land.
+
+---
+
+### [DECISION] 2026-08-23 — Chunk-quality fix backlog (queued behind rb_aug results)
+
+**Context.** Post-rebucket + COMET diagnostics show:
+- Rebucket brought AL monotonicity from 44% dips → 6% (huge win on latency separation).
+- COMET dips got WORSE (38% → 53%) because wider AL spread exposes the model's inconsistent interpolation across the 5-point latency ladder (trained on 3 hard labels, evaluated on 5).
+- Cond-A is much smoother across all monotonicity axes (BLEU dips 19%, COMET dips 19%, AL dips 0%).
+
+Root cause of zigzag: (a) 3→5 label interpolation gap, (b) within-bucket chunk variance in ours > cond-A's, (c) chunk content differences (our OT commits at statistical convergence, cond-A's at syntactic/semantic breaks).
+
+The interpolation gap will be addressed by the augmentation experiment already running (`jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_aug.pbs`, jobid 177067591). The remaining chunk-content-level levers are logged below for follow-up.
+
+**Punctuation-alignment diagnostic (2026-08-23).** Fraction of internal chunk boundaries ending at a punctuation character (Unicode P* + language-specific):
+
+| dataset | boundaries | at punct | any non-punct row |
+|---|---:|---:|---:|
+| merged3 (ours) | 109,908 | **20.4%** | 87.9% of 52,958 rows |
+| cond-A (GPT-4) | 38,944 | **55.1%** | 48.2% of 23,637 rows |
+| SiMT-Multi-90K (EAST-raw) | 160,030 | 41.0% | 69.2% of 71,539 rows |
+
+Per-lang: ours EN 21.5%, DE 27.9%, RU 22.9%, AR 14.1%, VI 14.4%. Cond-A EN 50.8%, DE 52.1%, RU 66.2%. GPT-4 respects punctuation ~2.7× more than our OT annotator.
+
+**Refined per-issue diagnostic (2026-08-23).** Broke the punctuation gap into three specific issues — the "boundary-vs-punct" number above is imperfect (counts decimals/abbreviations as misses). Refined detectors exclude those and split by mechanism:
+
+| issue | detector | merged3 rows | condA rows | Multi-90K rows |
+|---|---|---:|---:|---:|
+| Case 1: real internal sentence break (missed `.!?;`) | punct followed by whitespace + non-word | **5.9% (3,109)** | 3.7% (874) | 3.3% (2,327) |
+| Case 2a: pure-punct chunk (chunk = `"."`) | chunk is all non-alnum after strip | 0.0% (0) | 0.1% (14) | 0.3% (222) |
+| Case 2b: floating punct (`"word ."`) | `\s+[.!?,;:]` inside chunk | **2.8% (1,459)** | 0.2% (49) | 0.1% (77) |
+| ANY of 1/2a/2b | | **7.5% (3,950)** | 4.0% (936) | 3.7% (2,614) |
+
+- Case 1 is ~1.6× cond-A's rate — real but not dominant.
+- Case 2a we don't have at all (a good property).
+- Case 2b is **~14× cond-A's rate**, entirely concentrated in Arabic. Root cause: Arabic subtitle corpora format punctuation with a preceding space (`الأشياء السيئة .`), the tokenizer preserves it, and OT places a boundary such that `SP .` ends the chunk. Total closable gap on ANY-detector: **~3.5pp**.
+
+**Where the issues arise:**
+
+| issue | likely cause | fix location |
+|---|---|---|
+| Case 1 | OT `commit_from_matrix` doesn't preferentially commit at punctuation → boundary lands elsewhere → merge fuses across the period | `_chunks_from_commit` (add punct-preference) + `merge_small_chunks` (never merge across sentence-ending punct) |
+| Case 2b | source has `"word . word"` → tokenizer keeps space → boundary before the punct → punct floats at chunk end | Detokenizer normalisation pre-annotation, OR merge rule: attach floating punct to preceding word-chunk |
+
+Refines fix A (punct snapping): should have TWO stages — (a) during OT-driven `_chunks_from_commit`, prefer commits at positions where the source token ends with sentence punctuation (soft bias, e.g. discount τ threshold at those positions), (b) during EAST §3.1 `merge_small_chunks`, forbid merges that would fuse across a chunk-ending sentence punctuation.
+
+**2026-08-23 update: ellipsis-aware recount + per-lang breakdown.** Arabic `..` `...` are conversational ellipses (pauses), not sentence breaks — excluding them drops merged3's Case 1 from 5.9% → 4.7%. Per-source-language:
+
+| src | merged3 Case 1 | cond-A Case 1 | merged3 Case 2b |
+|---|---:|---:|---:|
+| en | 3.7% | 3.7% | 0.2% |
+| ru | 4.5% | 2.7% | 0.2% |
+| **de** | **8.9%** | **5.2%** | 0.4% |
+| ar | 5.6% | — | **29.8%** |
+| vi | 6.2% | — | 0.9% |
+
+**Reads.**
+- English: we match cond-A exactly. No gap.
+- German: our biggest real gap (3.7pp). German subordinate clauses separated by `,` `;` `.` are our failure mode.
+- Case 2b (floating punct) is 99.9% Arabic (1,785/1,959 chunks) — a source-corpus formatting artifact (Arabic subtitle data has spaces around punctuation). Fix by regex-normalising the source (`\s+([.!?,;:])` → `\1`) BEFORE annotation, not in the chunker.
+- Cond-A's own Case 1 samples are heavily false-positive on German date/ordinal abbreviations (`24. August`, `13. Jahrhundert`). Cond-A's true Case 1 rate is probably 2-3%, not 3.7%. Our real gap on de is thus 5-6pp, not 3.7pp.
+
+Prioritise the German case first if punct-aware chunking is implemented (highest impact, cleanest signal, condA-comparable data exists).
+
+**Vietnamese also needs the fix.** Case 1 rate 5.9% (443 rows out of 7,511) — same structural failure as German (multi-clause sentences with internal `.` boundaries not respected). Sample vi misses: `"chúng ta nhiều. Và chúng ta"`, `"Ngẩng đầu lên. Nhìn"`, `"trước mặt tôi. Và"`. No cond-A vi to compare, but the pattern is identical to the German case, so a fix should transfer.
+
+**Explicitly NOT targeting commas.** Comma-break rate (chunk contains internal `,` followed by word) is 44-58% across languages, but this is not a chunking bug — clauses like "the man who walked" can and should span a comma. Only sentence-ending `.!?` are the boundary preferences to enforce.
+
+**Candidate fixes, ranked by cost/impact (small before large, keeps teacher-free claim).**
+
+- **A. Snap OT boundaries to punctuation.** After `_chunks_from_commit`, for each internal boundary position `i`, check if the source token at `i-1` ends with punctuation. If not, move to nearest punctuation within ±k source tokens (k=2 or 3). ~30 LOC, no new deps, no re-annotation. Directly reduces the 80% mid-phrase-break rate. Highest-impact cheap fix.
+- **B. POS-aware boundary snapping (extends A).** Same idea but using spaCy POS tags: don't split inside NP/VP. Adds spaCy dep, ~50 LOC, ~30 sec/1K sentences overhead. Bigger impact than A alone, but adds a dependency.
+- **C. Length-balancing merge/split.** After OT + EAST §3.1 merge, enforce chunks within a row have `sw_chunk ∈ [mean−σ, mean+σ]`. Merge underweight neighbors; split overweight ones at middle punct/word boundary. ~40 LOC. Risk: a split creates a boundary OT didn't pick — arguably violates the "backbone-derived commits" claim in METHOD.md. Skip unless needed.
+- **D. Stratified outlier drop.** For each `(direction, latency_bucket)`, drop rows with sw/cc >2σ from bucket mean. Tighter within-bucket distribution → sharper learned per-label behavior → less interpolation zigzag. Costs 5-10% of training data. ~20 LOC.
+- **E. Higher primary τ (=0.40 instead of 0.30).** Produces coarser chunks natively (~4 chunks/sent vs current ~6). Requires re-annotation, OR replay existing matrices at higher τ via `commit_from_matrix` (already implemented, cheap CPU pass). Would produce close-to-cond-A chunk *distributions* with zero content-level changes. Clean ablation ("does coarser OT alone recover cond-A?").
+- **F. τ per source-word budget.** Calibrate τ per row so chunk count ≈ target `f(sw)`. Reduces within-bucket variance. ~50 LOC. Moderate impact, moderate cost.
+- **G. Target-side attention as commit signal.** Augment OT (which uses target next-token distribution) with decoder attention over source. Multi-hour research, uncertain payoff. Skip for now.
+- **H. Post-hoc degenerate-chunk filter.** Drop rows where a chunk contains only stopwords, ends mid-word, or has purely-punctuation content. ~20 LOC. Small-impact hygiene.
+
+**Precedence.**
+1. **Wait for rb_aug (177067591)** — if augmentation smooths the curves enough, punctuation-snapping may be unnecessary.
+2. **If rb_aug still zigzags**: fire A + D together (~1 hour code + 1 build + 1 SFT + 1 sanity sweep). A attacks boundary-quality; D attacks within-bucket variance.
+3. **Alternative diagnostic run: E (τ replay).** Cheap way to test if coarser chunks alone recover cond-A. Uses existing matrices, no GPU re-annotation, just a `commit_from_matrix` pass at τ=0.40 primary → rebuild → retrain.
+4. Escalate to B/F only if A/D/E hit a ceiling.
+
+**Explicitly not doing:**
+- LLM-post-processing of chunks (violates teacher-free claim).
+- 5-label training (user wants to keep 3-label to preserve EAST §3.3 interpolation-effect claim).
+- New annotator backbone (already have E4B ablation; scaling didn't dominate merged3).
+
+---
+
+### [DECISION] 2026-08-22 — Align augmentation + latency logic in build_sft_dataset with rebucket rule
+
+**Context.** Rebucketing (previous entry) fixed merged3's static labels via a standalone script (`scripts/phase2_rebucket_latency.py`). But `scripts/phase2_build_sft_dataset.py` still used the old chunk-count-only rule (`latency_from_chunk_count`), and its `augment_row_at_lower_chunk_counts` used the same stale rule. Future dataset builds would produce the old labels; augmentation would emit rows whose latency label was inconsistent with the base rows. Two sources of truth → drift.
+
+**Fix.** Made `phase2_build_sft_dataset.py` the single source of truth:
+
+- Replaced `latency_from_chunk_count(cc)` with `latency_from_chunk_stats(cc, sw)`:
+  - `cc <= LATENCY_CC1_MAX (=2)` → `high`
+  - else `cc / sw >= LATENCY_LOW_CCSW (=0.20)` → `low`
+  - else `cc / sw >= LATENCY_MED_CCSW (=0.13)` → `medium`
+  - else `high`
+- Added `_count_source_words(source, src_lang)` helper (matches condA convention).
+- Rewrote `augment_row_at_lower_chunk_counts` to:
+  - Skip early if `cc <= LATENCY_CC1_MAX` (already at the `high` floor; can't be coarsened further).
+  - Compute `sw` once from `row["source"]`.
+  - Consider 3 candidate coarser sizes: `ceil(k/2)` (aug2), `ceil(k/4)` (aug4), and `LATENCY_CC1_MAX` (aug_cc1) — de-duplicated by `target_n`.
+  - Label each coarser variant with `latency_from_chunk_stats(new_cc, sw)`.
+  - Emit only variants whose new label differs from the base and from previously-emitted augs.
+- Updated `build_dataset` reassignment path to pass `sw`.
+- Retired `scripts/phase2_rebucket_latency.py`'s hardcoded rule — now imports and delegates to `latency_from_chunk_stats` for one-shot post-hoc relabelling.
+- Updated CLI arg help text and top-of-module docstring.
+
+**Sanity.**
+- Rule reproduces expected labels on 8 hand-picked (cc, sw) test cases.
+- Applied via shared function to merged3, marginals identical to prior ad-hoc rebucket run: 12.0% / 18.8% / 69.2% (low/medium/high).
+- Augmentation on synthetic k=8 sw=15 row (base `low`, cc/sw=0.53) emits one variant at k=2 → `high`. Correct: no medium variant possible because ceil(k/2)=4 still has cc/sw=0.267 > 0.20 → still `low` → skipped.
+
+**Ran augmentation on rebucketed merged3.** 25,097 augmented rows added (+31.6% on 79K base), all going up the latency ladder:
+- `medium` → `high`: 14,905 (every base-medium row gets a high aug)
+- `low` → `high`:  9,506 (every base-low gets a high aug)
+- `low` → `medium`:   686 (few base-low rows land in medium after halving)
+
+Combined marginals: **low 9.1%, medium 14.9%, high 76.0%** (n=104,406). Closer to condA target (6.1/9.0/84.9) than rebucket-only (12/19/69). The remaining marginal gap reflects that our OT chunks are still finer-grained than GPT-4's; augmentation only walks labels *up* the ladder.
+
+**Files.**
+- Corpus: `results/phase2/sft_dataset_multilingual_v6b_merged3_rb_aug.json` (104K rows, 134 MB)
+- PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_aug.pbs`
+- JobID: `177067591.gadi-pbs` (Q as of submission)
+
+**Revisit if.** BLEU on rb_aug lands within noise of rb-only (~29.3); would suggest the augmentation direction (label-only up the ladder) doesn't help further, and the next lever is chunking granularity (higher merge threshold) or a split-based aug (walking labels DOWN).
+
+---
+
+### [DECISION] 2026-08-22 — Latency rebucketing: replace chunk-count threshold with GPT-4's empirical cc/sw rule
+
+**Context.** Post-hoc sanity on the merged3 SFT corpus (79,309 rows) revealed a source-length confound in our latency labels. Rule was `<=3 chunks -> high, 4-6 -> medium, >=7 -> low` (chunk-count only). Result: `low` bucket had rows averaging 45 src words and 8 chunks (really *medium* granularity on a long sentence), while `high` had 14-word rows. Marginals 82/16/2 with `low` starved.
+
+Cross-referenced against condA (GPT-4 chunks) and raw SiMT-Multi-90K on the shared invariant `chunks / src_words` (chunk-density) and `src_words / chunk` (granularity):
+
+| bucket | Multi-90K sw/cc | condA sw/cc | merged3 (current) sw/cc |
+|---|---:|---:|---:|
+| low | 4.34 | 4.28 | 5.74 |
+| medium | 6.65 | 6.36 | 5.97 |
+| high | 14.5 | 10.0 | 8.14 |
+
+Multi-90K and condA agree tightly on `sw/cc` per bucket (~4/~6/~10) and source length is roughly flat across buckets. Our labels correlate strongly with source length instead.
+
+**Empirical GPT-4 rule** (extracted from condA joint P(latency | cc, sw)):
+- `cc <= 2` → `high` (regardless of length) — 98% match on cc=1, 88-99% on cc=2 depending on sw
+- else `cc/sw >= 0.20` → `low`
+- else `cc/sw >= 0.13` → `medium`
+- else `high`
+
+Joint accuracy on condA + Multi-90K: 71.4% (88.1% on condA alone, condA marginal reproduced within 1pp: predicted 7.2/7.8/85.0 vs true 6.1/9.0/84.9).
+
+**Applied to merged3** (23.8% of rows relabelled):
+
+| bucket | condA target | m3 CURRENT | **m3 REBUCKETED** |
+|---|---:|---:|---:|
+| low | 6.1% | 2.0% (1,564) | **12.0% (9,506)** |
+| medium | 9.0% | 16.4% (13,014) | **18.8% (14,905)** |
+| high | 84.9% | 81.6% (64,731) | **69.2% (54,898)** |
+
+Per-bucket contents now match condA in every measurable dimension:
+
+| bucket | source | src_words | chunks | sw/cc |
+|---|---|---:|---:|---:|
+| low | condA | 20.6 | 4.78 | 4.28 |
+|  | m3-current | 45.3 | 7.92 | 5.74 |
+|  | **m3-new** | **18.4** | **3.96** | **4.64** |
+| medium | condA | 19.1 | 3.06 | 6.36 |
+|  | m3-current | 27.1 | 4.55 | 5.97 |
+|  | **m3-new** | **24.7** | **4.06** | **6.11** |
+| high | condA | 15.8 | 1.66 | 10.0 |
+|  | m3-current | 13.8 | 1.82 | 8.14 |
+|  | **m3-new** | **14.1** | **1.66** | **8.71** |
+
+Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotator + merge=3 produces more mid-range chunk-count rows than GPT-4's semantic chunking. Bucket *semantics* now match though: a `low` merged3 row looks like a `low` condA row on sw, cc, and sw/cc.
+
+**Chose.** Rebucket merged3 with the empirical rule and retrain with the ship recipe (α=1, 2 epochs, direct-ids splice, descriptive_init).
+
+**Files.**
+- Rebucket script: `scripts/phase2_rebucket_latency.py`
+- Rebucketed corpus: `results/phase2/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79,309 rows, unchanged; `latency` field overwritten, prior label stored in `_annotator_meta.rebucket_rule.prior_latency`)
+- PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rebucketed.pbs`
+- Output dir: `results/phase2/sft_multilingual_v6b_ctrl_merged3_rebucketed/`
+
+**Revisit if.** BLEU-vs-latency curve on the rebucketed model does not smooth relative to merged3-current at the low-latency end — would indicate the ugly curve was not driven by starved-low-bucket training.
+
+---
+
+### [RUN] 2026-08-22 — v6b-ctrl-merged3-rebucketed SFT submitted
+**Config.** Gemma-4-E2B-it (2B), α=1, 2 epochs, direct-ids splice, descriptive_init, best-model by eval_loss.
+**Data.** `results/phase2/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79K rows; latency marginals 12/19/69).
+**Command.** `qsub jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rebucketed.pbs`
+**JobID.** `177046448.gadi-pbs` (Q as of submission).
+**Read.** Awaiting completion (~1h GPU per prior merged3 run). Next: extrinsic 5-latency × 8-direction sanity at N=50 FLORES, compare BLEU-vs-DAL curve to merged3-current and cond-A.
+
+---
+
 ### [DECISION] 2026-08-22 — v6b-ctrl-merged3 (EAST §3.1 merge on OT) is the new ship candidate
 
 **Context.** Cond-A (GPT-4 chunks, matched backbone) beat v6b-ctrl (our OT chunks) by +5.72 mean BLEU on 20-cell head-to-head (Multi-90K's 4 dirs × 5 latencies, N=50 FLORES). Advisor pressed on the confound: cond-A's training was 85% "high" latency (few chunks), so its "low" prompt inference behaves near-offline. Pareto analysis on the BLEU-vs-AL curve confirmed cond-A still wins at matched AL by +2-4 BLEU per direction (though only strictly Pareto-dominates 4/5 ctrl points on de-en).

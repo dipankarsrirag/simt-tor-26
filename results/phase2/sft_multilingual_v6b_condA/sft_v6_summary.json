@@ -21,13 +21,13 @@
     "n_smoke_rows": -1
   },
   "train_metrics": {
-    "wall_time_sec": 1765.146133184433,
-    "train_loss": 1.672178149424355
+    "wall_time_sec": 4127.524225234985,
+    "train_loss": 1.332758976344172
   },
-  "n_train_rows": 37947,
-  "n_eval_rows": 1997,
+  "n_train_rows": 90490,
+  "n_eval_rows": 4859,
   "special_token_embedding_deltas": {
-    "<|end-of-read|>": 0.024558240547776222,
-    "<|end-of-write|>": 0.01821691356599331
+    "<|end-of-read|>": 0.03111851029098034,
+    "<|end-of-write|>": 0.02005849778652191
   }
 }

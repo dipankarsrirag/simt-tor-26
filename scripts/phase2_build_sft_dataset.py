@@ -17,6 +17,16 @@ Chunk derivation. For each sentence:
 
 τ strategy — start with the tightest fixed-τ policy that avoids collapse.
 Gate-1 Config F used τ=0.30 as the primary; that's what we ship as default.
+
+Latency label (2026-08-22 rebucketing). Assigned via `latency_from_chunk_stats(cc, sw)`
+using the empirical (cc, sw) rule fit to condA:
+    cc <= 2                             -> high
+    else cc / src_words >= 0.20         -> low
+    else cc / src_words >= 0.13         -> medium
+    else                                -> high
+Optional `--augment_latency` produces coarsened copies of many-chunk rows to
+expose the same source at higher latency labels. Base + aug rows use the
+SAME rule, so labels are consistent across the corpus.
 """
 
 from __future__ import annotations
@@ -26,11 +36,110 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
 
 from src.annotator.annotate import _chunks_from_commit, _enforce_monotone, _is_cjk_lang
 from src.constants import DATA_ROOT, PRIMARY_BACKBONE, REPO_ROOT
+
+
+# Target-side function-word lists for stranded-endings merge (2026-08-23).
+# A chunk ending in one of these words is a mid-NP/PP cutoff — merge it into
+# the next chunk to move the boundary to a syntactically meaningful position.
+# Lowercased match on the last whitespace-token of the target chunk.
+STRANDED_ENDINGS: dict[str, set[str]] = {
+    "en": {
+        "the", "a", "an",
+        "and", "or", "but", "nor", "so", "yet",
+        "of", "in", "on", "at", "to", "for", "with", "by", "from",
+        "into", "onto", "upon", "over", "under", "about", "as", "than",
+        "that", "which", "who", "whom", "whose", "if", "when", "while",
+        "though", "although", "because", "unless", "until", "since",
+    },
+    "de": {
+        "der", "die", "das", "den", "dem", "des",
+        "ein", "eine", "einen", "einem", "einer", "eines",
+        "und", "oder", "aber", "sondern", "denn",
+        "in", "an", "auf", "von", "zu", "mit", "für", "über", "unter",
+        "bei", "aus", "nach", "vor", "durch", "gegen", "ohne", "um",
+        "dass", "wenn", "als", "weil", "obwohl", "damit",
+    },
+    "ru": {
+        "и", "а", "но", "или", "да", "ни",
+        "в", "во", "на", "с", "со", "по", "для", "к", "ко", "о", "об",
+        "от", "до", "у", "из", "за", "перед", "над", "под", "между",
+        "что", "чтобы", "если", "когда", "хотя", "потому",
+    },
+    # Arabic and Vietnamese lists deferred — target-side function-word
+    # conventions differ enough that we want native-speaker review first.
+}
+
+
+def _chunk_ends_with_stopword(chunk_str: str, tgt_lang: str) -> bool:
+    stops = STRANDED_ENDINGS.get(tgt_lang)
+    if not stops:
+        return False
+    s = chunk_str.rstrip().rstrip(".,;:!?")
+    if not s:
+        return False
+    last = s.split()[-1].lower() if s.split() else ""
+    # Strip trailing punctuation from the last token too (e.g., "and,")
+    last = last.rstrip(".,;:!?)")
+    return last in stops
+
+
+def merge_stranded_function_word_chunks(source_chunks, target_chunks,
+                                        source_chunk_ids, target_chunk_ids,
+                                        src_lang: str, tgt_lang: str):
+    """Merge any (source_chunk[i], target_chunk[i]) whose target chunk ends
+    with a syntactic function word (article/preposition/conjunction) into
+    the following pair — the boundary lands in a mid-NP/PP dead-zone
+    otherwise.
+
+    Iterates until no more merges apply. If the LAST chunk ends with a
+    stopword, merge it into the previous chunk instead (sentence-final
+    chunks should end cleanly).
+
+    Operates in lock-step on source, target, and both id lists so byte-
+    round-trip is preserved on both sides.
+    """
+    stops = STRANDED_ENDINGS.get(tgt_lang)
+    if not stops:
+        return source_chunks, target_chunks, source_chunk_ids, target_chunk_ids
+
+    src_sep = "" if _is_cjk_lang(src_lang) else " "
+    tgt_sep = "" if _is_cjk_lang(tgt_lang) else " "
+
+    # Forward pass: merge chunk i into chunk i+1 iteratively
+    changed = True
+    while changed and len(target_chunks) > 1:
+        changed = False
+        for i in range(len(target_chunks) - 1):
+            if _chunk_ends_with_stopword(target_chunks[i], tgt_lang):
+                target_chunks[i + 1] = (target_chunks[i] + tgt_sep + target_chunks[i + 1]).strip()
+                source_chunks[i + 1] = (source_chunks[i] + src_sep + source_chunks[i + 1]).strip()
+                target_chunk_ids[i + 1] = target_chunk_ids[i] + target_chunk_ids[i + 1]
+                source_chunk_ids[i + 1] = source_chunk_ids[i] + source_chunk_ids[i + 1]
+                del target_chunks[i]
+                del source_chunks[i]
+                del target_chunk_ids[i]
+                del source_chunk_ids[i]
+                changed = True
+                break
+
+    # Last-chunk cleanup: if the final chunk ends with a stopword, merge into previous
+    if len(target_chunks) > 1 and _chunk_ends_with_stopword(target_chunks[-1], tgt_lang):
+        target_chunks[-2] = (target_chunks[-2] + tgt_sep + target_chunks[-1]).strip()
+        source_chunks[-2] = (source_chunks[-2] + src_sep + source_chunks[-1]).strip()
+        target_chunk_ids[-2] = target_chunk_ids[-2] + target_chunk_ids[-1]
+        source_chunk_ids[-2] = source_chunk_ids[-2] + source_chunk_ids[-1]
+        del target_chunks[-1]
+        del source_chunks[-1]
+        del target_chunk_ids[-1]
+        del source_chunk_ids[-1]
+
+    return source_chunks, target_chunks, source_chunk_ids, target_chunk_ids
 
 CORPUS = DATA_ROOT / "SiMT-De-En-660K" / "SiMT-De-En-660K.json"
 
@@ -140,26 +249,52 @@ def commit_with_fallback(matrix, tau_ladder, n):
     return commit, tau_ladder[-1], True
 
 
-# Latency thresholds recalibrated 2026-08-19 (v4 rebuild) to match the
-# empirical tertiles of our OT-annotator's chunk-count distribution.
-# The v2 build distribution (before augmentation) was 27% high / 21% medium
-# / 51% low — over-representing low. New bounds shift the medium band up:
-#   <= 3 chunks   -> high    (conservative commit; ~27% of raw rows)
-#   4 - 6 chunks  -> medium  (was 4-5; adds chunk-count 6 to medium: ~30%)
-#   >= 7 chunks   -> low     (was >=6; ~43%)
-# Then augmentation (see augment_row_at_lower_chunk_counts) further balances
-# the buckets by generating higher-latency versions from many-chunk sources.
-LATENCY_HIGH_MAX_CHUNKS = 3    # <= 3 chunks -> high latency
-LATENCY_MEDIUM_MAX_CHUNKS = 6  # 4-6 chunks -> medium
-                               # >= 7 chunks -> low latency
+# Latency rule (2026-08-22 rebuild): use the chunk-density signal that
+# GPT-4 empirically uses in cond-A, not raw chunk count. Prior rule
+# (<=3 high, 4-6 medium, >=7 low) baked in a source-length confound —
+# long sentences ended up in `low` even when their granularity (source
+# words per chunk) was medium, and short sentences monopolised `high`.
+# See LOG.md 2026-08-22 "Latency rebucketing" for the P(lat|cc,sw)
+# derivation.
+#
+# Rule:
+#   cc <= LATENCY_CC1_MAX                     -> high   (few chunks -> long wait)
+#   else cc / src_words >= LATENCY_LOW_CCSW   -> low    (aggressive commit)
+#   else cc / src_words >= LATENCY_MED_CCSW   -> medium
+#   else                                       -> high
+#
+# Thresholds fit on condA joint P(latency | cc, sw). 88% accuracy on
+# condA, 60% on Multi-90K, marginals reproduce condA within 1pp.
+LATENCY_CC1_MAX = 2      # cc <= 2 -> `high` regardless of length
+LATENCY_LOW_CCSW = 0.20  # cc / src_words >= 0.20 -> `low`
+LATENCY_MED_CCSW = 0.13  # cc / src_words in [0.13, 0.20) -> `medium`
 
 
-def latency_from_chunk_count(cc: int) -> str:
-    if cc <= LATENCY_HIGH_MAX_CHUNKS:
+def latency_from_chunk_stats(cc: int, src_words: int) -> str:
+    """Assign a latency bucket from chunk count + source length.
+
+    Uses the empirical GPT-4 rule extracted from condA (2026-08-22):
+      - cc <= 2                             -> `high`
+      - else cc / src_words >= 0.20         -> `low`
+      - else cc / src_words >= 0.13         -> `medium`
+      - else                                -> `high`
+    """
+    if cc <= LATENCY_CC1_MAX:
         return "high"
-    if cc <= LATENCY_MEDIUM_MAX_CHUNKS:
+    ratio = cc / max(src_words, 1)
+    if ratio >= LATENCY_LOW_CCSW:
+        return "low"
+    if ratio >= LATENCY_MED_CCSW:
         return "medium"
-    return "low"
+    return "high"
+
+
+def _count_source_words(source: str, src_lang: str) -> int:
+    """Source-word count for the latency rule. Matches condA (space-split
+    for alphabetic scripts, character-count for CJK)."""
+    if _is_cjk_lang(src_lang):
+        return sum(1 for c in source if not c.isspace())
+    return len(source.split())
 
 
 def merge_chunks_to_n(source_chunks, target_chunks, source_chunk_ids, target_chunk_ids,
@@ -210,23 +345,49 @@ def augment_row_at_lower_chunk_counts(row: dict):
     same source at higher latency labels. Returns a list of NEW rows (does NOT
     include the base row — caller handles that).
 
-    Rule:
+    Since coarsening reduces cc while sw is fixed, cc/sw decreases, so the
+    label naturally walks up the ladder: `low` -> `medium` -> `high`. Each
+    aug row is labelled using the same (cc, sw) rule as the base builder
+    (`latency_from_chunk_stats`), so downstream training sees consistent
+    (label, chunk-density) semantics across base and augmentation rows.
+
+    Merge targets:
       - k >= 4  -> merge to ceil(k/2) chunks    (one coarser step)
       - k >= 7  -> also merge to ceil(k/4) chunks (two coarser steps)
-    New rows inherit index (with `_aug` suffix), source/target strings, but
-    have merged chunks and a freshly-assigned latency label per new chunk count.
+    We also try target_n = LATENCY_CC1_MAX (=2) explicitly so any row with
+    k > 2 can produce a `high`-labelled augmentation, regardless of divisor.
+    Duplicate target_n values are de-duplicated.
+
+    New rows inherit index (with `_aug` suffix in meta), source/target
+    strings, but have merged chunks and a freshly-assigned latency label.
+    Rows whose label doesn't change are skipped (no informational gain).
     """
     import copy
     k = len(row["source_chunks"])
-    if k < 4:
-        return []
+    if k <= LATENCY_CC1_MAX:
+        return []  # already `high` under the (cc, sw) rule; no coarsening possible
+
+    sw = _count_source_words(row["source"], row.get("src_lang", "en"))
+    base_latency = row["latency"]
+
+    # Candidate target_n values, ordered by aggressiveness.
+    candidates = []
+    if k >= 4:
+        candidates.append(("aug2", -(-k // 2)))          # halve
+    if k >= 7:
+        candidates.append(("aug4", -(-k // 4)))          # quarter
+    candidates.append(("aug_cc1", LATENCY_CC1_MAX))       # force to `high` bucket
+    # de-duplicate by target_n, preserve first tag seen
+    seen = set()
+    dedup = []
+    for tag, tn in candidates:
+        if tn < 1 or tn >= k or tn in seen:
+            continue
+        seen.add(tn)
+        dedup.append((tag, tn))
+
     out = []
-    for divisor, tag in [(2, "aug2"), (4, "aug4")]:
-        target_n = max(1, -(-k // divisor))  # ceil-div
-        if target_n >= k:
-            continue
-        if divisor == 4 and k < 7:
-            continue
+    for tag, target_n in dedup:
         new_src, new_tgt, new_src_ids, new_tgt_ids = merge_chunks_to_n(
             row["source_chunks"], row["target_chunks"],
             row["source_chunk_ids"], row["target_chunk_ids"],
@@ -234,11 +395,15 @@ def augment_row_at_lower_chunk_counts(row: dict):
             src_lang=row.get("src_lang", "en"),
             tgt_lang=row.get("tgt_lang", "en"),
         )
-        if len(new_src) < 1:
+        if not new_src:
             continue
-        new_latency = latency_from_chunk_count(len(new_src))
-        if new_latency == row["latency"]:
-            continue  # no informational gain if latency label doesn't flip
+        new_latency = latency_from_chunk_stats(len(new_src), sw)
+        if new_latency == base_latency:
+            continue  # no informational gain — same label as base
+        # Skip if we already emitted an aug with the same target label
+        # (aug2 and aug4 may both land in `medium` for some k).
+        if any(o["latency"] == new_latency for o in out):
+            continue
         aug = copy.copy(row)
         aug["source_chunks"] = new_src
         aug["target_chunks"] = new_tgt
@@ -248,8 +413,10 @@ def augment_row_at_lower_chunk_counts(row: dict):
         aug_meta = dict(row.get("_annotator_meta", {}))
         aug_meta["augmented_from_base"] = True
         aug_meta["base_n_chunks"] = k
+        aug_meta["base_src_words"] = sw
         aug_meta["merged_to_n_chunks"] = len(new_src)
         aug_meta["merge_tag"] = tag
+        aug_meta["base_latency"] = base_latency
         aug["_annotator_meta"] = aug_meta
         out.append(aug)
     return out
@@ -258,17 +425,23 @@ def augment_row_at_lower_chunk_counts(row: dict):
 def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
                   corpus_by_idx: dict, reassign_latency: bool = True,
                   merge_small: bool = False, min_src_words: int = 2,
-                  min_src_chars_cjk: int = 4):
+                  min_src_chars_cjk: int = 4, merge_stranded: bool = False,
+                  refine_bounds: bool = False, refine_window: int = 3,
+                  refine_alpha: float = 1.0, refine_beta: float = 1.0,
+                  keep_collapsed: bool = False,
+                  force_latency: Optional[str] = None):
     """Return list of dicts matching SiMT-660K.json schema.
 
     `tau_ladder`: list of tau values, tried in order per row. First tau that
     produces > 1 chunks is used (collapse fallback, 2026-08-18 fix). Primary
     tau is tau_ladder[0]; the rest are fallbacks.
     `reassign_latency`: if True (default), overwrite each row's latency
-    label based on our chunk count using EAST-inherited thresholds
-    (`latency_from_chunk_count`). If False, inherit SiMT-660K's original
-    latency label (which was GPT-4-derived and may be inconsistent with our
-    chunks — pre-2026-08-18 behavior).
+    label using `latency_from_chunk_stats(cc, sw)` — the (cc, sw) rule
+    empirically fit to condA (GPT-4 chunks). If False, inherit SiMT-660K's
+    original label (which was GPT-4-derived for the underlying source but
+    may be inconsistent with our OT chunks). Pre-2026-08-22 defaults used
+    a pure chunk-count rule; that produced a source-length confound
+    (see LOG.md 2026-08-22 rebucketing entry).
     """
     from src.annotator.east_format import EastRow, interleave
 
@@ -296,11 +469,15 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
             if fell_back:
                 n_collapse_at_primary += 1
             if cc == 1:
-                # Even the largest tau in the ladder collapsed. Very rare
-                # (target j=0 doesn't converge even at tau_max). Drop.
                 n_still_collapse += 1
-                skipped += 1
-                continue
+                if not keep_collapsed:
+                    # Even the largest tau in the ladder collapsed. Drop.
+                    skipped += 1
+                    continue
+                # else: keep this cc=1 row — it's a legitimate "read the whole
+                # source then emit" high-latency training example. Useful for
+                # tau-sweep balancing where cc=1 rows are the natural high-
+                # latency variant of a source.
 
             src_clean = src_row["source"].strip()
             tgt_clean = src_row["target"].strip()
@@ -329,6 +506,22 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
                 skipped += 1
                 continue
 
+            # 2026-08-23 OT-guided boundary refinement (opt-in).
+            # Shifts each chunk boundary within a ±window by voting on
+            # (OT confidence × syntactic goodness). Uses the raw OT matrix
+            # `rec["matrix"]` — must run BEFORE _chunks_from_commit while
+            # the matrix + commit are still aligned. Preserves monotonicity.
+            # Disabled by default; removable by omitting the CLI flag.
+            if refine_bounds:
+                from src.annotator.boundary_refine import refine_boundaries
+                commit = refine_boundaries(
+                    commit, src_ids_orig, rec["matrix"], tokenizer,
+                    tau=tau_used,
+                    window=refine_window, alpha=refine_alpha, beta=refine_beta,
+                    stranded_endings=None,   # post-emit handles target-side
+                    src_lang=src_row["src_lang"],
+                )
+
             source_chunks, target_chunks, source_chunk_ids, target_chunk_ids = _chunks_from_commit(
                 commit, src_ids_orig, tgt_ids_orig, tokenizer, n, src_lang=src_row["src_lang"]
             )
@@ -350,12 +543,39 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
                     skipped += 1
                     continue
 
-            # Fix 2 (2026-08-18): reassign latency based on our chunk count,
-            # using EAST-inherited thresholds. Ensures the latency token is
-            # self-consistent with cond-B's actual chunk density.
+            # 2026-08-23: stranded-function-word merge. If a target chunk ends
+            # with a determiner/preposition/conjunction (mid-NP/PP dead zone),
+            # merge it into the next chunk. Only fires for target langs with a
+            # curated stopword list (en/de/ru today).
+            #
+            # When --refine_boundaries is active, this pass is subsumed as the
+            # `syn(i) < 0` branch. Kept as an independent flag so callers can
+            # enable stranded-merge WITHOUT boundary refinement (matches the
+            # rb_fw ablation cell), or vice versa.
+            if merge_stranded and len(source_chunks) > 1:
+                source_chunks, target_chunks, source_chunk_ids, target_chunk_ids = merge_stranded_function_word_chunks(
+                    source_chunks, target_chunks, source_chunk_ids, target_chunk_ids,
+                    src_row["src_lang"], src_row["tgt_lang"],
+                )
+                if not source_chunks or len(source_chunks) != len(target_chunks):
+                    skipped += 1
+                    continue
+
+            # Reassign latency using the empirical (cc, sw) rule fit to condA
+            # (2026-08-22 rebucketing). Prior versions used chunk-count-only
+            # thresholds, which correlated `low` with long sentences rather
+            # than with commit granularity.
             inherited_latency = src_row["latency"]
-            if reassign_latency:
-                new_latency = latency_from_chunk_count(len(source_chunks))
+            if force_latency is not None:
+                # tau-sweep balanced mode: override with the caller-supplied label
+                new_latency = force_latency
+                if new_latency != inherited_latency:
+                    n_relabelled += 1
+                    latency_flips[(inherited_latency, new_latency)] = \
+                        latency_flips.get((inherited_latency, new_latency), 0) + 1
+            elif reassign_latency:
+                sw = _count_source_words(src_clean, src_row["src_lang"])
+                new_latency = latency_from_chunk_stats(len(source_chunks), sw)
                 if new_latency != inherited_latency:
                     n_relabelled += 1
                     latency_flips[(inherited_latency, new_latency)] = \
@@ -430,10 +650,11 @@ def main():
                          "0.50,0.70,1.00 (2026-08-18 collapse fix). Set to empty "
                          "string to disable fallback (pre-fix behavior).")
     ap.add_argument("--no_reassign_latency", action="store_true",
-                    help="Do NOT reassign latency labels based on our chunk count. "
-                         "Default: reassign per EAST-inherited chunk-count thresholds "
-                         "(<=3 -> high, 4-5 -> medium, >=6 -> low) so the latency "
-                         "token is self-consistent with cond-B chunks (2026-08-18 fix).")
+                    help="Do NOT reassign latency labels. Default: reassign using "
+                         "the empirical (cc, src_words) rule fit to condA — "
+                         "cc<=2 -> high; else cc/sw>=0.20 low, >=0.13 medium, else high. "
+                         "This is the 2026-08-22 rebucketing (see LOG.md). Set to skip "
+                         "reassignment and inherit SiMT-660K's original label.")
     ap.add_argument("--output", type=Path,
                     default=REPO_ROOT / "results" / "phase2" / "sft_dataset_n2k.json")
     ap.add_argument("--merge_small_chunks", action="store_true",
@@ -446,12 +667,56 @@ def main():
                          "to merge chunks with <=3 words (aggressive).")
     ap.add_argument("--min_src_chars_cjk", type=int, default=4,
                     help="CJK-source variant of --min_src_words. Default 4 = EAST rule.")
+    ap.add_argument("--force_latency", type=str, default=None,
+                    choices=[None, "low", "low-medium", "medium", "medium-high", "high"],
+                    help="Override the latency label for EVERY row to this value. "
+                         "Use with tau-sweep balanced augmentation: run one build "
+                         "per tau value with --force_latency <corresponding-bucket>, "
+                         "then concatenate. Bypasses --no_reassign_latency and any "
+                         "(cc, sw) rule; the tau is the label.")
+    ap.add_argument("--keep_collapsed", action="store_true",
+                    help="Keep rows where OT collapses to a single chunk (cc=1). "
+                         "Default: drop such rows (they're rare edge cases). "
+                         "For tau-sweep balanced augmentation, cc=1 rows are the "
+                         "natural high-latency variant of each source and should "
+                         "be kept — enable this flag.")
+    ap.add_argument("--refine_boundaries", action="store_true",
+                    help="2026-08-23: OT-guided boundary voting. For each OT-"
+                         "chosen chunk boundary, search within ±window source "
+                         "tokens and pick the position maximising "
+                         "α · ot_confidence + β · syntactic_score. Uses raw "
+                         "OT divergence values (still purely backbone-derived) "
+                         "combined with a language-agnostic syntactic signal "
+                         "(post-punct=+1, post-comma=+0.5). Non-destructive: "
+                         "omit the flag to disable and reproduce prior behavior. "
+                         "See src/annotator/boundary_refine.py.")
+    ap.add_argument("--refine_window", type=int, default=3,
+                    help="Search window (source tokens) around each OT commit "
+                         "position during --refine_boundaries. Default 3.")
+    ap.add_argument("--refine_alpha", type=float, default=1.0,
+                    help="Weight for OT-confidence in the voting score.")
+    ap.add_argument("--refine_beta", type=float, default=1.0,
+                    help="Weight for syntactic-goodness in the voting score.")
+    ap.add_argument("--merge_stranded_function_words", action="store_true",
+                    help="2026-08-23 fix. Merge any (source,target) chunk pair "
+                         "whose TARGET chunk ends with a stranded determiner/"
+                         "preposition/conjunction (e.g. 'the', 'and', 'of', 'in') "
+                         "into the next chunk. Moves the boundary from a mid-NP "
+                         "dead-zone to a syntactically meaningful position. "
+                         "Cond-A has 1.6%% stranded-endings; ours has 20.2%% "
+                         "without this fix (see LOG.md 2026-08-23). Only fires "
+                         "for target languages with a curated stopword list "
+                         "(en/de/ru today; ar/vi deferred pending native review).")
     ap.add_argument("--augment_latency", action="store_true",
-                    help="2026-08-19 v4 augmentation: for each row with >=4 "
-                         "chunks, generate merged versions with fewer chunks "
-                         "(higher latency labels). Same source content appears "
-                         "at multiple latencies — teaches the model to condition "
-                         "chunk granularity on the <|latency|> token.")
+                    help="Coarsen chunks to expose the SAME source at multiple "
+                         "latency labels. Under the (cc, sw) rule (2026-08-22), "
+                         "coarsening lowers cc/sw and walks the label up: low -> "
+                         "medium -> high. For each row with cc > 2 we try up to "
+                         "3 coarser variants (ceil(k/2), ceil(k/4), and 2 chunks) "
+                         "and keep any that produce a NEW latency label. Directly "
+                         "teaches the model to condition streaming granularity on "
+                         "the natural-language latency prompt — analogous to condA's "
+                         "P(latency|cc,sw) overlap.")
     args = ap.parse_args()
 
     from transformers import AutoTokenizer
@@ -490,7 +755,14 @@ def main():
                                         reassign_latency=reassign_latency,
                                         merge_small=args.merge_small_chunks,
                                         min_src_words=args.min_src_words,
-                                        min_src_chars_cjk=args.min_src_chars_cjk)
+                                        min_src_chars_cjk=args.min_src_chars_cjk,
+                                        merge_stranded=args.merge_stranded_function_words,
+                                        refine_bounds=args.refine_boundaries,
+                                        refine_window=args.refine_window,
+                                        refine_alpha=args.refine_alpha,
+                                        refine_beta=args.refine_beta,
+                                        keep_collapsed=args.keep_collapsed,
+                                        force_latency=args.force_latency)
         kept.extend(kept_i)
         for k in ["skipped", "missing", "collapse_at_primary_tau",
                   "still_collapse_after_fallback", "relabelled"]:

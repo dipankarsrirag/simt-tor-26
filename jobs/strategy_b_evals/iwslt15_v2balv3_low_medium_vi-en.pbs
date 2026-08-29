@@ -1,0 +1,41 @@
+#!/bin/bash
+#PBS -N iw15_v2balv3_low_medium_vi-en
+#PBS -P ba39
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=20GB
+#PBS -l walltime=00:45:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/iwslt15_v2balv3_low_medium_vi-en.log
+
+set -o pipefail
+export HF_HOME=/g/data/po67/dipankar/cache
+export HF_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export HUGGINGFACE_HUB_CACHE=/g/data/po67/dipankar/cache/hub
+export TRANSFORMERS_CACHE=/g/data/po67/dipankar/cache/transformers
+export TORCH_HOME=/g/data/po67/dipankar/cache/torch
+export XDG_CACHE_HOME=/g/data/po67/dipankar/cache
+export TMPDIR=/g/data/po67/dipankar/cache/tmp
+mkdir -p $TMPDIR
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
+
+cd /g/data/ba39/dipankar/simt-tor-26
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+[ -f "/g/data/ba39/dipankar/simt-tor-26/results/phase2/extrinsic/iwslt15_stream_v6bv2balv3_checkargmax_low_medium_vi-en_n1268.json" ] && exit 0
+
+python -u src/eval/extrinsic.py \
+    --model_dir /g/data/ba39/dipankar/simt-tor-26/results/phase2/sft_multilingual_v6b_v2bal_v3/final \
+    --tokenizer_dir results/phase2/tokenizer-extended-v6 \
+    --dev_src /g/data/ba39/dipankar/simul-mt/data/eval/vi-en/iwslt15_tst2013.vi-en.src --dev_ref /g/data/ba39/dipankar/simul-mt/data/eval/vi-en/iwslt15_tst2013.vi-en.ref \
+    --n_sentences -1 \
+    --src_lang "vi" --tgt_lang "en" \
+    --use_chat_template --latency "low-medium" \
+    --mode streaming --policy check_argmax \
+    --output "/g/data/ba39/dipankar/simt-tor-26/results/phase2/extrinsic/iwslt15_stream_v6bv2balv3_checkargmax_low_medium_vi-en_n1268.json"

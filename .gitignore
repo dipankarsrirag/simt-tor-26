@@ -53,6 +53,10 @@ dist/
 .vscode/
 *.swp
 
+# AI-assistant local instructions — not part of the shipped repo.
+CLAUDE.md
+.claude/
+
 # Secrets — never commit.
 .env
 .env.*

@@ -1,0 +1,61 @@
+#!/bin/bash
+#PBS -N dl_ru_en_opus
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=50GB
+#PBS -l walltime=03:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/download_ru_en_opus.log
+
+set -o pipefail
+cd /g/data/ba39/dipankar/simul-mt/data/raw
+
+# Download news-commentary v16 ru-en (small, ~100K pairs) and TED2020 v1 ru-en
+# from OPUS: https://opus.nlpl.eu
+
+# 1) TED2020 v1 en-ru (~176K sentence pairs)
+if [ ! -f opus-ted2020-v1-en-ru.zip ]; then
+    wget -q "https://object.pouta.csc.fi/OPUS-TED2020/v1/moses/en-ru.txt.zip" \
+         -O opus-ted2020-v1-en-ru.zip && echo "OK TED2020 en-ru"
+fi
+
+# 2) News-Commentary v16 en-ru (~280K sentence pairs)
+if [ ! -f opus-news-commentary-v16-en-ru.zip ]; then
+    wget -q "https://object.pouta.csc.fi/OPUS-News-Commentary/v16/moses/en-ru.txt.zip" \
+         -O opus-news-commentary-v16-en-ru.zip && echo "OK NewsCommentary en-ru"
+fi
+
+# 3) Extract to parallel_clean/ru-en/
+DEST=/g/data/ba39/dipankar/simul-mt/data/parallel_clean/ru-en
+mkdir -p $DEST
+cd $DEST
+TMPDIR=$(mktemp -d)
+for pkg in ted2020-v1 news-commentary-v16; do
+    ZIP=/g/data/ba39/dipankar/simul-mt/data/raw/opus-${pkg}-en-ru.zip
+    [ -f "$ZIP" ] || { echo "MISS: $ZIP"; continue; }
+    unzip -o -q "$ZIP" -d $TMPDIR
+    # OPUS moses format: two files like "TED2020.en-ru.en" and "TED2020.en-ru.ru"
+    SHORT_NAME=$(echo $pkg | sed 's/-v.*//')  # ted2020 / news-commentary
+    # Locate the pair
+    EN_FILE=$(ls $TMPDIR/*.en 2>/dev/null | head -1)
+    RU_FILE=$(ls $TMPDIR/*.ru 2>/dev/null | head -1)
+    if [ -n "$EN_FILE" ] && [ -n "$RU_FILE" ]; then
+        cp "$EN_FILE" ${SHORT_NAME}.en
+        cp "$RU_FILE" ${SHORT_NAME}.ru
+        echo "  installed ${SHORT_NAME}: $(wc -l <${SHORT_NAME}.en) lines"
+    fi
+    rm -f $TMPDIR/*
+done
+rm -rf $TMPDIR
+
+echo ""
+echo "=== ru-en parallel corpora installed ==="
+ls -la $DEST
+for f in $DEST/*.ru; do
+    if [ -f "$f" ]; then echo "  $(basename $f): $(wc -l <$f) lines"; fi
+done

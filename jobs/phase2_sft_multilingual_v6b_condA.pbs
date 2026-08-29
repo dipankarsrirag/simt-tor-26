@@ -13,10 +13,10 @@
 #PBS -k oed
 #PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_sft_multilingual_v6b_condA.log
 
-# Cond-A (GPT-4 chunks) counterpart to v6b-ctrl for fair head-to-head.
-# Identical recipe: gemma-4-E2B-it, α=1 (no upweight), 2 epochs, best-model,
-# checkpoint cleanup. Only difference: GPT-4 chunks vs our OT chunks.
-# 40K rows (4 dirs), ~half the size of ctrl's 79K → walltime tighter, 3h ample.
+# Cond-A REBUILT (2026-08-23 fix): keeps ALL 3 latency variants per Multi-90K
+# source, no dedup collapse. 95,349 rows (was 39,944 before fix). Marginals
+# 30/34/36 (was skewed to 6/9/85). This is the CORRECT GPT-4-chunks reference
+# for our extrinsic BLEU/COMET comparisons.
 
 set -eo pipefail
 mkdir -p /g/data/ba39/dipankar/simt-tor-26/logs
