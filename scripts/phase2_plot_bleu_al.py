@@ -18,7 +18,7 @@ Our-method data source: results/phase2/extrinsic/full_stream_<policy>_n<n>.json
 
 Competitor numbers must be hand-entered from published tables — this
 script hosts them as constants at the top for full transparency. Update
-citations in RELATEDWORKS.md when changing them.
+citations in docs/related-work.md when changing them.
 
 Usage:
     python scripts/phase2_plot_bleu_al.py \

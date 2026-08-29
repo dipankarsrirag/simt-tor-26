@@ -744,7 +744,7 @@ Prioritise the German case first if punct-aware chunking is implemented (highest
 
 - **A. Snap OT boundaries to punctuation.** After `_chunks_from_commit`, for each internal boundary position `i`, check if the source token at `i-1` ends with punctuation. If not, move to nearest punctuation within ±k source tokens (k=2 or 3). ~30 LOC, no new deps, no re-annotation. Directly reduces the 80% mid-phrase-break rate. Highest-impact cheap fix.
 - **B. POS-aware boundary snapping (extends A).** Same idea but using spaCy POS tags: don't split inside NP/VP. Adds spaCy dep, ~50 LOC, ~30 sec/1K sentences overhead. Bigger impact than A alone, but adds a dependency.
-- **C. Length-balancing merge/split.** After OT + EAST §3.1 merge, enforce chunks within a row have `sw_chunk ∈ [mean−σ, mean+σ]`. Merge underweight neighbors; split overweight ones at middle punct/word boundary. ~40 LOC. Risk: a split creates a boundary OT didn't pick — arguably violates the "backbone-derived commits" claim in METHOD.md. Skip unless needed.
+- **C. Length-balancing merge/split.** After OT + EAST §3.1 merge, enforce chunks within a row have `sw_chunk ∈ [mean−σ, mean+σ]`. Merge underweight neighbors; split overweight ones at middle punct/word boundary. ~40 LOC. Risk: a split creates a boundary OT didn't pick — arguably violates the "backbone-derived commits" claim in docs/_archive/method-formal.md. Skip unless needed.
 - **D. Stratified outlier drop.** For each `(direction, latency_bucket)`, drop rows with sw/cc >2σ from bucket mean. Tighter within-bucket distribution → sharper learned per-label behavior → less interpolation zigzag. Costs 5-10% of training data. ~20 LOC.
 - **E. Higher primary τ (=0.40 instead of 0.30).** Produces coarser chunks natively (~4 chunks/sent vs current ~6). Requires re-annotation, OR replay existing matrices at higher τ via `commit_from_matrix` (already implemented, cheap CPU pass). Would produce close-to-cond-A chunk *distributions* with zero content-level changes. Clean ablation ("does coarser OT alone recover cond-A?").
 - **F. τ per source-word budget.** Calibrate τ per row so chunk count ≈ target `f(sw)`. Reduces within-bucket variance. ~50 LOC. Moderate impact, moderate cost.
@@ -1138,7 +1138,7 @@ Other directions demonstrated the v6 fix works cleanly:
 - Evaluate on newstest2013 wait_k∈{3,5,7} + check_argmax at low/medium/high latency. Expected: multilingual model shows similar Pareto to single-language v4; the "adaptivity vs wait_k" story replays across all 10 directions.
 
 **Phase 2 — M9 KV-cache reuse (~1 day engineering).** After v5 SFT lands:
-- Refactor `src/annotator/annotate.py` inner loop to use HF `past_key_values` (two-tier: prompt cache + per-prefix-i cache). See OPTIONALS.md §M9 for the concrete sketch.
+- Refactor `src/annotator/annotate.py` inner loop to use HF `past_key_values` (two-tier: prompt cache + per-prefix-i cache). See docs/_archive/OPTIONALS.md §M9 for the concrete sketch.
 - Regression test: byte-compare divergence matrices on 50 sentences from `results/phase2/annot_ot_n10k/matrices.jsonl` (already-annotated DE→EN subset). L∞ diff must be <1e-4.
 - Expected 2-5× wall-clock speedup, up to 40× reduction on attention alone.
 
@@ -1166,7 +1166,7 @@ Other directions demonstrated the v6 fix works cleanly:
 ### [DECISION] 2026-08-20 — Prioritize M9 (KV-cache reuse in annotator) after multilingual v5 lands
 **Context.** Multilingual v5 annotation (10 directions × 10K rows) measured at ~74 sents/min on Gemma-4-E2B/H200 = ~0.8s/sent. Total wall: ~22 GPU-hours across 10 directions × ~3 shards each. Fine for 100K rows total, but any scale-up (50K/dir → 500K total, or a full-660K single-direction replication) becomes prohibitive.
 **Root cause.** Annotator does N independent forward passes per sentence (one per source prefix length). No KV cache reuse across prefix lengths → ~65% of attention compute is redundant on 20-token sources.
-**Decision.** M9 (KV-cache reuse in annotator inner loop) is now a **prerequisite for any scale-up experiment**. Refresh design note in OPTIONALS.md §M9 with concrete implementation sketch (two-tier past_key_values), complexity analysis (2-5× wall-clock, up to 40× on attention alone), verification protocol (byte-compare divergence matrices vs stored `annot_ot_n10k/matrices.jsonl`), and follow-on M9b (cross-sentence batching for additional 2-4×).
+**Decision.** M9 (KV-cache reuse in annotator inner loop) is now a **prerequisite for any scale-up experiment**. Refresh design note in docs/_archive/OPTIONALS.md §M9 with concrete implementation sketch (two-tier past_key_values), complexity analysis (2-5× wall-clock, up to 40× on attention alone), verification protocol (byte-compare divergence matrices vs stored `annot_ot_n10k/matrices.jsonl`), and follow-on M9b (cross-sentence batching for additional 2-4×).
 **Not doing right now.** Multilingual v5 annotation is already in flight — refactoring the annotator mid-run wastes 6 R jobs. Refactor after v5 matrices land and before any 50K+ scale-up experiment.
 **Revisit if.** Fresh 100K+ annotation job comes up (H14 data curve, additional-language extension, full-corpus replication). At that point, one day of engineering saves ~10+ GPU-hours per rerun.
 
@@ -1570,7 +1570,7 @@ Next configs to land will fill the rest of the table.
 **Revisit if:** any current walltime turns out too tight for actual runtime — bump the offending PBS by 30 min. Also if chain-at-start produces >1 unnecessary follow-up shard because of race between DONE marker + counter check (unlikely; the state dir is per-family).
 
 ### [RUN] 2026-08-19 — WMT15 + WMT22 offline BLEU (176597832 landed): 34.24 / 28.60 on v1 checkpoint
-**Config:** `sft_n10k/final` (v1 OT-SFT) offline generation on WMT15 newstest2015 and WMT22 newstest2022 De→En. Task 1c per `docs/07-next_steps.md`. Latency medium, greedy, all sents scored.
+**Config:** `sft_n10k/final` (v1 OT-SFT) offline generation on WMT15 newstest2015 and WMT22 newstest2022 De→En. Task 1c per `docs/next-steps.md`. Latency medium, greedy, all sents scored.
 **Result:**
 
 | Test set | n | BLEU | wall | s/sent | Signature |
@@ -1578,7 +1578,7 @@ Next configs to land will fill the rest of the table.
 | WMT15 newstest2015 | 2169 | **34.24** | 20.1 min | 0.56 | nrefs:1\|case:mixed\|eff:no\|tok:13a\|smooth:exp\|version:2.6.0 |
 | WMT22 newstest2022 | 1984 | **28.60** | 16.0 min | 0.48 | ditto |
 
-**Read.** Feeds Fig. 1 (WMT15/AL, vs non-LLM competitors) and Fig. 2 (WMT22/LAAL, vs LLM competitors) axes directly per `docs/05-phase2_sft_and_streaming.md` Cross-paper comparability protocol. WMT15 34.24 is a strong absolute number for a 2B-param model at 9.5K training rows. WMT22 28.60 vs EAST Table 2 De→En 32.55 is ~4 BLEU behind, consistent with the 4× params × 66× data disadvantage. Streaming BLEU numbers on these same test sets need a follow-up run before the head-to-head is complete — the newstest2013 streaming numbers (Table 3 mirror) are the current anchor.
+**Read.** Feeds Fig. 1 (WMT15/AL, vs non-LLM competitors) and Fig. 2 (WMT22/LAAL, vs LLM competitors) axes directly per `docs/_archive/phase2-sft-and-streaming.md` Cross-paper comparability protocol. WMT15 34.24 is a strong absolute number for a 2B-param model at 9.5K training rows. WMT22 28.60 vs EAST Table 2 De→En 32.55 is ~4 BLEU behind, consistent with the 4× params × 66× data disadvantage. Streaming BLEU numbers on these same test sets need a follow-up run before the head-to-head is complete — the newstest2013 streaming numbers (Table 3 mirror) are the current anchor.
 
 ### [RUN] 2026-08-19 — SFT v2 (176597831) LANDED clean at step 700 / epoch 1.23; early-stopped; embedding movement healthy
 **Config:** `phase2_sft_n10k_v2.pbs` — v1 recipe verbatim on `sft_dataset_n10k_v2.json` (9,562 rows; fallback-τ + latency reassignment fixes applied at annotator-time; collapse rate 0.05% vs v1's 28%). Ran on gpuhopper.
@@ -1593,11 +1593,11 @@ Post-train sample gens (medium/low/high latency, 3 sents) — all three correctl
 **Config:** 20 sents on `sft_n10k/final`, `check_prob_thresh 0.10`, newstest2013. Gate criteria: BLEU > 0, chunks/sent > 0, AL finite.
 **Result:** BLEU 41.93 (high — small-sample noise; the point is non-zero + coherent hyps like "A Republican strategy to oppose Obama's re-election"). AL 17.85 mean / 16.50 med. LAAL 9.44 mean. **chunks/sent = 1.00 / 20** — every sentence drained at source-exhaust without a soft commit. `source-exhausted-without-eor: 20/20`. Every g_words vector uniformly equals `src_words` (e.g., `[9,9,9,9,9,9,9]` for the 9-word / 7-target-word first sample).
 **Read.** Gate passes mechanically. **Preliminary finding:** for the v1 checkpoint, `p(EOR)` never exceeds 0.10 during READ across all 20 sents. This is expected under the P3 (i–iv) hypothesis (adaptivity is class-imbalance-suppressed) — and it's evidence that shifting from hard argmax to soft-commit-at-0.10 does NOT unlock the model's latent adaptivity, because there is no latent adaptivity at this magnitude to unlock. Full sweeps still fire per docs Week-1 plan for a defensible paper-record null across the full grid.
-**Chose:** fire all three sweeps with the docs-planned grids (thresh {0.05, 0.10, 0.20}, rank {1, 2, 3, 5}, ratio {0.1, 0.5, 1.0}) rather than adjust grids based on smoke evidence. Rationale: (i) the plan is preregistered in `docs/07-next_steps.md`; (ii) even null results across all 10 configs constitute a publishable Test A result — "adaptivity is not hidden by hard argmax at any of these thresholds"; (iii) if any config unexpectedly fires, it's a discovery.
+**Chose:** fire all three sweeps with the docs-planned grids (thresh {0.05, 0.10, 0.20}, rank {1, 2, 3, 5}, ratio {0.1, 0.5, 1.0}) rather than adjust grids based on smoke evidence. Rationale: (i) the plan is preregistered in `docs/next-steps.md`; (ii) even null results across all 10 configs constitute a publishable Test A result — "adaptivity is not hidden by hard argmax at any of these thresholds"; (iii) if any config unexpectedly fires, it's a discovery.
 **Firing:** 176599155 (thresh 3-config), 176599156 (rank 4-config), 176599157 (ratio 3-config).
 
 ### [RUN] 2026-08-18 late — Week-1 experiments fired: v2 SFT (176597831), chained streaming eval (176597836), WMT15+22 offline (176597832), softcommit smoke (176597830)
-**Config:** Task-1a-c per `docs/07-next_steps.md`. Advisor-tightened plan applied: (i) smoke the new soft-commit code before firing the 10-config sweep, (ii) split 1b into 3 policy-family jobs, (iii) match v1's hparams exactly in v2 SFT (only `--corpus_file` + `--output_dir` changed), (iv) chain-with-afterok on the v2 eval (recovery on SFT failure is `qdel` on the held eval).
+**Config:** Task-1a-c per `docs/next-steps.md`. Advisor-tightened plan applied: (i) smoke the new soft-commit code before firing the 10-config sweep, (ii) split 1b into 3 policy-family jobs, (iii) match v1's hparams exactly in v2 SFT (only `--corpus_file` + `--output_dir` changed), (iv) chain-with-afterok on the v2 eval (recovery on SFT failure is `qdel` on the held eval).
 
 **Code shipped this session (pre-firing):** `src/eval/extrinsic.py::stream_translate` now accepts three new policies — `check_prob_thresh`, `check_rank`, `check_ratio` — with CLI knobs `--commit_prob_thresh` / `--commit_rank` / `--commit_ratio`. `check_ratio` uses `p(EOR) / p(top_non_eor)` where `top_non_eor = argmax over vocab minus EOR`. Advisor-flagged sanity: `check_ratio 1.0 == check_argmax` mathematically — eyeball once results land; `check_rank 1 == check_argmax` (min-rank-on-ties convention).
 
@@ -1631,7 +1631,7 @@ Post-train sample gens (medium/low/high latency, 3 sents) — all three correctl
    - `phase2_build_sft_dataset.py` → `phase2_build_sft_dataset.py`
    - MODEL_ARM env var in eval PBS templates removed (single-arm now).
    In docs and new prose, referred to as "OT-SFT" or "our method." Legacy `sft_condB_*` refs in LOG entries are historical archaeology and stay.
-3. **Consolidate hypotheses to P1-P4.** `docs/02-hypotheses.md` cut from 570 lines / 29 sections to 125 lines / 6 sections. Layer 1 (P1-P4 paper-facing) retained; Layer 2 (H1-H23 archaeology) deleted. Governance table simplified to "which experiment supports which prediction."
+3. **Consolidate hypotheses to P1-P4.** `docs/hypotheses.md` cut from 570 lines / 29 sections to 125 lines / 6 sections. Layer 1 (P1-P4 paper-facing) retained; Layer 2 (H1-H23 archaeology) deleted. Governance table simplified to "which experiment supports which prediction."
 4. **Redefine Gate B.** No longer "OT-SFT ≥ +2 BLEU over Cond-C" (Cond-C gone); now "OT-SFT ≥ +2 BLEU over Simul-LLM's published wait-k=5 De→En number."
 
 **Verified:** grep across `src/`, `scripts/`, `jobs/` finds zero remaining `condB`/`condC` code identifiers post-refactor (only cond-A/cond-B/cond-C prose in archaeological PBS comments — those stay as historical context).
@@ -1650,7 +1650,7 @@ Post-train sample gens (medium/low/high latency, 3 sents) — all three correctl
 - **OT-SFT** (legacy `condB`) — our method, primary.
 - **WaitK-SFT** (legacy `condC_waitk`) — within-framework wait-k chunking ablation, isolates chunk-quality (Gate B).
 
-Naming table added to `docs/00-README.md`. Legacy code identifiers (`condB`, `condC_waitk`) kept in file paths to avoid breaking downstream references; docs and new prose use descriptive names.
+Naming table added to `docs/README.md`. Legacy code identifiers (`condB`, `condC_waitk`) kept in file paths to avoid breaking downstream references; docs and new prose use descriptive names.
 
 **Deleted:**
 - ~46 GB of SFT checkpoints: `sft_condA_e4b_n10k/`, `sft_condA_n10k/`, `sft_condA_n2k/`, `sft_condA_n2k_e5/`, `sft_condA_n2k_fixed/`, `sft_condA_qwen35_n10k/`.
@@ -1659,7 +1659,7 @@ Naming table added to `docs/00-README.md`. Legacy code identifiers (`condB`, `co
 
 **Refactored:**
 - `src/eval/extrinsic.py` docstring + `--model_dir` help.
-- `scripts/phase2_plot_bleu_al.py` — full rewrite. Two-figure structure (Fig. 1 = vs non-LLM on WMT15/AL, Fig. 2 = vs LLM on WMT22/LAAL). Competitor numbers as top-of-file constants for transparency; hand-populated from published tables per RELATEDWORKS.md.
+- `scripts/phase2_plot_bleu_al.py` — full rewrite. Two-figure structure (Fig. 1 = vs non-LLM on WMT15/AL, Fig. 2 = vs LLM on WMT22/LAAL). Competitor numbers as top-of-file constants for transparency; hand-populated from published tables per docs/related-work.md.
 - `scripts/phase2_compute_al_ca_approx.py` — arm list updated.
 - `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` + `phase2_inference_smoke.py` — docstring cond-A refs removed.
 - `jobs/phase2_extrinsic_stream_{full,extra_waitk,latency_sweep}.pbs` — MODEL_ARM error message updated to `condB or condC_waitk`.
@@ -1673,19 +1673,19 @@ Naming table added to `docs/00-README.md`. Legacy code identifiers (`condB`, `co
 
 ### [SESSION HANDOFF #2] 2026-08-18 late — adaptivity investigation, annotator fixes, paper structure consolidated, cond-A REMOVED
 
-**What happened this session (in addition to earlier SESSION HANDOFF).** Deep-dive investigation into H9's `chunks/sent=1.00 under check_argmax` finding revealed the mechanism (class imbalance + collapse rows), leading to two annotator-time fixes shipped in-code plus four new hypothesis probes (Tests A/B/C + prompt-format ablation). Paper structure consolidated to four core hypotheses P1-P4. **Late in session, user directed full removal of cond-A** — ~46 GB checkpoints + all cond-A code refs + PBS files deleted; live arms are now OT-SFT (formerly `condB`) + WaitK-SFT (formerly `condC_waitk`). Naming table added to `docs/00-README.md`. Comparison strategy pivots from "matched cond-A vs cond-B" to "OT-SFT + within-framework WaitK-SFT ablation vs past-work published numbers verbatim."
+**What happened this session (in addition to earlier SESSION HANDOFF).** Deep-dive investigation into H9's `chunks/sent=1.00 under check_argmax` finding revealed the mechanism (class imbalance + collapse rows), leading to two annotator-time fixes shipped in-code plus four new hypothesis probes (Tests A/B/C + prompt-format ablation). Paper structure consolidated to four core hypotheses P1-P4. **Late in session, user directed full removal of cond-A** — ~46 GB checkpoints + all cond-A code refs + PBS files deleted; live arms are now OT-SFT (formerly `condB`) + WaitK-SFT (formerly `condC_waitk`). Naming table added to `docs/README.md`. Comparison strategy pivots from "matched cond-A vs cond-B" to "OT-SFT + within-framework WaitK-SFT ablation vs past-work published numbers verbatim."
 
 **Code shipped this session:**
 1. `src/eval/extrinsic.py` — added `compute_laal()` (Papi 2022 Length-Adaptive AL) alongside AL; every future streaming eval writes both. Smoke tests passed on analytic cases.
 2. `scripts/phase2_build_sft_dataset.py` — two fixes: (a) fallback τ ladder `[0.30, 0.50, 0.70, 1.00]` to escape single-chunk-collapse rows at dataset-build time; (b) latency-token reassignment per EAST-inherited chunk-count thresholds (≤3 → high, 4-5 → medium, ≥6 → low). Both provenance-logged in each row's new `_annotator_meta` field.
 3. `src/train/sft.py` — automatic post-training cleanup of intermediate `checkpoint-*/` dirs (retains only `final/`). ~275 GB freed across existing 8 sft_ dirs.
-4. `HOUSEKEEPING.md §6.8` — documented post-job hygiene rule + manual cleanup snippet.
+4. `docs/setup.md §6.8` — documented post-job hygiene rule + manual cleanup snippet.
 
 **Docs restructured this session:**
-- `docs/02-hypotheses.md` — split into two layers. Layer 1 = four core paper-facing hypotheses P1-P4 (headline, robustness, mechanism, annotator-independence). Layer 2 = archaeological H1-H23 subsumed into P1-P4 with mapping. Fresh reader can read P1-P4 in 2 minutes and skip everything else.
-- `docs/05-phase2_sft_and_streaming.md` — added Cross-paper comparability protocol (method-family split: Fig. 1 non-LLM on WMT15/AL, Fig. 2 LLM on WMT22/LAAL, Table 3 multi-lingual WMT22 X↔En) with draft paragraph for §Experiments.
-- `docs/00-README.md` — project-state paragraph rewritten to reflect P1-P4 structure + fixes shipped.
-- `../OPTIONALS.md` — added method-improvement candidates M8 (word-level OT annotator), M9 (KV-cache reuse in annotator, 2-5× speedup), M10 (vLLM refactor, 5-10× speedup with prompt-logprobs API + prefix caching), M11 (labelled-role prompt template ablation).
+- `docs/hypotheses.md` — split into two layers. Layer 1 = four core paper-facing hypotheses P1-P4 (headline, robustness, mechanism, annotator-independence). Layer 2 = archaeological H1-H23 subsumed into P1-P4 with mapping. Fresh reader can read P1-P4 in 2 minutes and skip everything else.
+- `docs/_archive/phase2-sft-and-streaming.md` — added Cross-paper comparability protocol (method-family split: Fig. 1 non-LLM on WMT15/AL, Fig. 2 LLM on WMT22/LAAL, Table 3 multi-lingual WMT22 X↔En) with draft paragraph for §Experiments.
+- `docs/README.md` — project-state paragraph rewritten to reflect P1-P4 structure + fixes shipped.
+- `_archive/OPTIONALS.md` — added method-improvement candidates M8 (word-level OT annotator), M9 (KV-cache reuse in annotator, 2-5× speedup), M10 (vLLM refactor, 5-10× speedup with prompt-logprobs API + prefix caching), M11 (labelled-role prompt template ablation).
 
 **Decisions this session (also codified as `[DECISION]` entries below):**
 - Multi-lingual: pivot from en-es/en-vi/en-ar to SiMT-Multi-90K's 4 shipped pairs (en-de/en-zh/en-cs/en-ru) — GPT-4 chunks shipped free.
@@ -1716,9 +1716,9 @@ Naming table added to `docs/00-README.md`. Legacy code identifiers (`condB`, `co
 
 **Fresh session's context prime (read in this order):**
 1. This handoff entry.
-2. `docs/00-README.md` project-state paragraph.
-3. `docs/02-hypotheses.md` Layer 1 (P1-P4 only, skip Layer 2 unless doing archaeology).
-4. `docs/07-next_steps.md` Week 1 priorities.
+2. `docs/README.md` project-state paragraph.
+3. `docs/hypotheses.md` Layer 1 (P1-P4 only, skip Layer 2 unless doing archaeology).
+4. `docs/next-steps.md` Week 1 priorities.
 5. The five `[DECISION]` entries below (venue targeting, multi-lingual pivot, multi-seed drop, cond-C scope, cross-paper plot split).
 
 ### [RUN] 2026-08-18 late — Cond-C SFT (176560794) FAILED at step 150 — safetensors errno 7; needs re-run
@@ -1733,7 +1733,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 
 **Chose:** delete `checkpoint-50` (superseded by 100) and `checkpoint-150` (corrupt); keep `checkpoint-100` as sole survivor for optional inspection. Re-run Cond-C after diagnosing the save-path issue.
 
-**Read.** Gate B (H15) result is BLOCKED on Cond-C re-run. First things to try on re-run: (a) reduce `--per_device_batch_size 4 → 2` to shrink saved gradient buffers; (b) set `--save_safetensors=False` to fall back to pickled `pytorch_model.bin` (loses safetensors safety but avoids errno 7); (c) if that lands, port the flag to a `SAFE_SERIALIZATION` env var in the SFT wrapper. Log the diagnosis when it lands as Bug #6 in `docs/00-README.md`.
+**Read.** Gate B (H15) result is BLOCKED on Cond-C re-run. First things to try on re-run: (a) reduce `--per_device_batch_size 4 → 2` to shrink saved gradient buffers; (b) set `--save_safetensors=False` to fall back to pickled `pytorch_model.bin` (loses safetensors safety but avoids errno 7); (c) if that lands, port the flag to a `SAFE_SERIALIZATION` env var in the SFT wrapper. Log the diagnosis when it lands as Bug #6 in `docs/README.md`.
 
 ### [RUN] 2026-08-18 late — Checkpoint cleanup: intermediate `checkpoint-N/` dirs deleted; only `final/` kept
 **Config:** manual cleanup pass across all `results/phase2/sft_*/` dirs.
@@ -1762,7 +1762,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 
 **Revisit if:** SimulPL turns out to also report on WMT15 — then it moves onto Fig. 1 as an LLM data-point in the non-LLM plot (or Fig. 1 becomes "all methods on WMT15"). Verify at plot-assembly time.
 
-**Also this session:** added LAAL (Papi 2022) alongside AL to `src/eval/extrinsic.py::compute_al` — every future streaming eval writes both. Smoke test on analytic cases passed. See `docs/05-phase2_sft_and_streaming.md` "Cross-paper comparability protocol" for the full split table + draft paragraph for §Experiments.
+**Also this session:** added LAAL (Papi 2022) alongside AL to `src/eval/extrinsic.py::compute_al` — every future streaming eval writes both. Smoke test on analytic cases passed. See `docs/_archive/phase2-sft-and-streaming.md` "Cross-paper comparability protocol" for the full split table + draft paragraph for §Experiments.
 
 ### [SESSION HANDOFF] 2026-08-18 evening — end-of-session state, direction pivot to Multi-lingual + Multi-90K
 
@@ -1778,7 +1778,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 **Direction pivots decided this session (all with corresponding [DECISION] entries below):**
 1. Multi-lingual via SiMT-Multi-90K's 4 shipped pairs (en-de/en-zh/en-cs/en-ru), not en-es/en-vi/en-ar. Multi-90K has GPT-4 chunks shipped → cond-A free.
 2. Multi-seed dropped — signal is +5 BLEU vs seed noise ~0.5 BLEU. Rebuttal-cycle add only.
-3. H18 (τ generalisation) + H19 (mixed-lingual training) added to `docs/02-hypotheses.md`.
+3. H18 (τ generalisation) + H19 (mixed-lingual training) added to `docs/hypotheses.md`.
 4. Submission target: ARR March (was January) — multi-lingual expansion worth the 2 months for direct EAST Table 2 head-to-head.
 5. Cond-C scope: within-framework wait-k chunking ablation, NOT full Simul-LLM reproduction. Simul-LLM (Cond-C') deferred to rebuttal.
 
@@ -1793,15 +1793,15 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 - `05-phase2_sft_and_streaming.md` — head-to-head with EAST Tables 2/3 added; "What Phase 2 owes" reorganised by criticality with dates + gates.
 - `00-README.md` — project-state paragraph refreshed; 5th bug (MAX_SHARDS gate) added.
 - `../LOG.md` — 4 new [DECISION] entries + this handoff.
-- `../RELATEDWORKS.md` — baseline comparison plan with within-framework scope caveat.
-- `../OPTIONALS.md` — Blocker 4 added; venue table updated with acceptance-probability ranges.
+- `related-work.md` — baseline comparison plan with within-framework scope caveat.
+- `_archive/OPTIONALS.md` — Blocker 4 added; venue table updated with acceptance-probability ranges.
 
 **Code/data artifacts created this session:**
 - `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` — wait-k=5 procedural chunking within EAST format. Smoke-tested + built full dataset (9,567 rows, 0 skipped, 15-25 chunks per sent).
 - `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` — submitted as 176560794.
 - `results/phase2/condC_waitk5_n10k_dataset.json` — 9.8 MB.
 
-**Next-session context prime.** Read order: this handoff entry → `docs/00-README.md` project state → `docs/07-next_steps.md` Week 1 (Cond-C status) → the [DECISION] entries below (venue targeting, Cond-C critical, multi-lingual via Multi-90K). Concrete first tasks: (i) check whether Cond-C SFT 176560794 has landed and if so run streaming eval, (ii) fire COMET-22 rerun on sft_condA/B_n10k checkpoints, (iii) fire WMT22 De→En offline rerun for head-to-head number.
+**Next-session context prime.** Read order: this handoff entry → `docs/README.md` project state → `docs/next-steps.md` Week 1 (Cond-C status) → the [DECISION] entries below (venue targeting, Cond-C critical, multi-lingual via Multi-90K). Concrete first tasks: (i) check whether Cond-C SFT 176560794 has landed and if so run streaming eval, (ii) fire COMET-22 rerun on sft_condA/B_n10k checkpoints, (iii) fire WMT22 De→En offline rerun for head-to-head number.
 
 ---
 
@@ -1818,7 +1818,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 **Revisit if:** τ-generalisation smoke (H18 Week 4) shows τ=0.30 is not universal (>1 BLEU delta from best per-pair τ) — then report per-language τ and reframe the "fire-and-forget" claim.
 
 ### [DECISION] 2026-08-18 — Multi-seed protocol dropped; add in rebuttal cycle if raised
-**Context:** OPTIONALS.md §5 required 3 seeds + paired bootstrap on the headline comparison for Findings-tier credibility. Session review: cond-B beats cond-A by +5 BLEU across wait_k∈{3,5,7} — an order of magnitude above typical per-seed noise (~0.5 BLEU on WMT De→En at 10K). Additional seeds cost ~9 GPU-hours and don't move numbers materially given the signal magnitude.
+**Context:** docs/_archive/OPTIONALS.md §5 required 3 seeds + paired bootstrap on the headline comparison for Findings-tier credibility. Session review: cond-B beats cond-A by +5 BLEU across wait_k∈{3,5,7} — an order of magnitude above typical per-seed noise (~0.5 BLEU on WMT De→En at 10K). Additional seeds cost ~9 GPU-hours and don't move numbers materially given the signal magnitude.
 
 **Chose:** drop multi-seed from initial submission plan. Rebuttal-cycle add if reviewers explicitly demand. Frees compute for multi-lingual expansion (Weeks 5-6).
 
@@ -1861,7 +1861,7 @@ Failure cases:
 **Revisit if:** Cond-C at n=10K comes back within 1 BLEU of cond-B at matched wait-k (kills the "chunk quality" story vs "wait-k SFT works"). Then either downshift to IWSLT with matched-recipe-methodology framing, OR try scale (10K→50K) to see if the gap widens with more data.
 
 ### [DECISION] 2026-08-18 — Cond-C (wait-k chunking within EAST framework) is a CRITICAL within-framework ablation, not optional
-**Context:** OPTIONALS.md currently frames baseline comparisons as "nice to have." Advisor pass flagged this as the #1 Findings-blocker. Simul-LLM (Agostinelli et al. ACL 2024) trains LLaMA-2-7B on wait-k-truncated pairs with no special tokens — that IS the closest SFT baseline our method must be measured against. Without a matched-conditions test, "OT chunks > wait-k chunks" is defended by argument, not experiment.
+**Context:** docs/_archive/OPTIONALS.md currently frames baseline comparisons as "nice to have." Advisor pass flagged this as the #1 Findings-blocker. Simul-LLM (Agostinelli et al. ACL 2024) trains LLaMA-2-7B on wait-k-truncated pairs with no special tokens — that IS the closest SFT baseline our method must be measured against. Without a matched-conditions test, "OT chunks > wait-k chunks" is defended by argument, not experiment.
 
 **Scope decision (advisor 2026-08-18):** Cond-C is a **within-framework chunking-rule ablation**, NOT a full Simul-LLM reproduction. Same EAST tokens, same interleave, same recipe — only chunk boundaries differ (wait-k=5 procedural rule vs OT-derived). This is a *cleaner* mechanism test because framework is held constant. A full Simul-LLM reproduction (Cond-C', no EAST tokens) is deferred to rebuttal cycle if reviewers demand it.
 
@@ -2012,7 +2012,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 **Read.** Toy SFT smoke passes. trl.SFTTrainer + Gemma-4-E2B + extended tokenizer + EAST interleave format run end-to-end without errors. Special tokens are seen by the model and their embeddings train. Ready to scale to condition-A on 2K (Gate 2 proper).
 
 ### [DECISION] 2026-08-16 — Phase 2 kickoff sequencing: SFT scaffold first, annotation second
-**Context.** Gate 1 landed (OT PASSES, JS FAILS — Phase 2 unblocked per `TIMELINE.md`). Naive "start Phase 2" reading was "submit 10K OT annotation." But OT costs 28s/sentence × 10K = 78h — over the 48h walltime cap, forcing a sharded submission with no validated downstream. Condition A (GPT-4 tags) needs zero annotation — the tags ship with SiMT-660K.
+**Context.** Gate 1 landed (OT PASSES, JS FAILS — Phase 2 unblocked per `docs/_archive/TIMELINE.md`). Naive "start Phase 2" reading was "submit 10K OT annotation." But OT costs 28s/sentence × 10K = 78h — over the 48h walltime cap, forcing a sharded submission with no validated downstream. Condition A (GPT-4 tags) needs zero annotation — the tags ship with SiMT-660K.
 **Options.**
 - (a) Submit 10K OT annotation (sharded 5×15h) NOW, scaffold SFT during the wait.
 - (b) Scaffold SFT wrapper first (no GPU), validate on shipped condition-A tags via toy SFT (~15 min GPU), then annotate condition-B on a small subset (2K) to close the pipeline end-to-end. Scale to 10K once the 2K loop lands.
@@ -2024,7 +2024,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 
 **Concrete sequence:**
 1. **Now, no GPU:** `scripts/phase2_prepare_tokenizer.py` — add 5 EAST special tokens to Gemma-4-E2B tokenizer, save to `results/phase2/tokenizer-extended/`. Versioned once; used consistently by SFT and inference (advisor blocker: tokenizer drift between annotate/train/infer breaks every downstream metric).
-2. **Now, no GPU:** `src/train/sft.py` — trl.SFTTrainer wrapper. Loads extended tokenizer + resized model. Builds EAST-interleaved strings from `source_chunks`/`target_chunks`. **Full-sequence CE loss (not completion-only)** per EAST §3.2 — see RELATEDWORKS.md §EAST-#3 note that this is an intentional break from Wang et al. 2024.
+2. **Now, no GPU:** `src/train/sft.py` — trl.SFTTrainer wrapper. Loads extended tokenizer + resized model. Builds EAST-interleaved strings from `source_chunks`/`target_chunks`. **Full-sequence CE loss (not completion-only)** per EAST §3.2 — see docs/related-work.md §EAST-#3 note that this is an intentional break from Wang et al. 2024.
 3. **~15 min GPU:** toy SFT — 100 rows of shipped GPT-4-chunked SiMT-660K, condition A, 20 steps. Verify (i) special-token embeddings move, (ii) trl loop completes, (iii) a post-train generation places `<|end-of-read|>`/`<|end-of-write|>` markers plausibly.
 4. **After (3) works:** condition-A SFT on 2K subset (latency-balanced, seed 42, ≤80 tok filter — matches EAST Fig. 6). ~1-2h GPU. **This is Gate 2.**
 5. **Parallel to (4):** OT annotation on the SAME 2K indices. Either sharded (5×~3h) or batched (~2h with M10 speedup). Deferred until after (3) — no point burning SU before pipeline is validated.
@@ -2065,10 +2065,10 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 - **JS FAILS as a headline criterion.** No mechanism concentration — effective MATCH tied across bins. Root cause is coverage: JS collapses to single-chunk on 54% of reordering / 51% of mild sentences at strict tau because JS doesn't fire when P_pre and P_full concentrate on different-but-semantically-similar tokens. JS remains valid as a cheap ablation for demonstrating OT's advantage; not a viable "ship shorter method section" fallback.
 
 **Interim metric refinement (this session).** Two rounds of correction to `phase1_reordering_bin.py`:
-- (1) After JS results, added `MATCH_eff` (treats single-chunk collapse as MISS) alongside `MATCH_cond` — because the initial conditional-only metric was misleadingly high on the reordering bin (single-chunk collapses were being dropped rather than counted as MISS). Pass criteria in `TIMELINE.md` Gate 1 updated to reference effective MATCH and coverage floor 70%.
+- (1) After JS results, added `MATCH_eff` (treats single-chunk collapse as MISS) alongside `MATCH_cond` — because the initial conditional-only metric was misleadingly high on the reordering bin (single-chunk collapses were being dropped rather than counted as MISS). Pass criteria in `docs/_archive/TIMELINE.md` Gate 1 updated to reference effective MATCH and coverage floor 70%.
 - (2) After OT results, caught a floating-point corner case: when the matched-count τ produced a commit trace with all identical values, per-sentence Pearson denominator was mathematically zero but computed to ~1e-16 due to FP roundoff in `sum(xs)/m` — yielding a defined Pearson < 0.85 which counted as MATCH. Fixed by requiring `ours_chunks > 1` explicitly in the match predicate. Affected 5 OT-reord + 10 OT-mild sentences. Corrected MATCH_eff dropped from initial reads of 61.4% (reord) / 74.3% (mild) to 54.3% / 60.0%. Verdict unchanged.
 
-**Unlocks:** Phase 2 SFT per `TIMELINE.md`. Annotate 10K then 50K with the OT winning config; matched-condition SFT (A = GPT-4 tags, B = ours) on Gemma-4-E2B; extrinsic eval on WMT15 newstest2015 with BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
+**Unlocks:** Phase 2 SFT per `docs/_archive/TIMELINE.md`. Annotate 10K then 50K with the OT winning config; matched-condition SFT (A = GPT-4 tags, B = ours) on Gemma-4-E2B; extrinsic eval on WMT15 newstest2015 with BLEU/COMET/BLEURT vs AL/LAAL/**AL-CA**.
 
 **Reservations (all logged; none blocking).**
 - Gate 1 measures agreement-with-GPT-4, not gold-alignment tag quality. RWTH-A eval (EAST App. E.4 mirror) runs in Phase 3.
@@ -2089,7 +2089,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 
 ### [DECISION] 2026-08-16 — Gate 1 redefined: stratified-by-reordering on 200 SiMT-660K sentences; RWTH-A deferred to Phase 3 appendix
 
-**Context.** Prior Gate 1 (per original `TIMELINE.md`) required scoring both ours' and GPT-4's tags on the RWTH De→En manually aligned corpus under EAST Eq. 4 (`A = (1/T) Σ I[a_i ≤ g_i]`). RWTH data has landed; script not yet written. Writing it was blocked on one open choice: what baseline to compare against, since GPT-4 chunks do not exist for the RWTH sentences (RWTH ≠ WMT15-derived SiMT-660K). Additionally: EAST itself put RWTH in App. E.4, not in the main body — the intrinsic result was supporting evidence, not the headline. Session with the user surfaced that the original gate framing may be doing too much work — it was trying to be both a "greenlight for Phase 2" gate and a "paper-headline intrinsic result", and neither role is well-served by that setup.
+**Context.** Prior Gate 1 (per original `docs/_archive/TIMELINE.md`) required scoring both ours' and GPT-4's tags on the RWTH De→En manually aligned corpus under EAST Eq. 4 (`A = (1/T) Σ I[a_i ≤ g_i]`). RWTH data has landed; script not yet written. Writing it was blocked on one open choice: what baseline to compare against, since GPT-4 chunks do not exist for the RWTH sentences (RWTH ≠ WMT15-derived SiMT-660K). Additionally: EAST itself put RWTH in App. E.4, not in the main body — the intrinsic result was supporting evidence, not the headline. Session with the user surfaced that the original gate framing may be doing too much work — it was trying to be both a "greenlight for Phase 2" gate and a "paper-headline intrinsic result", and neither role is well-served by that setup.
 
 **Options.**
 - (a) Keep Gate 1 as RWTH-A. Write `src/eval/rwth_intrinsic.py`; decide baseline (fast_align / GPT-4-API / wait-k floor); run. Compute-cheap but adds ~1 week of engineering + 1 open baseline decision, and produces a metric on a dataset that EAST relegated to appendix.
@@ -2103,7 +2103,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 4. Avoids the RWTH-baseline ambiguity — comparing against GPT-4 on the SAME sentences is unambiguous.
 5. Compute-cheap: bumps existing n=48 sweep to n=200 (OT ~2h, JS ~15 min). No additional engineering beyond a bin-analysis script.
 
-**Explicit caveat (must survive into any paper draft):** without gold alignment, agreement-with-GPT-4 is *not* tag quality. Gate 1 is a greenlight for Phase 2, not a paper result. The paper's intrinsic story still requires the RWTH-A eval in Phase 3. This caveat is stated in `TIMELINE.md` Gate 1 and `EXPERIMENTS.md` §Two-evaluations-not-one.
+**Explicit caveat (must survive into any paper draft):** without gold alignment, agreement-with-GPT-4 is *not* tag quality. Gate 1 is a greenlight for Phase 2, not a paper result. The paper's intrinsic story still requires the RWTH-A eval in Phase 3. This caveat is stated in `docs/_archive/TIMELINE.md` Gate 1 and `docs/experiments.md` §Two-evaluations-not-one.
 
 **Bin thresholds (fixed absolute, not sample-dependent quintiles — advisor point):**
 - `monotone`: GPT-4 per-sentence Pearson(i/n, j/m) ≥ 0.90
@@ -2119,7 +2119,7 @@ Fixed thresholds mean the bins mean the same thing at n=200, n=509 (Phase 3), an
 
 **Additional advisor-recommended step (adopted):** Precompute GPT-4 per-sentence Pearson on the *full* 660K first (~5 min on login node, pure chunk arithmetic — no GPU), then stratified-sample 200 (~70 per bin). Prevents the reordering bin from being sample-noise-dominated at 200 with a balanced-latency (not balanced-reordering) sample. Alternative would be to keep the balanced-latency sample and report CIs — chose to precompute for cleaner numbers.
 
-**Files modified this decision.** `CLAUDE.md` (empirical-status line + dataset table), `TIMELINE.md` (Gate 1 + Phase 3), `EXPERIMENTS.md` (§Two evaluations), `docs/next_steps.md` (reordered §1 = new Gate 1), `docs/data.md` (RWTH note).
+**Files modified this decision.** `CLAUDE.md` (empirical-status line + dataset table), `docs/_archive/TIMELINE.md` (Gate 1 + Phase 3), `docs/experiments.md` (§Two evaluations), `docs/next_steps.md` (reordered §1 = new Gate 1), `docs/data.md` (RWTH note).
 
 **Revisit if:** Gate 1 fails on the n=200 stratified analysis but the winning config was correct at n=48. Would suggest either the bin thresholds are wrong (too strict on reordering) or that the n=48 result was sample-noise. In either case, log the diagnosis and either loosen the pass criteria or investigate the mechanism.
 
@@ -2276,7 +2276,7 @@ Coverage now complete: τ=0.70 gives 100% fire with Pearson_min=0.34 (lowest per
 **Read:**
 - Aggregate Pearson matching GPT-4's is a weak positive. Per-sentence r=0.149 says we're catching *different* structure, not the same structure.
 - **RWTH is now genuinely necessary** — the intrinsic Eq. 4 metric is the only arbiter that can decide whether our early commits are unfaithful (a_i > g_i violations) or whether GPT-4 is over-conservative. Without ground alignment, the extrinsic Pearson comparison is inconclusive.
-- **OT is now the natural next criterion.** METHOD.md §3 hypothesis: uncertainty among semantically-nearby candidates is committable; uncertainty among semantically-distant candidates isn't. On idx=553850 the model is confident about "Exemption" but not the sentence structure — an embedding-aware ground cost should distinguish. Whether it delivers on Gemma-4-E2B is empirical.
+- **OT is now the natural next criterion.** docs/_archive/method-formal.md §3 hypothesis: uncertainty among semantically-nearby candidates is committable; uncertainty among semantically-distant candidates isn't. On idx=553850 the model is confident about "Exemption" but not the sentence structure — an embedding-aware ground cost should distinguish. Whether it delivers on Gemma-4-E2B is empirical.
 - The entropy-vs-JS chunk-count matched comparison still not clean; skipping until OT is in place — the ordering question (does the oracle help?) is worth revisiting with three criteria in the CRITERIA registry, not two.
 
 **What this does NOT resolve:**
@@ -2357,24 +2357,24 @@ Random floor on chat matrices: JS still barely loses to random (2pp gap, was 15p
 
 **Repo:** clean, on `main` at `9e120cb`, synced with `github.com/dipankarsrirag/simt-tor-26`.
 
-**Docs written this session:** `CLAUDE.md` (dataset roles table + WMT test-set section), `METHOD.md`, `EXPERIMENTS.md` (Stage-I scope, WMT22 correction from Ar/Zh error), `TIMELINE.md` (Phase 0 concrete deliverables + Stretches A/B/C), `RELATEDWORKS.md` (two-stage recipe), `HOUSEKEEPING.md` (paths, compute, git, data table, venv discipline), `LOG.md` (this file), `OPTIONALS.md` (venue verdict, 3 blockers, 4 strengthening, 7 method improvements, closest-work distinctions, 2×2 novelty frame).
+**Docs written this session:** `CLAUDE.md` (dataset roles table + WMT test-set section), `docs/_archive/method-formal.md`, `docs/experiments.md` (Stage-I scope, WMT22 correction from Ar/Zh error), `docs/_archive/TIMELINE.md` (Phase 0 concrete deliverables + Stretches A/B/C), `docs/related-work.md` (two-stage recipe), `docs/setup.md` (paths, compute, git, data table, venv discipline), `LOG.md` (this file), `docs/_archive/OPTIONALS.md` (venue verdict, 3 blockers, 4 strengthening, 7 method improvements, closest-work distinctions, 2×2 novelty frame).
 
 **Infrastructure scaffolded:** `.gitignore`, `create-venv.sh` (not yet run), `scripts/make_job.py` (gpuhopper+copyq only, shared `/g/data/po67/dipankar/cache/`), `pbs/env.sh`, `pbs/templates/job.pbs.tpl` (auto-resubmit), `src/constants.py`, `src/{annotator,train,eval}/`, `scripts/download_data.sh`, `data/` symlink to `/g/data/po67/dipankar/data/simt-tor-26/`.
 
 **Pending — needs human decision before Phase 0 code starts:**
 
-1. **Scale framing.** OPTIONALS.md §Blocker 1: Option A ("at 2B" preregistered) vs Option B (post-writeup 8B replication on `Llama-3.1-8B-Instruct`). Recommendation A. Blocks the paper's abstract wording; not blocking Phase 0 code.
-2. **OPTIONALS.md method-improvement scope.** Which of M1–M7 go in the annotator. Recommendation: M1, M2, M3, M5, M7 (High-priority set + trivial M5). Blocks the annotator design — decide before Phase 1.
+1. **Scale framing.** docs/_archive/OPTIONALS.md §Blocker 1: Option A ("at 2B" preregistered) vs Option B (post-writeup 8B replication on `Llama-3.1-8B-Instruct`). Recommendation A. Blocks the paper's abstract wording; not blocking Phase 0 code.
+2. **docs/_archive/OPTIONALS.md method-improvement scope.** Which of M1–M7 go in the annotator. Recommendation: M1, M2, M3, M5, M7 (High-priority set + trivial M5). Blocks the annotator design — decide before Phase 1.
 3. **Paper name.** Suggested `DRIFT` (Distributional Read/write Inference-Free Training). Not blocking code, but easier to fix before project-name strings enter scripts.
 
 **Pending — infrastructure work not blocked on human decision:**
 
 4. **RWTH De→En gold alignments URL.** `scripts/download_data.sh` step 5 is a TODO placeholder. EAST paper §E.4 has the source. Once URL is in, re-run `qsub jobs/download_data.pbs` (idempotent — will only fetch RWTH). Blocks the Gate 1 intrinsic annotation-quality measure.
 5. **`bash create-venv.sh` — layers `pot / trl / accelerate / peft / datasets / sacrebleu` onto the shared `.venv-fil`.** Not yet run. Coordinate with `first-impressions-last` and `simul-mt` owners per HOUSEKEEPING §4.1 shared-venv discipline. Blocks any code that imports these packages.
-6. **BLEURT-20 fetch to `MODEL_BASE/BLEURT-20/`.** Flagged in HOUSEKEEPING §5. Needed for the third-metric row in `EXPERIMENTS.md`. Trivial `copyq` job; not blocking early phases.
+6. **BLEURT-20 fetch to `MODEL_BASE/BLEURT-20/`.** Flagged in HOUSEKEEPING §5. Needed for the third-metric row in `docs/experiments.md`. Trivial `copyq` job; not blocking early phases.
 7. **`scripts/build_off_multi.py` — Off-Multi-120K assembly from WMT17-21 test data à la ALMA.** Only needed for Stretch A (multilingual Stage II), not for the primary Stage-I result.
 
-**Context prime for next session.** Read order: `CLAUDE.md` (project spec + dataset table) → `OPTIONALS.md` (paper strategy; the 2×2 diagonal-move framing is the anchor) → `TIMELINE.md` Phase 0. Do not start writing the training pipeline — the annotator is the project, the SFT is plumbing.
+**Context prime for next session.** Read order: `CLAUDE.md` (project spec + dataset table) → `docs/_archive/OPTIONALS.md` (paper strategy; the 2×2 diagonal-move framing is the anchor) → `docs/_archive/TIMELINE.md` Phase 0. Do not start writing the training pipeline — the annotator is the project, the SFT is plumbing.
 
 ---
 
@@ -2389,14 +2389,14 @@ Random floor on chat matrices: JS still barely loses to random (2pp gap, was 15p
 ### [DECISION] 2026-08-14 — Scope: Stage I only; Stage II is stretch
 **Context:** EAST is a two-stage recipe (§3.2 of the paper): full-weight SFT on `SiMT-De-En-660K` (Stage I, De→En) then LoRA on `SiMT-Multi-90K` + `Off-Multi-120K` (Stage II, 8 directions). Our 14-week timeline with a 2B backbone cannot cover both properly.
 **Options:** (a) Stage I only, matched comparison at De→En. (b) Stage I + Stage II subset, sacrificing ablation depth. (c) Full recipe on a smaller data subset each — matches EAST shape but neither stage lands cleanly.
-**Chose:** (a). The claim lives in the annotation criterion, which decides tag placement in Stage I; Stage II just LoRA-adds on top of Stage-I tags and can't move the criterion. EAST publishes Stage-I numbers separately (Figure 3 "EAST-Stage-I"), giving us a matched target. Stretches A, B, C in `TIMELINE.md` are the multilingual, document-level, and conversational extensions — all gated on Gate 3.
+**Chose:** (a). The claim lives in the annotation criterion, which decides tag placement in Stage I; Stage II just LoRA-adds on top of Stage-I tags and can't move the criterion. EAST publishes Stage-I numbers separately (Figure 3 "EAST-Stage-I"), giving us a matched target. Stretches A, B, C in `docs/_archive/TIMELINE.md` are the multilingual, document-level, and conversational extensions — all gated on Gate 3.
 **Revisit if:** the Stage-I result lands early (say by week 8) with room to spare, and Dipankar wants to add multilingual before the writeup.
 
 ### [DECISION] 2026-08-14 — Primary backbone: `Qwen3.5-2B`
-**Context:** EAST's Table 2 uses Llama-3-8B-Instruct. Our compute is one H200 per job (see `HOUSEKEEPING.md` §6), which comfortably fits 2B full-weight tuning with margin for the annotator's prefix-batch passes. Larger backbones would eat Phase 2 walltime that we need for `tau` sweeps and ablations.
+**Context:** EAST's Table 2 uses Llama-3-8B-Instruct. Our compute is one H200 per job (see `docs/setup.md` §6), which comfortably fits 2B full-weight tuning with margin for the annotator's prefix-batch passes. Larger backbones would eat Phase 2 walltime that we need for `tau` sweeps and ablations.
 **Options:** (a) `Qwen3.5-2B`, (b) `gemma-4-E2B-it`, (c) 4B variants of either.
 **Chose:** (a) as primary, (b) as the cross-family annotator-ablation partner. Sizes matched at 2B so the annotator-model ablation isolates family, not scale. Scale-up to 4B stays available (both on disk) if Gate 3 passes with headroom.
-**Revisit if:** `METHOD.md` §8 sanity checks show `Qwen3.5-2B` produces degenerate `i*[j]` traces (commit points cluster at sentence end). Then switch to `gemma-4-E2B-it` and re-check.
+**Revisit if:** `docs/_archive/method-formal.md` §8 sanity checks show `Qwen3.5-2B` produces degenerate `i*[j]` traces (commit points cluster at sentence end). Then switch to `gemma-4-E2B-it` and re-check.
 
 ### [DECISION] YYYY-MM-DD — Annotator is the same model as the fine-tuning backbone
 **Context:** EAST uses GPT-4 as an external annotator. We need to decide whether to self-annotate or use a larger teacher.

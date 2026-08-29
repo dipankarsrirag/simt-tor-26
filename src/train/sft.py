@@ -1,5 +1,5 @@
 """
-SFT wrapper for Phase 2 (EXPERIMENTS.md §Primary result).
+SFT wrapper for Phase 2 (docs/experiments.md §Primary result).
 
 Trains a backbone LLM (Gemma-4-E2B / E4B / Qwen3.5-2B) on EAST-interleaved
 training strings using trl.SFTTrainer. Consumes an OT-annotated dataset
@@ -491,7 +491,7 @@ def main():
     ap.add_argument("--keep_checkpoints", action="store_true",
                     help="Retain intermediate checkpoint-*/ dirs after training. "
                     "Default: delete them once final/ is saved (saves 50-300 GB per run). "
-                    "See HOUSEKEEPING.md §Post-job hygiene.")
+                    "See docs/setup.md §Post-job hygiene.")
 
     # v3 experiment flags (2026-08-19). Address v2's degenerate check_argmax
     # via two orthogonal interventions on top of the annotator-time fixes:
@@ -769,7 +769,7 @@ def main():
     # `sft_summary.json`. Each intermediate checkpoint is 3-30 GB on this
     # project — leaving them accumulates ~50-300 GB per SFT run. Gated by
     # `--keep_checkpoints` for the rare case someone wants to inspect the
-    # training trajectory. See HOUSEKEEPING.md §"Post-job hygiene".
+    # training trajectory. See docs/setup.md §"Post-job hygiene".
     if not args.keep_checkpoints:
         import shutil
         removed = []

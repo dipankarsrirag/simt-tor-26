@@ -22,9 +22,9 @@ Goal: bring an undergrad assistant onto the codebase. Current state = 14 weeks o
 
 ```
 simt-tor-26/
-├── CLAUDE.md               EXPERIMENTS.md    HOUSEKEEPING.md
-├── LOG.md                  METHOD.md         OPTIONALS.md
-├── RELATEDWORKS.md         TIMELINE.md       create-venv.sh
+├── CLAUDE.md               docs/experiments.md    docs/setup.md
+├── LOG.md                  docs/_archive/method-formal.md         docs/_archive/OPTIONALS.md
+├── docs/related-work.md         docs/_archive/TIMELINE.md       create-venv.sh
 ├── data -> …               docs/ (9 files)
 ├── figures/  jobs/ (14 subdirs, 485 PBS)  logs/  pbs/  results/  scripts/ (48)
 ├── src/ (annotator/ eval/ train/ constants.py + __pycache__/)
@@ -42,18 +42,18 @@ simt-tor-26/
 ├── data -> …               # KEEP (symlink).
 ├── docs/
 │   ├── 00-README.md        # Doc index (rewrite from current 00-README.md).
-│   ├── 01-method.md        # ← METHOD.md (moved from root).
+│   ├── 01-method.md        # ← docs/_archive/method-formal.md (moved from root).
 │   ├── 02-hypotheses.md    # KEEP.
-│   ├── 03-experiments.md   # ← EXPERIMENTS.md (moved from root).
+│   ├── 03-experiments.md   # ← docs/experiments.md (moved from root).
 │   ├── 04-data.md          # KEEP (renamed from 06-data.md).
-│   ├── 05-setup.md         # ← HOUSEKEEPING.md §1-3 (trimmed).
-│   ├── 06-related-work.md  # ← RELATEDWORKS.md (moved).
+│   ├── 05-setup.md         # ← docs/setup.md §1-3 (trimmed).
+│   ├── 06-related-work.md  # ← docs/related-work.md (moved).
 │   ├── 07-next-steps.md    # KEEP.
 │   ├── 08-followup-experiments.md   # KEEP (locked 2026-08-29).
 │   ├── 09-refactor.md      # THIS FILE.
 │   └── _archive/
-│       ├── OPTIONALS.md
-│       ├── TIMELINE.md
+│       ├── docs/_archive/OPTIONALS.md
+│       ├── docs/_archive/TIMELINE.md
 │       ├── CLAUDE-original.md      # (content folded into README + docs/01)
 │       ├── HOUSEKEEPING-full.md    # (full ops manual)
 │       ├── 03-phase1_annotator_experiments.md
@@ -157,12 +157,12 @@ simt-tor-26/
 |---|---|---|
 | `README.md` | **NEW** | Doesn't exist yet. Entry point for new contributor. |
 | `CLAUDE.md` | `docs/_archive/CLAUDE-original.md` | Content folded into new README + `docs/01-method.md`. |
-| `METHOD.md` | `docs/01-method.md` | Detailed algorithm — belongs in docs. |
-| `EXPERIMENTS.md` | `docs/03-experiments.md` | Ablation grid; reference doc. |
-| `HOUSEKEEPING.md` | `docs/05-setup.md` (trimmed) + `docs/_archive/HOUSEKEEPING-full.md` | Trim to §1-3 (venv/paths/data fetch). Full 23KB version archived. |
-| `RELATEDWORKS.md` | `docs/06-related-work.md` | Lit review reference. |
-| `TIMELINE.md` | `docs/_archive/TIMELINE.md` | Superseded by LOG.md. |
-| `OPTIONALS.md` | `docs/_archive/OPTIONALS.md` | 74KB dumping ground; 80% is stale venue-targeting discussion. |
+| `docs/_archive/method-formal.md` | `docs/01-method.md` | Detailed algorithm — belongs in docs. |
+| `docs/experiments.md` | `docs/03-experiments.md` | Ablation grid; reference doc. |
+| `docs/setup.md` | `docs/05-setup.md` (trimmed) + `docs/_archive/HOUSEKEEPING-full.md` | Trim to §1-3 (venv/paths/data fetch). Full 23KB version archived. |
+| `docs/related-work.md` | `docs/06-related-work.md` | Lit review reference. |
+| `docs/_archive/TIMELINE.md` | `docs/_archive/TIMELINE.md` | Superseded by LOG.md. |
+| `docs/_archive/OPTIONALS.md` | `docs/_archive/OPTIONALS.md` | 74KB dumping ground; 80% is stale venue-targeting discussion. |
 | `LOG.md` | (no change — top level) | Primary record. Internal cross-references. |
 
 ### Results directories
@@ -203,7 +203,7 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW).
 - `src/` — the library. Three subpackages: annotator (offline chunk-tag placement), train (SFT recipe), eval (streaming inference + metrics).
 - `scripts/` — pipeline entry-points, numbered 01→06 in run order.
 - `jobs/` — PBS wrappers for Gadi. `annotate/`, `train/`, `eval/`, plus `loop_resubmit.sh` for queue draining.
-- `docs/` — everything else. Read `docs/00-README.md` first; it's the doc index.
+- `docs/` — everything else. Read `docs/README.md` first; it's the doc index.
 - `LOG.md` — decision + run log. **Never edited retroactively.**
 
 ## Quickstart
@@ -230,7 +230,7 @@ python scripts/03_plot_bleu_al.py
 ## Where to read next
 
 - **Algorithm:** `docs/01-method.md`
-- **Falsifiable claims:** `docs/02-hypotheses.md`
+- **Falsifiable claims:** `docs/hypotheses.md`
 - **Experiment plan (paper submission):** `docs/08-followup-experiments.md`
 - **Setup / paths / accounts:** `docs/05-setup.md`
 ```
@@ -239,7 +239,7 @@ python scripts/03_plot_bleu_al.py
 
 Sequentially invokes 01→06 with the canonical config paths. Undergrad's "just make it run" button. Includes checkpoints so partial re-runs work.
 
-### `docs/00-README.md` (rewrite)
+### `docs/README.md` (rewrite)
 
 New content: doc index with 3-sentence description of each 01→09 file. Points to `README.md` for the top-level onboarding.
 
@@ -282,7 +282,7 @@ One-liner per archived script explaining why it's there.
 
 **Phase A — safe (git-visible, reversible via revert):**
 1. Create `docs/_archive/`, `scripts/_archive/`, `jobs/_archive/`, `results/_archive/`, `src/_archive/` (empty dirs with `.gitkeep`).
-2. Move top-level MD files per table. Update all internal cross-references (`METHOD.md` → `docs/01-method.md` etc.) via `grep -rl` + `sed`.
+2. Move top-level MD files per table. Update all internal cross-references (`docs/_archive/method-formal.md` → `docs/01-method.md` etc.) via `grep -rl` + `sed`.
 3. Move `phase1_*.py`, `probe_*.py`, `smoke_*.py`, `phase0_*`, `phase2_v[1-5]_*.py` to `scripts/_archive/`.
 4. Rename active scripts to `01_..06_` prefix. Update any PBS files that reference them.
 5. Move `src/train/sft.py` → `src/_archive/sft_pre_v6.py`. Rename `src/train/sft_v6.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
@@ -307,7 +307,7 @@ One-liner per archived script explaining why it's there.
 |---|---|
 | Broken PBS paths after `jobs/` restructure | Update all `#PBS -o` and `source` lines via scripted rewrite; smoke-test 1 PBS from each stage post-move. |
 | Broken `import` after `src/train/sft.py` swap | `grep -rn "from src.train.sft"` before + after; verify identical count. |
-| `LOG.md` cross-references break | LOG.md references `METHOD.md`, `EXPERIMENTS.md`, etc. — `sed -i 's|METHOD\.md|docs/01-method.md|g' LOG.md`. |
+| `LOG.md` cross-references break | LOG.md references `docs/_archive/method-formal.md`, `docs/experiments.md`, etc. — `sed -i 's|METHOD\.md|docs/01-method.md|g' LOG.md`. |
 | `docs/*.md` cross-references break | Same treatment. |
 | Undergrad thinks archived stuff is deleted | `_archive/README.md` explains what's there and when to look. |
 | Refactor disrupts live jobs in queue | Complete refactor when queue is empty (currently is — verified 2026-08-29). |

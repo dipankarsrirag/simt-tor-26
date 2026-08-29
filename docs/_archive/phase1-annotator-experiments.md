@@ -222,7 +222,7 @@ Matched to each config's most-informative τ (chunk-count closest to GPT-4's 4.0
 **Read — Gate 1 PASSES for OT.**
 
 - **Monotone bin:** OT matches GPT-4 chunk-count tightly (Δ = 0.67) at 100% coverage. Pass.
-- **Reordering bin:** OT effective MATCH 54.3% strictly beats monotone 38.6% by 15.7 pp — the mechanism claim (margin widens on reordering-divergent pairs) confirmed at n=210. Coverage 77.1% above the 70% threshold in `TIMELINE.md` Gate 1. Pass.
+- **Reordering bin:** OT effective MATCH 54.3% strictly beats monotone 38.6% by 15.7 pp — the mechanism claim (margin widens on reordering-divergent pairs) confirmed at n=210. Coverage 77.1% above the 70% threshold in `docs/_archive/TIMELINE.md` Gate 1. Pass.
 - **Mild bin:** effective MATCH 60.0% — the highest of any bin, with the tightest chunk-count Δ. The middle-ground non-monotone sentences where OT's embedding-grounded ground cost has the most to bite on.
 - METHOD §8 sanity: positional Pearson median 0.78 (mono 0.88, mild 0.73, reord 0.73); zero identity-like traces; 5.7% terminal-degenerate. Criterion is non-degenerate. See `results/gate1/gate1_report.md`.
 

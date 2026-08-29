@@ -13,7 +13,7 @@
 #PBS -k oed
 #PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/phase2_extrinsic_offline_wmt.log
 
-# Task 1c per docs/07-next_steps.md: offline BLEU on WMT15 newstest2015
+# Task 1c per docs/next-steps.md: offline BLEU on WMT15 newstest2015
 # (Fig. 1 competitor axis) AND WMT22 newstest2022 De→En (Fig. 2 + EAST
 # Table 2 head-to-head axis). Same v1 checkpoint sft_n10k/final that has
 # been the anchor number all along.

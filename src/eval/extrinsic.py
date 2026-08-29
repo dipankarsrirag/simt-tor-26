@@ -239,7 +239,7 @@ def stream_translate(
       - check_argmax : commit if argmax(logits) == EOR
       - wait_k       : commit every k source words (deterministic schedule)
 
-    Soft-commit adaptivity probes (Test A per docs/07-next_steps.md — asks
+    Soft-commit adaptivity probes (Test A per docs/next-steps.md — asks
     whether learned adaptivity is hidden behind hard argmax):
       - check_prob_thresh : commit if p(EOR) > commit_prob_thresh
       - check_rank        : commit if rank(EOR) <= commit_rank
@@ -468,7 +468,7 @@ def compute_laal(g_words: List[int], x_len: int, y_len: int) -> Optional[float]:
     De->En streaming outputs (Papi et al. 2022).
 
     Reported alongside AL so competitor numbers using either variant can
-    be compared to ours — see docs/05-phase2_sft_and_streaming.md
+    be compared to ours — see docs/_archive/phase2-sft-and-streaming.md
     'Cross-paper comparability protocol'.
     """
     if y_len == 0 or x_len == 0 or not g_words:

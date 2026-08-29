@@ -181,7 +181,7 @@ Each off-diagonal: ~1h SFT + ~5h streaming eval on gpuhopper. Total ~36 hours GP
 ## Week 8 — Writing sprint
 
 **Concrete work:**
-1. Draft in this order: (a) intro + 2×2 framing pitch (see `../OPTIONALS.md`), (b) related work (Simul-LLM/TransLLaMa/AlignAtt/DaP-SiMT distinctions), (c) method (annotator + OT criterion + dataset construction + τ-generalisation claim per H18), (d) experiments (Table 1 matched De→En matrix, Table 2 multi-lingual mixed per H19 mirroring EAST Table 2, Fig. 3 BLEU-vs-AL, Fig. 4 data scale, Fig. 3-bis reordering-stratified), (e) discussion (H9 reframing + limitations).
+1. Draft in this order: (a) intro + 2×2 framing pitch (see `_archive/OPTIONALS.md`), (b) related work (Simul-LLM/TransLLaMa/AlignAtt/DaP-SiMT distinctions), (c) method (annotator + OT criterion + dataset construction + τ-generalisation claim per H18), (d) experiments (Table 1 matched De→En matrix, Table 2 multi-lingual mixed per H19 mirroring EAST Table 2, Fig. 3 BLEU-vs-AL, Fig. 4 data scale, Fig. 3-bis reordering-stratified), (e) discussion (H9 reframing + limitations).
 2. Rebuttal-fodder: multi-seed on champion pair (if reviewers ask); RWTH-A intrinsic (Phase 3 appendix); en-ar reproduction as appendix if time.
 
 **Target submission:** ARR March (multi-lingual expansion pushes January cycle). ACL 2027 commitment window follows March cycle.
@@ -216,7 +216,7 @@ Each off-diagonal: ~1h SFT + ~5h streaming eval on gpuhopper. Total ~36 hours GP
 ## Not blockers (deferrable to post-writeup / rebuttal)
 
 - Off-Multi-120K + Stage-II LoRA.
-- 8B replication (`OPTIONALS.md` §Blocker 1 Option B — post-writeup only).
+- 8B replication (`docs/_archive/OPTIONALS.md` §Blocker 1 Option B — post-writeup only).
 - en-es / en-vi / en-ar — post-writeup stretch, appendix at best.
 - Multi-seed + paired bootstrap — rebuttal cycle only.
 - BLEURT-20 metric alongside sacrebleu — nice-to-have, not required for Findings.
@@ -224,4 +224,4 @@ Each off-diagonal: ~1h SFT + ~5h streaming eval on gpuhopper. Total ~36 hours GP
 
 ## Weekly checkpoint reminder
 
-Bring `../LOG.md` to Dipankar meetings, not a summary — `../HOUSEKEEPING.md` §1.
+Bring `../LOG.md` to Dipankar meetings, not a summary — `setup.md` §1.

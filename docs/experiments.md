@@ -4,9 +4,9 @@
 
 EAST is a two-stage recipe (see `CLAUDE.md` §What EAST actually does): full-weight SFT on `SiMT-De-En-660K` (De→En, "Stage I"), then LoRA on `SiMT-Multi-90K` + `Off-Multi-120K` for multilingual generalisation ("Stage II"). **Our primary result is Stage I only.**
 
-Why: (1) the claim lives in the annotation criterion, and Stage I is where that criterion decides tag placement — Stage II inherits Stage I's tags and just adds LoRA. (2) EAST reports Stage I separately (EAST-Stage-I in their Figure 3), giving us a published matched-comparison target. (3) A 14-week student project on a 2B backbone (`HOUSEKEEPING.md` §5) has runway for Stage I plus ablations, not for a full Stage II sweep.
+Why: (1) the claim lives in the annotation criterion, and Stage I is where that criterion decides tag placement — Stage II inherits Stage I's tags and just adds LoRA. (2) EAST reports Stage I separately (EAST-Stage-I in their Figure 3), giving us a published matched-comparison target. (3) A 14-week student project on a 2B backbone (`docs/setup.md` §5) has runway for Stage I plus ablations, not for a full Stage II sweep.
 
-Stage II is a stretch — see `TIMELINE.md`. Do not spend Phase 2 budget on it.
+Stage II is a stretch — see `docs/_archive/TIMELINE.md`. Do not spend Phase 2 budget on it.
 
 ## Primary result
 
@@ -15,7 +15,7 @@ Stage II is a stretch — see `TIMELINE.md`. Do not spend Phase 2 budget on it.
 | Condition | Tags from |
 |---|---|
 | A (baseline) | GPT-4 chunks — the `source_chunks`/`target_chunks` fields shipped with `SiMT-De-En-660K`, wrapped with `<|eor|>`/`<|eow|>` and the `low`/`medium`/`high` latency indicator per EAST §3.2 |
-| B (ours) | Backbone, per `METHOD.md`. Same wrapping and indicators. |
+| B (ours) | Backbone, per `docs/_archive/method-formal.md`. Same wrapping and indicators. |
 
 Both conditions use EAST's loss recipe: cross-entropy on **source + target + special tokens** — not the target-only masking used by Wang et al. 2024. One epoch, full-weight tuning, matching EAST-Stage-I.
 
@@ -71,7 +71,7 @@ AL-CA is the one that matters for us. All our expensive computation is offline, 
 
 **Test sets.**
 - **Primary — WMT15 De→En newstest2015.** Matches EAST Figure 3. This is the entry point; everything before the extension section runs here.
-- **Stretch — WMT22 X↔En, 8 directions (De/Zh/Ru/Cs ↔ En).** Matches EAST Figure 4. Only touch after Gate 3 (`TIMELINE.md`) passes and only if Stage II is being attempted — sentence-level SiMT numbers here require a Stage-II-trained model. Zh↔En and Cs↔En are where the reordering-divergence claim lives (fronted objects, verb-final subordinate clauses); those are the interesting directions if we run this at all.
+- **Stretch — WMT22 X↔En, 8 directions (De/Zh/Ru/Cs ↔ En).** Matches EAST Figure 4. Only touch after Gate 3 (`docs/_archive/TIMELINE.md`) passes and only if Stage II is being attempted — sentence-level SiMT numbers here require a Stage-II-trained model. Zh↔En and Cs↔En are where the reordering-divergence claim lives (fronted objects, verb-final subordinate clauses); those are the interesting directions if we run this at all.
 - **Stretch — WMT22 De/Ru→En document-level.** EAST §4.3 zero-shot. Reuses the Figure-4 sentence data grouped by `docid`; no extra fetch. Only meaningful with a Stage-II model.
 
 ## Guardrails

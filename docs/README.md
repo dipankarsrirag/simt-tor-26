@@ -16,12 +16,12 @@ Numbered. Read in order — later files assume earlier ones. Written so whoever 
 The single-source-of-authority files at the repo root are still:
 
 - `../CLAUDE.md` — the project claim and non-negotiable invariants (kept lean; points here).
-- `../METHOD.md` — the annotation algorithm, precisely.
-- `../EXPERIMENTS.md` — the ablation grid, baselines, metrics.
-- `../TIMELINE.md` — phases and gates.
+- `_archive/method-formal.md` — the annotation algorithm, precisely.
+- `experiments.md` — the ablation grid, baselines, metrics.
+- `_archive/TIMELINE.md` — phases and gates.
 - **`../LOG.md`** — append-only run + decision log. The primary record; `docs/` is a curated summary of it.
-- `../HOUSEKEEPING.md` — compute, paths, accounts, ops rules.
-- `../OPTIONALS.md` — paper strategy: venue verdict, blockers, positioning.
+- `setup.md` — compute, paths, accounts, ops rules.
+- `_archive/OPTIONALS.md` — paper strategy: venue verdict, blockers, positioning.
 
 ## Naming — the live experimental arm (2026-08-22 update)
 

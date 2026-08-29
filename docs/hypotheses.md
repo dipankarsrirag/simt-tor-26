@@ -18,7 +18,7 @@ The project's central falsifiable claim is in `../CLAUDE.md`. Four paper-facing 
 - (ii) Offline BLEU is unchanged between the two arms (null result — OT chunking doesn't degrade full-source translation).
 - (iii) Absolute BLEU on published test sets (WMT15 De→En newstest2015 + WMT22 De→En newstest2022) lands in the range of past LLM SiMT methods at matched-latency: within a few BLEU of EAST-Stage-I-8B at 4×/66× disadvantage, and competitive with Simul-LLM / TransLLaMa / SimulPL / ITST at matched published bins.
 
-**Test.** OT-SFT (already trained, `sft_n10k/final/`). Streaming eval on newstest2013 dev, then WMT15 + WMT22 De→En for competitor comparison. Cross-paper plotting via `scripts/phase2_plot_bleu_al.py` — competitor numbers hand-populated from published tables per RELATEDWORKS.md.
+**Test.** OT-SFT (already trained, `sft_n10k/final/`). Streaming eval on newstest2013 dev, then WMT15 + WMT22 De→En for competitor comparison. Cross-paper plotting via `scripts/phase2_plot_bleu_al.py` — competitor numbers hand-populated from published tables per docs/related-work.md.
 
 **Empirical status (as of 2026-08-22, N=50 FLORES devtest sanity):**
 - (i) 🟡 PARTIAL — v6b-ctrl-merged3 (OT + EAST §3.1 merge) is +4.36 BLEU over raw v6b-ctrl on the matched-cond-A 4 directions, closing 76% of the +5.72 gap that separated raw OT from GPT-4 chunks. Still 1.36 BLEU behind cond-A on average. **On de-en at low_medium latency, merged3 (31.88) beats cond-A (30.90).**

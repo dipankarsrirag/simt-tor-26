@@ -42,7 +42,7 @@ Answers to the three ambiguities from the previous draft (see git history for th
 | Symbol | Meaning |
 |---|---|
 | **Backbone** | The LM used both as annotator (offline) and as the SFT starting point. |
-| **Corpus** | The parallel-text pool used to derive training rows. Two options: `east-corpus` (SiMT-660K + SiMT-Multi-90K, GPT-4 chunks shipped) or `htgt-corpus` (europarl + news-comm + TED2020, our human-target curation; see `docs/06-data.md`). |
+| **Corpus** | The parallel-text pool used to derive training rows. Two options: `east-corpus` (SiMT-660K + SiMT-Multi-90K, GPT-4 chunks shipped) or `htgt-corpus` (europarl + news-comm + TED2020, our human-target curation; see `docs/data.md`). |
 | **Annotator** | The model whose distributions decide OT chunk boundaries. Usually the same as **Backbone** (self-annotation) but can differ (cross-annotation). |
 | **Policy** | The SFT-time chunking recipe: `ot` (ours), `wait-k` (fixed), `conv-simt` (Wang 2024), `gpt4-chunks` (EAST-shipped). |
 
@@ -266,11 +266,11 @@ Each SFT run comparable to `v6b_v2bal_v3_htgt` — ~12 GPU-h on H200 (see `LOG.m
 
 Per cell:
 - **SacreBLEU** (headline).
-- **COMET** (`wmt22-comet-da`) for Figs 1-3 to catch BLEU-COMET disagreement (`EXPERIMENTS.md` §Metrics).
+- **COMET** (`wmt22-comet-da`) for Figs 1-3 to catch BLEU-COMET disagreement (`docs/experiments.md` §Metrics).
 - **AL** (Ma 2019 §4, word-unit).
 - **AL-CA** (computation-aware) for Fig 1 only — the paper's promised streaming metric; verifies our offline-first design (~50 ms/word target).
 
-Not yet computed at scale — see `docs/07-next_steps.md` §COMET rescoring.
+Not yet computed at scale — see `docs/next-steps.md` §COMET rescoring.
 
 ---
 
@@ -307,4 +307,4 @@ Not yet computed at scale — see `docs/07-next_steps.md` §COMET rescoring.
 - Metrics table (per direction, per latency, all 5 figures collapsed) → App. A.
 - COMET / AL-CA comparison table → App. B.
 
-Every figure result reported, positive or negative — selective reporting is a Findings-reviewer footgun (`EXPERIMENTS.md` §Guardrails).
+Every figure result reported, positive or negative — selective reporting is a Findings-reviewer footgun (`docs/experiments.md` §Guardrails).

@@ -11,10 +11,10 @@ Weeks are indicative. Gates are not.
 Understand what exists before building anything.
 
 - [ ] Read EAST (arXiv 2504.09570) properly. §3 (both training stages, loss recipe on source+target+special tokens) and Appendices A, C, E.4 are load-bearing.
-- [ ] Confirm `SiMT-De-En-660K` (~220K rows per latency level, De→En, WMT15-derived) and `SiMT-Multi-90K` (8 directions) — both fetched by `scripts/download_data.sh`. `Off-Multi-120K` is a stretch-only build (see `HOUSEKEEPING.md` §3).
+- [ ] Confirm `SiMT-De-En-660K` (~220K rows per latency level, De→En, WMT15-derived) and `SiMT-Multi-90K` (8 directions) — both fetched by `scripts/download_data.sh`. `Off-Multi-120K` is a stretch-only build (see `docs/setup.md` §3).
 - [ ] Confirm the shipped `source_chunks`/`target_chunks` fields are the GPT-4 baseline. Reconstruct one training row by hand: interleave with `<|eor|>`/`<|eow|>`, prepend the `low`/`medium`/`high` latency indicator, verify against EAST's Figure 18 format.
 - [ ] Get the RWTH De→En gold alignment data (App. E.4). URL is a TODO in `scripts/download_data.sh` — confirm from the paper and re-run the copyq job.
-- [ ] **Fix Stage-I scope in `LOG.md`** as a decision entry — Stage II is stretch, see `EXPERIMENTS.md`.
+- [ ] **Fix Stage-I scope in `LOG.md`** as a decision entry — Stage II is stretch, see `docs/experiments.md`.
 
 **Gate 0:** you can state, in two sentences, what EAST does and what we are changing. If not, re-read.
 
@@ -27,7 +27,7 @@ This is the project. Everything else is plumbing.
 - [ ] Implement `P_full[j]` and `P_pre[i][j]` extraction. Batch the prefixes.
 - [ ] Implement the OT criterion (top-k support, embedding cost, Sinkhorn).
 - [ ] Implement KL and entropy variants — same interface, swappable.
-- [ ] Annotate 200 sentences. Run every sanity check in `METHOD.md` §8.
+- [ ] Annotate 200 sentences. Run every sanity check in `docs/_archive/method-formal.md` §8.
 - [ ] Score our tags and GPT-4's tags on the RWTH intrinsic measure.
 
 **Gate 1 (week 5) — the important one.** Redefined 2026-08-16 (see `LOG.md`): a **stratified-by-reordering aggregate on 200 SiMT-660K sentences**, using GPT-4's own per-sentence Pearson as the reordering-severity proxy. Sentences binned monotone (Pearson ≥ 0.90), mild (0.70–0.90), reordering (< 0.70). Per bin report chunk-count delta vs GPT-4, per-sentence Pearson (ours at matched-count tau), and MATCH rate under threshold 0.85. RWTH-A moves to Phase 3 as an appendix result mirroring EAST §E.4's positioning.
@@ -59,7 +59,7 @@ Pass criteria (report both conditional and effective MATCH rate — the latter t
 
 ## Phase 3 — Ablations + RWTH intrinsic appendix (weeks 11–12)
 
-Run in the order given in `EXPERIMENTS.md`. Divergence, then annotator model, then monotonicity, then the rest.
+Run in the order given in `docs/experiments.md`. Divergence, then annotator model, then monotonicity, then the rest.
 
 The cross-annotation ablation is not optional — it is the answer to the first question any reviewer asks about self-annotation.
 
@@ -70,8 +70,8 @@ The cross-annotation ablation is not optional — it is the answer to the first 
 ## Phase 4 — Write-up (weeks 13–14)
 
 - [ ] Draft. Lead with the intrinsic result, then extrinsic.
-- [ ] State the exposure-bias limitation (`METHOD.md` §9) rather than waiting to be asked.
-- [ ] Authorship was agreed at project start — see `HOUSEKEEPING.md`.
+- [ ] State the exposure-bias limitation (`docs/_archive/method-formal.md` §9) rather than waiting to be asked.
+- [ ] Authorship was agreed at project start — see `docs/setup.md`.
 
 ---
 
@@ -83,7 +83,7 @@ Rationale if it happens: EAST's Stage II is LoRA on `SiMT-Multi-90K` (8 directio
 
 Two things to settle before running anything:
 
-- **Off-Multi-120K assembly.** Not published on HF. Rebuild from WMT17-21 test data following ALMA (Xu et al. 2024a). `HOUSEKEEPING.md` §3 flags this as a TODO — the assembly script is not written.
+- **Off-Multi-120K assembly.** Not published on HF. Rebuild from WMT17-21 test data following ALMA (Xu et al. 2024a). `docs/setup.md` §3 flags this as a TODO — the assembly script is not written.
 - **Which directions actually get re-annotated.** All 8 is expensive. Pick a subset that supports the divergence-widens-with-reordering claim (De/Zh/Cs → En, maybe En→Zh). Argue the subset in `LOG.md` before running.
 
 ## Stretch B: document-level SiMT (EAST §4.3)

@@ -60,7 +60,7 @@ Then SFT exactly as EAST: loss on source, target, and special tokens (not the pr
 
 The annotator is the same model we fine-tune. Cleaner story (no external teacher, no GPT-4 dependency, no distillation), and it means the tags are calibrated to the model that has to act on them.
 
-**The risk this creates is error amplification, not contamination.** Wherever `M` is miscalibrated — German verb-final constructions are the obvious candidate — the tags inherit the miscalibration and training makes `M` confident about it. `EXPERIMENTS.md` includes a cross-annotation ablation that settles this. Run it; do not assume.
+**The risk this creates is error amplification, not contamination.** Wherever `M` is miscalibrated — German verb-final constructions are the obvious candidate — the tags inherit the miscalibration and training makes `M` confident about it. `docs/experiments.md` includes a cross-annotation ablation that settles this. Run it; do not assume.
 
 ## 6. Latency control
 

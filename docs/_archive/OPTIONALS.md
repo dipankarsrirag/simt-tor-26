@@ -1,4 +1,4 @@
-# OPTIONALS.md — improvements ranked by paper impact
+# docs/_archive/OPTIONALS.md — improvements ranked by paper impact
 
 The plan and method as written are **IWSLT-publishable** if the Stage-I primary lands. For **ACL/EMNLP Findings**, three blockers stand between us and a defensible submission — none of them fatal, all of them addressable within the 14-week window if scheduled now. **ICLR is the wrong venue** and should not be optimised for (representation-learning / algorithmic-breadth story, not what we have).
 
@@ -104,7 +104,7 @@ That's the paper. **The core claim is a two-cell move in a 2×2** — trivially 
 
 ### 1. Scale framing — preregister "at 2B" or add an 8B replication
 
-**Problem.** EAST's headline numbers (Fu et al. 2025, Table 2) are on Llama-3-8B-Instruct. Ours are on Qwen3.5-2B (`HOUSEKEEPING.md` §5). Two soft-punt lines in the current docs — "matched comparison holds at any scale" (`CLAUDE.md`) and "matched comparison is still valid as long as both conditions use our pipeline" (`EXPERIMENTS.md` §Baselines) — will not survive a Findings review. Reviewers expect either (a) scale-matched evidence or (b) explicit scale-conditioned claim.
+**Problem.** EAST's headline numbers (Fu et al. 2025, Table 2) are on Llama-3-8B-Instruct. Ours are on Qwen3.5-2B (`docs/setup.md` §5). Two soft-punt lines in the current docs — "matched comparison holds at any scale" (`CLAUDE.md`) and "matched comparison is still valid as long as both conditions use our pipeline" (`docs/experiments.md` §Baselines) — will not survive a Findings review. Reviewers expect either (a) scale-matched evidence or (b) explicit scale-conditioned claim.
 
 **Two clean paths, pick one:**
 
@@ -115,7 +115,7 @@ That's the paper. **The core claim is a two-cell move in a 2×2** — trivially 
 
 ### 2. REINA distinction — a full subsection, not a bullet
 
-**Problem.** REINA (Hirschkind et al., AAAI 2026, arXiv 2508.04946) is structurally the closest published idea. `RELATEDWORKS.md` flags it in one sentence. Findings reviewers who read REINA and our paper back-to-back will not see the distinction unless we make it explicit at section level.
+**Problem.** REINA (Hirschkind et al., AAAI 2026, arXiv 2508.04946) is structurally the closest published idea. `docs/related-work.md` flags it in one sentence. Findings reviewers who read REINA and our paper back-to-back will not see the distinction unless we make it explicit at section level.
 
 **What REINA actually does (§3.1 of the paper, page 3):**
 
@@ -141,7 +141,7 @@ That is: **the log-probability-of-the-next-token ratio under full vs partial inp
 
 ### 3. Exposure bias — measure it on dev, do not just admit it
 
-**Problem.** `METHOD.md` §9 says "measure if time allows; state regardless." That's not enough. The gap between reference-conditioned `P_pre[i][j] = p(y_j | S_≤i, T_<j)` (data-construction) and self-conditioned `p(y_j | S_≤i, ŷ_<j)` (inference) is directly quantifiable on dev — no ablation grid, just one forward pass at a handful of `tau` values.
+**Problem.** `docs/_archive/method-formal.md` §9 says "measure if time allows; state regardless." That's not enough. The gap between reference-conditioned `P_pre[i][j] = p(y_j | S_≤i, T_<j)` (data-construction) and self-conditioned `p(y_j | S_≤i, ŷ_<j)` (inference) is directly quantifiable on dev — no ablation grid, just one forward pass at a handful of `tau` values.
 
 **Concrete diagnostic to add to Phase 1** (after Gate 1, before Phase 2):
 
@@ -161,9 +161,9 @@ That is: **the log-probability-of-the-next-token ratio under full vs partial inp
 
 ### 4. Baseline within-framework ablations — Cond-C (wait-k chunking) and Cond-D (`<wait>`-token variant)
 
-**Problem.** As of 2026-08-18, `RELATEDWORKS.md` argues we beat Simul-LLM (Agostinelli et al., ACL 2024) and TransLLaMa (Koshkin et al., Findings EMNLP 2024) by construction. Findings reviewers will demand a matched-conditions comparison to at least one competitor's *mechanism* transposed into our framework — otherwise the "our chunking is better" claim is defended purely by argument, not experiment.
+**Problem.** As of 2026-08-18, `docs/related-work.md` argues we beat Simul-LLM (Agostinelli et al., ACL 2024) and TransLLaMa (Koshkin et al., Findings EMNLP 2024) by construction. Findings reviewers will demand a matched-conditions comparison to at least one competitor's *mechanism* transposed into our framework — otherwise the "our chunking is better" claim is defended purely by argument, not experiment.
 
-**Scope caveat (advisor 2026-08-18).** Cond-C is NOT a full Simul-LLM reproduction — Simul-LLM trains on plain `(src_prefix, tgt_prefix)` pairs with no special tokens; ours keeps the full EAST format (`<latency>`, `<|end-of-read|>`, `<|end-of-write|>`) but replaces OT-derived chunk boundaries with a wait-k=5 procedural rule. This is a **within-framework chunking-rule ablation** — cleaner for the mechanism claim (framework held constant, only chunking rule varies) but not a framework-free reproduction. See `docs/02-hypotheses.md` H15 for the reframed scope statement.
+**Scope caveat (advisor 2026-08-18).** Cond-C is NOT a full Simul-LLM reproduction — Simul-LLM trains on plain `(src_prefix, tgt_prefix)` pairs with no special tokens; ours keeps the full EAST format (`<latency>`, `<|end-of-read|>`, `<|end-of-write|>`) but replaces OT-derived chunk boundaries with a wait-k=5 procedural rule. This is a **within-framework chunking-rule ablation** — cleaner for the mechanism claim (framework held constant, only chunking rule varies) but not a framework-free reproduction. See `docs/hypotheses.md` H15 for the reframed scope statement.
 
 **Cond-C (wait-k procedural chunking within EAST) — Gate B, Week 1.** Same 9,567 sentences, same tokens, same SFT recipe. Chunks: first 5 src words → 1 tgt; then 1 src / 1 tgt until exhaustion. `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` (built 2026-08-18) + `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` (submitted as job 176560794). Pass: cond-B ≥ +2 BLEU over Cond-C averaged over wait_k∈{3,5,7}. Failure kills the within-framework chunking-rule claim and forces IWSLT retreat.
 
@@ -171,9 +171,9 @@ That is: **the log-probability-of-the-next-token ratio under full vs partial inp
 
 **Rebuttal-cycle framework-free reproductions (Cond-C', Cond-D').** If a reviewer demands plain-Simul-LLM or plain-TransLLaMa reproductions (no EAST tokens), we build them in the rebuttal window. ~2 days each. Not part of initial submission because framework confound would let the reviewer argue *against* our contribution.
 
-**Effort.** Cond-C: done (dataset built, SFT queued). Cond-D: 1 day scripting + ~40min SFT + ~5h streaming eval. Fits inside Weeks 1-2 of `docs/07-next_steps.md`.
+**Effort.** Cond-C: done (dataset built, SFT queued). Cond-D: 1 day scripting + ~40min SFT + ~5h streaming eval. Fits inside Weeks 1-2 of `docs/next-steps.md`.
 
-**Why this became a blocker only recently.** Original OPTIONALS.md framed cond-C/D as "nice-to-have"; 2026-08-18 advisor pass flagged that competing SFT-based SiMT methods must be compared at matched conditions or reviewers reject on baseline coverage. Cond-C/D moved from OPTIONALS to CRITICAL. Corresponding `[DECISION]` entry in `LOG.md`.
+**Why this became a blocker only recently.** Original docs/_archive/OPTIONALS.md framed cond-C/D as "nice-to-have"; 2026-08-18 advisor pass flagged that competing SFT-based SiMT methods must be compared at matched conditions or reviewers reject on baseline coverage. Cond-C/D moved from OPTIONALS to CRITICAL. Corresponding `[DECISION]` entry in `LOG.md`.
 
 ## Strengthening (non-blocking, real paper-impact per hour)
 
@@ -183,7 +183,7 @@ That is: **the log-probability-of-the-next-token ratio under full vs partial inp
 
 **Why it's the paper's motivation figure.** Without it, the intro's core claim — *"EAST's data construction is biased against reordering examples"* — is an assertion. With it, it's evidence. Reviewers read Figure 1 first; if it lands the motivation, the rest of the paper coasts.
 
-**Recommendation.** Move it from `CLAUDE.md`'s "half a day's work, no training" aside to `TIMELINE.md` Phase 0 as a concrete deliverable, alongside the data-format sanity check. It doesn't need the annotator built — it only needs `SiMT-De-En-660K` (already fetched) + awesome-align or fast_align for the alignment stat.
+**Recommendation.** Move it from `CLAUDE.md`'s "half a day's work, no training" aside to `docs/_archive/TIMELINE.md` Phase 0 as a concrete deliverable, alongside the data-format sanity check. It doesn't need the annotator built — it only needs `SiMT-De-En-660K` (already fetched) + awesome-align or fast_align for the alignment stat.
 
 ### 5. Multiple seeds + paired bootstrap
 
@@ -191,19 +191,19 @@ Standard at Findings; currently unspecified. The `LOG.md` template mentions `see
 
 **Concrete change:** every headline number in `RESULTS.md` (the table format is TBD) runs on **3 seeds** minimum (`42, 43, 44`). Report mean ± std. For the primary A-vs-B comparison, run **paired bootstrap on 1000 resamples of the test set** for BLEU/COMET/BLEURT differences; report p-value and 95% CI on the delta.
 
-Add to `EXPERIMENTS.md` §Guardrails: *"Single-seed results are debugging output. Anything in a table gets three seeds and a paired bootstrap."*
+Add to `docs/experiments.md` §Guardrails: *"Single-seed results are debugging output. Anything in a table gets three seeds and a paired bootstrap."*
 
 Cost: 3× annotation and 3× SFT for the primary comparison. That is significant. Restrict multi-seed to the headline table + the divergence ablation; single-seed is fine for the top-k support / data-size sweeps.
 
 ### 6. Data-efficiency reframing — the "10K, no API cost" story
 
-**Current framing** (implicit in `METHOD.md` §7): *"Annotate a subset (10K–50K) — EAST Fig. 6 shows most benefit at 10K."*
+**Current framing** (implicit in `docs/_archive/method-formal.md` §7): *"Annotate a subset (10K–50K) — EAST Fig. 6 shows most benefit at 10K."*
 
 **Better framing for the paper:** *"Zero API cost. 10K sentences. Matched or better than EAST's 10K GPT-4-annotated."*
 
 This is the same experiment, framed differently. Reviewers love a data-efficiency story with a cost narrative attached. The GPT-4 API cost for annotating 10K WMT15 De-En sentences at EAST's three-latency-level prompt is not zero — public GPT-4 pricing gives roughly *$X per 10K annotations* (the student should compute this from OpenAI's current pricing at write-up time). Ours is one full-source forward pass + `n` prefix passes on a H200, i.e., wall time not spend, and repeatable at zero marginal cost per re-annotation.
 
-**Add to `EXPERIMENTS.md` §Primary result:** a single sentence in the abstract / intro paragraph that frames the win as "cost + quality", not just quality. The 10K-vs-660K data-size ablation stays as-is; only the framing changes.
+**Add to `docs/experiments.md` §Primary result:** a single sentence in the abstract / intro paragraph that frames the win as "cost + quality", not just quality. The 10K-vs-660K data-size ablation stays as-is; only the framing changes.
 
 ### 7. Catchy name — 30 minutes, real impact
 
@@ -286,9 +286,9 @@ See §Blocker 2 above. **The distinction is the paper.** If we get this wrong, t
 
 ## Method improvements — concrete algorithmic changes
 
-The blockers and strengthening items above are about framing, measurement, and positioning. This section is about the algorithm itself. Seven candidate changes, ordered by paper impact. Each has a concrete change to `METHOD.md`, a distinction from prior work read directly, and a specific "does the paper get stronger" test.
+The blockers and strengthening items above are about framing, measurement, and positioning. This section is about the algorithm itself. Seven candidate changes, ordered by paper impact. Each has a concrete change to `docs/_archive/method-formal.md`, a distinction from prior work read directly, and a specific "does the paper get stronger" test.
 
-**Reading `METHOD.md` §§2–4 as the baseline:** commit at `i*[j] = min { i : D(P_full[j], P_pre[i][j]) < tau }`, then enforce greedy monotonicity `i*[j] = max(i*[j], i*[j-1])`, then emit EAST's interleaved format. The improvements below sit on top.
+**Reading `docs/_archive/method-formal.md` §§2–4 as the baseline:** commit at `i*[j] = min { i : D(P_full[j], P_pre[i][j]) < tau }`, then enforce greedy monotonicity `i*[j] = max(i*[j], i*[j-1])`, then emit EAST's interleaved format. The improvements below sit on top.
 
 ### M0. τ selection provenance — pin the primary choice, don't leave it floating
 
@@ -298,13 +298,13 @@ cond-B dataset construction (`scripts/phase2_build_sft_dataset.py --tau 0.30`,
 §Config D-ext table): 90% fire, chunk-count 4.67 (vs GPT-4's 4.06), positional
 Pearson med 0.81. This provenance is currently one line in the build script's
 docstring and one line in `LOG.md`'s 2026-08-16 cond-B dataset entry — for the
-paper it needs to land in `METHOD.md` §3 (criterion + threshold) with a
+paper it needs to land in `docs/_archive/method-formal.md` §3 (criterion + threshold) with a
 one-sentence justification, and any sensitivity ablation over `τ ∈ {0.20, 0.30, 0.50}`
 in Phase 2 SFT would be worth ~2 GPU-hours on n=2K.
 
 ### M1. Scheduled-sampling annotation — fix exposure bias at the source
 
-**Current.** `P_pre[i][j] = p(y_j | S_≤i, T_<j)` teacher-forces the reference target prefix `T_<j`. Same for `P_full[j]`. The tags placed by comparing these two are therefore reference-conditioned. At inference the model sees its own outputs, not the reference — this is the exposure-bias gap `METHOD.md` §9 admits.
+**Current.** `P_pre[i][j] = p(y_j | S_≤i, T_<j)` teacher-forces the reference target prefix `T_<j`. Same for `P_full[j]`. The tags placed by comparing these two are therefore reference-conditioned. At inference the model sees its own outputs, not the reference — this is the exposure-bias gap `docs/_archive/method-formal.md` §9 admits.
 
 **Change.** During annotation, replace `T_<j` with a mixed prefix that samples between the reference and the annotator's own greedy prediction. Concretely, use a Bengio-style scheduled-sampling schedule with mixing rate `ρ` that varies per sentence (not per token to avoid trace incoherence). At `ρ=0` we recover the current teacher-forced criterion. At `ρ=1` we get pure self-conditioning at annotation time — closing the gap but adding annotator variance.
 
@@ -406,7 +406,7 @@ SPRT (Wald 1947) accumulates log-likelihood ratio evidence across `i` and commit
 
 ### M5. JSD alongside OT and KL in the divergence ablation
 
-**Current.** `EXPERIMENTS.md` §Ablation grid tests OT / KL / entropy-only / random-at-matched-latency.
+**Current.** `docs/experiments.md` §Ablation grid tests OT / KL / entropy-only / random-at-matched-latency.
 
 **Change.** Add **JSD** as a fourth row. Same criterion pipeline, just swap `D`. JSD is symmetric, bounded in [0,1], and typically better-behaved numerically than KL. If KL is asymmetric-fragile, JSD will notice.
 
@@ -634,7 +634,7 @@ The paper is a demonstration that two well-populated adjacent subcultures each s
 | 5 | 3-seed + paired bootstrap on headline | 3× SFT for primary comparison | Standard credibility | **DROPPED 2026-08-18** — signal is +5 BLEU vs ~0.5 BLEU seed noise; add in rebuttal if raised. See `../LOG.md` `[DECISION] 2026-08-18 — Multi-seed protocol dropped`. |
 | 6 | Data-efficiency framing | 1 hr text | Story win | **Yes, week 12** |
 | 7 | Catchy name | 30 min | Memorability | **Yes, week 12** |
-| REINA ablation (KL matches OT) | Already in `EXPERIMENTS.md` §Ablation grid | Amplifies REINA distinction | Already scheduled |
+| REINA ablation (KL matches OT) | Already in `docs/experiments.md` §Ablation grid | Amplifies REINA distinction | Already scheduled |
 | CCPS ablation | 1–2 days compute | Nice-to-have | Skip unless week 11 has slack |
 | 8B replication (Option B) | Post-writeup | Paper stronger | Only if Gate 3 passes with margin |
 
@@ -642,14 +642,14 @@ If all "Yes" items get done, the Findings blocker list is empty. The remaining r
 
 ## What this document changes about the plan
 
-Concretely, the following existing docs need touch-ups to reflect the OPTIONALS.md decisions once accepted:
+Concretely, the following existing docs need touch-ups to reflect the docs/_archive/OPTIONALS.md decisions once accepted:
 
-- `TIMELINE.md` Phase 0 — add reordering Figure 1 as a deliverable.
-- `TIMELINE.md` Phase 1 — add exposure-bias dev diagnostic as a Gate-1 add-on.
-- `TIMELINE.md` Phase 2 — mark headline runs as 3-seed + paired bootstrap.
-- `EXPERIMENTS.md` §Guardrails — 3-seed rule.
-- `EXPERIMENTS.md` §Ablation grid — optional CCPS row.
+- `docs/_archive/TIMELINE.md` Phase 0 — add reordering Figure 1 as a deliverable.
+- `docs/_archive/TIMELINE.md` Phase 1 — add exposure-bias dev diagnostic as a Gate-1 add-on.
+- `docs/_archive/TIMELINE.md` Phase 2 — mark headline runs as 3-seed + paired bootstrap.
+- `docs/experiments.md` §Guardrails — 3-seed rule.
+- `docs/experiments.md` §Ablation grid — optional CCPS row.
 - `CLAUDE.md` — soften "any scale" wording; add "at 2B" framing note pointing at this file.
 - `LOG.md` — DECISION entry recording the scale-framing choice once made.
 
-These are cheap edits after OPTIONALS.md is agreed. Do not make them now — read the file first, decide which items are in and which are out.
+These are cheap edits after docs/_archive/OPTIONALS.md is agreed. Do not make them now — read the file first, decide which items are in and which are out.
