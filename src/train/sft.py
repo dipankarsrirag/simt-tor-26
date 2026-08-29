@@ -41,10 +41,12 @@ from src.annotator.east_format import (
     build_user_instruction, build_assistant_body, build_chat_prompt_v6,
     EastRow, parse_row, lang_name,
 )
-from src.constants import REPO_ROOT
+from src.config import REPO_ROOT, MODEL_BASE
 
-DEFAULT_MODEL = "/g/data/po67/dipankar/models/gemma-4-E2B-it"
-DEFAULT_TOKENIZER = REPO_ROOT / "results" / "phase2" / "tokenizer-extended-v6"
+# Defaults for laptop / no-config invocations. Overridden per-experiment by
+# configs/{tag}.yaml (backbone.local_path, backbone.tokenizer_dir).
+DEFAULT_MODEL = str(MODEL_BASE / "gemma-4-E2B-it")
+DEFAULT_TOKENIZER = REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "tokenizer-extended-v6"
 
 # Splice placeholder: a rare ASCII sentinel unique enough to survive chat-
 # template rendering unchanged, and easy to split on. Not fed to the model.

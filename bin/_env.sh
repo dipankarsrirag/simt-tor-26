@@ -13,6 +13,19 @@ set -euo pipefail
 # ─────────── repo root ───────────
 export SIMT_REPO_ROOT="${SIMT_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
+# ─────────── filesystem conventions ───────────
+# Data pool — the ./data symlink target. Override with SIMT_DATA_ROOT=/path.
+export SIMT_DATA_ROOT="${SIMT_DATA_ROOT:-${SIMT_REPO_ROOT}/data}"
+# Shared model-weights root (Gadi po67 cache; laptops fall back to $HOME).
+if [ -z "${SIMT_MODEL_BASE:-}" ]; then
+  if [ -d /g/data/po67/dipankar/models ]; then
+    export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+  else
+    export SIMT_MODEL_BASE="${HOME}/.cache/simt-models"
+    mkdir -p "${SIMT_MODEL_BASE}"
+  fi
+fi
+
 # ─────────── PYTHONPATH ───────────
 export PYTHONPATH="${SIMT_REPO_ROOT}:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1

@@ -41,7 +41,11 @@ from typing import Optional
 sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
 
 from src.annotator.annotate import _chunks_from_commit, _enforce_monotone, _is_cjk_lang
-from src.constants import DATA_ROOT, PRIMARY_BACKBONE, REPO_ROOT
+from src.config import DATA_ROOT, MODEL_BASE, REPO_ROOT
+
+# Default backbone for tokenizer lookup when --config isn't supplied. Override
+# per-experiment via configs/{tag}.yaml → backbone.local_path.
+PRIMARY_BACKBONE = MODEL_BASE / "gemma-4-E2B-it"
 
 
 # Target-side function-word lists for stranded-endings merge (2026-08-23).
