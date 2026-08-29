@@ -17,21 +17,22 @@ EAST's shipped training data (SiMT-660K, SiMT-Multi-90K) is:
 
 Our claim (`README.md` §The claim) requires eliminating **all** teacher signal from the pipeline, not just chunk annotation. The curated corpus does that: **human-authored on both sides**, from established open MT corpora, verified 0% overlap with FLORES devtest.
 
-### Source composition (v2, 2026-08-24)
+### Source composition
 
-Per direction, 30,000 rows sampled from public human-translated parallel corpora. Total: 237,993 rows across 8 directions.
+Per direction, ~10,000 unique sentence pairs sampled from public human-translated parallel corpora. Each pair is expanded at SFT-dataset build time into 3 latency variants (low/medium/high) — the final SFT dataset therefore has ~30,000 rows per direction, ~237,993 rows total.
 
-| Direction | Rows | Source mix | Provenance |
+| Direction | Unique pairs (annotator matrices row count) | Source mix | Provenance |
 |---|---|---|---|
-| en-de | 29,811 | europarl-v10 (~78%) + news-commentary-v16 (~11%) + TED2020 (~11%) | europarl: `https://www.statmt.org/europarl/v10/training/europarl-v10.de-en.tsv.gz`; news-commentary: WMT17-21 shared task; TED2020: `https://opus.nlpl.eu/TED2020/de&en/v1/moses/de-en.txt.zip` |
-| de-en | 28,836 | same as en-de (paired flip) | same URLs |
-| en-ru | 29,934 | TED2020 (~58%) + news-commentary-v16 (~42%) | TED2020: OPUS `https://opus.nlpl.eu/TED2020/en&ru/v1/moses/en-ru.txt.zip`; news-commentary: WMT17-21 |
-| ru-en | 29,412 | same as en-ru (paired flip) | same URLs |
-| en-ar | 30,000 | TED2020 (100%) | `https://opus.nlpl.eu/TED2020/ar&en/v1/moses/ar-en.txt.zip` |
-| ar-en | 30,000 | same as en-ar (paired flip) | same URL |
-| en-vi | 30,000 | TED2020 (100%) | `https://opus.nlpl.eu/TED2020/en&vi/v1/moses/en-vi.txt.zip` |
-| vi-en | 30,000 | same as en-vi (paired flip) | same URL |
-| **Total** | **237,993** | | |
+| en-de | 9,937 | europarl-v10 (~78%) + news-commentary-v16 (~11%) + TED2020 (~11%) | europarl: `https://www.statmt.org/europarl/v10/training/europarl-v10.de-en.tsv.gz`; news-commentary: WMT17-21 shared task; TED2020: `https://opus.nlpl.eu/TED2020/de&en/v1/moses/de-en.txt.zip` |
+| de-en | 9,612 | same as en-de (paired flip) | same URLs |
+| en-ru | 9,978 | TED2020 (~58%) + news-commentary-v16 (~42%) | TED2020: OPUS `https://opus.nlpl.eu/TED2020/en&ru/v1/moses/en-ru.txt.zip`; news-commentary: WMT17-21 |
+| ru-en | 9,804 | same as en-ru (paired flip) | same URLs |
+| en-ar | 10,000 | TED2020 (100%) | `https://opus.nlpl.eu/TED2020/ar&en/v1/moses/ar-en.txt.zip` |
+| ar-en | 10,000 | same as en-ar (paired flip) | same URL |
+| en-vi | 10,000 | TED2020 (100%) | `https://opus.nlpl.eu/TED2020/en&vi/v1/moses/en-vi.txt.zip` |
+| vi-en | 10,000 | same as en-vi (paired flip) | same URL |
+| **Unique pairs** | **79,331** | | |
+| **SFT rows** (× 3 latencies) | **237,993** | | |
 
 **All sources are human translations**:
 - **Europarl** — European Parliament proceedings, translated by professional EU translators (Koehn 2005).

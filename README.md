@@ -49,7 +49,7 @@ Pick a tag (short lowercase-with-underscores, e.g. `east_8b_curated`). Create `c
 | Stage | On laptop / no venv | On Gadi (cluster) | Output |
 |---|---|---|---|
 | 1. Build source pool | `bin/01_build_source_pool --config configs/{tag}.yaml` | same (or `qsub` a PBS) | `results/sft_dataset/{tag}/source_pool.json` |
-| 2. Annotate (OT chunk placement) | (per-direction; slow on laptop) | `qsub jobs/annotate/{tag}_<dir>.pbs` × per direction | `results/annotate/{tag}/matrices.jsonl` |
+| 2. Annotate (OT chunk placement) | (per-direction; slow on laptop) | `qsub jobs/annotate/{tag}_<dir>.pbs` × per direction | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator model + lang-pair, reusable across experiments) |
 | 3. Build SFT dataset | `bin/02_build_sft_dataset --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
 | 4. SFT training | (needs GPU — Gadi only) | `qsub jobs/train/{tag}.pbs` | `results/train/{tag}/final/` + `sft_summary.json` |
 | 5. Extrinsic eval | (needs GPU — Gadi only) | `qsub jobs/eval/{tag}_<test>_<lat>_<dir>.pbs` (many) | `results/eval/{tag}/*.json` |

@@ -33,8 +33,17 @@ source_pool:
 
 # ─────────── annotation ───────────
 # (Stage 2 — src/annotator/annotate.py invoked by jobs/annotate/{tag}_*.pbs)
+#
+# Output is keyed by (annotator model, language pair), NOT by experiment tag:
+#   results/annotate/{annotator}/{pair}/matrices.jsonl
+# Rationale: multiple downstream SFT experiments (different backbones, different
+# policies, different corpora) can reuse the same annotator matrices. Keying by
+# tag would force wasteful duplication.
 annotate:
-  annotator: same_as_backbone       # or: absolute path/HF id for cross-annotation experiments
+  annotator: same_as_backbone       # 'same_as_backbone' | HF id | local path.
+                                    # E.g. for Fig 5 cross-annotation experiments,
+                                    # set to 'gemma-4-E2B-it' while backbone stays
+                                    # at Gemma-4-E4B-it or EAST-8B.
   criterion: ot                     # ot | js | wait-k | conv-simt | gpt4-chunks
   tau: 0.30                         # OT convergence threshold
   top_k: 128                        # sparse support for OT
