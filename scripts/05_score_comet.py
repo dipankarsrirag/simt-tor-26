@@ -24,7 +24,7 @@ from src.config import MODEL_BASE, REPO_ROOT
 # Defaults (all overridable via env or CLI).
 EXTR = Path(os.environ.get(
     "SIMT_EVAL_DIR",
-    REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "extrinsic",
+    REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "extrinsic",
 ))
 TESTSETS_ROOT = Path(os.environ.get(
     "SIMT_TESTSETS_ROOT",

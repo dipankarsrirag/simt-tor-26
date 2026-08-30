@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-time — extend a backbone's tokenizer with EOR/EOW special tokens.
 # Reads: HF backbone
-# Writes: results/train/{tag}/tokenizer/  (or path from --output)
+# Writes: results/train/{tag}/tokenizer/ (or path from --output)
 #
 # Usage: bin/prepare_tokenizer --backbone google/gemma-4-E2B-it --output results/train/{tag}/tokenizer/
 

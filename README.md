@@ -8,7 +8,7 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 
 **Falsifiable claim:** backbone-derived tag placement matches or beats GPT-4-derived placement, with the margin growing on word-order-divergent pairs (e.g. German verb-final).
 
-**Empirical status (2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `_archive/results/v6b_gemma_2b/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
+**Empirical status (2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `_archive/results/gemma_2b_curated/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
 
 ---
 
@@ -31,7 +31,7 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 └── figures/           paper output PNGs
 ```
 
-Every live user-facing subtree (`jobs/`, `results/`, `logs/`) has three subdirs — `annotate/`, `train/`, `eval/` — for per-tag outputs. All prior runs live under `_archive/{jobs,results,logs}/v6b_gemma_2b/`. Everything a new experiment produces goes under `.../annotate/{annotator}/{pair}/`, `.../train/{tag}/`, `.../eval/{tag}/`. This keeps output namespaces separate across contributors and easy to collate.
+Every live user-facing subtree (`jobs/`, `results/`, `logs/`) has three subdirs — `annotate/`, `train/`, `eval/` — for per-tag outputs. All prior runs live under `_archive/{jobs,results,logs}/gemma_2b_curated/`. Everything a new experiment produces goes under `.../annotate/{annotator}/{pair}/`, `.../train/{tag}/`, `.../eval/{tag}/`. This keeps output namespaces separate across contributors and easy to collate.
 
 ---
 

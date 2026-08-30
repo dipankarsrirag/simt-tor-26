@@ -2,9 +2,9 @@
 Build the cond-B SFT training corpus from our OT annotator's matrices.
 
 Reads:
-  _archive/results/v6b_gemma_2b/annot_ot_n2k/matrices.jsonl
+  _archive/results/gemma_2b_curated/annot_ot_n2k/matrices.jsonl
 Writes:
-  _archive/results/v6b_gemma_2b/sft_dataset_n2k.json  — same schema as SiMT-660K.json
+  _archive/results/gemma_2b_curated/sft_dataset_n2k.json  — same schema as SiMT-660K.json
                                             but with our-annotator chunks
 
 The output can be fed to `src/train/sft.py --corpus_file <path>`.
@@ -772,7 +772,7 @@ def main():
                     default=[REPO_ROOT / "results" / "phase2" / "annot_ot_n2k" / "matrices.jsonl"],
                     help="One or more matrices.jsonl files. For multilingual v5, pass "
                          "all 10 direction files (or use shell-glob: --matrices "
-                         "_archive/results/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl).")
+                         "_archive/results/gemma_2b_curated/annot_ot_multi_*/matrices.jsonl).")
     ap.add_argument("--corpus_json", type=Path, default=None,
                     help="Override the default SiMT-De-En-660K source lookup with a "
                          "custom pool JSON (e.g. multilingual_source_pool_v5.json). "

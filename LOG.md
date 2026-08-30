@@ -58,20 +58,20 @@ Fig. 3 range (28-32).
 
 **Headline observations.**
 - **IWSLT17 de-en**: Ours (purple) Pareto-dominant across the AL range.
-  Beats CondA and CondB throughout; +3 BLEU at high AL vs CondB.
-  EAST-8B (green) sits between the 2B models — no scale advantage on
-  this out-of-domain talk-corpus.
+ Beats CondA and CondB throughout; +3 BLEU at high AL vs CondB.
+ EAST-8B (green) sits between the 2B models — no scale advantage on
+ this out-of-domain talk-corpus.
 - **IWSLT17 en-de**: Ours ties CondA at high AL (~25 BLEU), beats CondB
-  and EAST-8B at every AL.
+ and EAST-8B at every AL.
 - **WMT22 x→en**: Ours *underperforms* CondA/CondB/EAST-8B by ~5 BLEU on
-  de-en and ~10 BLEU on ru-en. This is the human-target eval-set regime
-  Ours was trained on but WMT22 news-domain reference style may not
-  match the europarl/news-comm/TED2020 htgt training mix. Worth flagging
-  in the paper as a domain-transfer caveat.
+ de-en and ~10 BLEU on ru-en. This is the human-target eval-set regime
+ Ours was trained on but WMT22 news-domain reference style may not
+ match the europarl/news-comm/TED2020 htgt training mix. Worth flagging
+ in the paper as a domain-transfer caveat.
 - **WMT22 en→x**: Ours competitive on en-de and en-ru.
 - **WMT15 De→En**: EAST-8B is Pareto-best at low AL (BLEU 31 @ AL 2.5).
-  Ours matches CondA/CondB at high AL. Consistent with 8B vs 2B scale
-  gap on WMT15 — the classic SiMT benchmark EAST optimises for.
+ Ours matches CondA/CondB at high AL. Consistent with 8B vs 2B scale
+ gap on WMT15 — the classic SiMT benchmark EAST optimises for.
 
 **Read.** The IWSLT17 result is the strongest evidence for htgt+OT
 annotation: Ours wins clearly against both a same-scale baseline (CondB)
@@ -88,7 +88,7 @@ mismatch with WMT22 news test.
 crystallises to a 3-way head-to-head: CondA (Multi-90K + GPT-4 chunks),
 CondB (v2bal_v3 = Multi-90K sources + our OT chunks), Ours (v2bal_v3_htgt
 = europarl/news-comm/TED2020 + our OT chunks + human targets). Every
-other trained checkpoint from the v6b family is superseded and not cited
+other trained checkpoint from the family is superseded and not cited
 in the paper.
 
 **Preserved.**
@@ -96,9 +96,9 @@ in the paper.
 - `sft_multilingual_v6b_v2bal_v3/final/` — CondB (9.6 GB)
 - `sft_multilingual_v6b_v2bal_v3_htgt/final/` — Ours (9.6 GB)
 - All eval JSONs from prior runs (small) — kept intact
-- `_archive/results/v6b_gemma_2b/DELETED_MODELS_ARCHIVE/` — sft_v6_summary.json +
-  trainer_state.json + inventory listing for each deleted model
-  (training metrics preserved)
+- `_archive/results/gemma_2b_curated/DELETED_MODELS_ARCHIVE/` — sft_v6_summary.json +
+ trainer_state.json + inventory listing for each deleted model
+ (training metrics preserved)
 
 **Deleted checkpoints (7 × 9.6GB + 1 × 15GB ≈ 86GB freed):**
 - `sft_multilingual_v6b_ctrl` (raw OT baseline, dropped from all plots)
@@ -113,7 +113,7 @@ in the paper.
 **Deleted intermediate SFT datasets (~1.9 GB total):**
 - 5 x `sft_dataset_multilingual_v6b_merged*.json` (superseded)
 - 3 x `sft_dataset_multilingual_v6b_final_v2bal_v3_tau*.json` shards
-  (superseded by the concatenated final)
+ (superseded by the concatenated final)
 - 3 x `sft_dataset_multilingual_v6b_htgt_tau*.json` shards
 - 3 x `sft_dataset_multilingual_v6b_final_v2{bal,rlx,uni,uni3}.json` variants
 - 1 x `sft_dataset_multilingual_v6b.json` (pre-recipe v6b)
@@ -147,23 +147,23 @@ regenerate model outputs on new test sets.
 
 **Full contamination table (3-tier fuzzy):**
 ```
-direction  side  lang  split      FLORES_n  alnum  +8tok  +5tok  TOTAL  % FLORES
+direction side lang split FLORES_n alnum +8tok +5tok TOTAL % FLORES
 ──────────────────────────────────────────────────────────────────────────────
-de-en      src   de    dev            997    512    48    16    576    57.8%
-de-en      src   de    devtest       1012    481    61    15    557    55.0%
-de-en      tgt   en    dev            997    129    69     6    204    20.5%
-de-en      tgt   en    devtest       1012    136    51    15    202    20.0%
-en-de      src   en    dev            997    436    17     2    455    45.6%
-en-de      src   en    devtest       1012    443    21     4    468    46.2%
-en-de      tgt   de    dev            997     46    42    15    103    10.3%
-en-de      tgt   de    devtest       1012     49    37    13     99     9.8%
-ru-en      src   ru    devtest       1012    387    20     5    412    40.7%
-ru-en      tgt   en    devtest       1012     51    22    13     86     8.5%
-en-ru      src   en    devtest       1012    453    25     7    485    47.9%
-en-ru      tgt   ru    devtest       1012     34    20     4     58     5.7%
-en-cs      src   en    devtest       1012    739    28     4    771    76.2%  ← worst
-zh-en      src   zh    devtest       1012    423     0     0    423    41.8%
-zh-en      tgt   en    devtest       1012    244    28    10    282    27.9%
+de-en src de dev 997 512 48 16 576 57.8%
+de-en src de devtest 1012 481 61 15 557 55.0%
+de-en tgt en dev 997 129 69 6 204 20.5%
+de-en tgt en devtest 1012 136 51 15 202 20.0%
+en-de src en dev 997 436 17 2 455 45.6%
+en-de src en devtest 1012 443 21 4 468 46.2%
+en-de tgt de dev 997 46 42 15 103 10.3%
+en-de tgt de devtest 1012 49 37 13 99 9.8%
+ru-en src ru devtest 1012 387 20 5 412 40.7%
+ru-en tgt en devtest 1012 51 22 13 86 8.5%
+en-ru src en devtest 1012 453 25 7 485 47.9%
+en-ru tgt ru devtest 1012 34 20 4 58 5.7%
+en-cs src en devtest 1012 739 28 4 771 76.2% ← worst
+zh-en src zh devtest 1012 423 0 0 423 41.8%
+zh-en tgt en devtest 1012 244 28 10 282 27.9%
 ```
 
 **Multi-90K source-string provenance (composition breakdown per direction):**
@@ -175,32 +175,32 @@ zh-en      tgt   en    devtest       1012    244    28    10    282    27.9%
 
 **Contamination map across evaluation sets** (Multi-90K sources ∩ test):
 ```
-                de-en   en-de   ru-en   en-ru
-FLORES devtest    55%     46%     41%     48%    ← contaminated
-WMT15             0%      0%      -       -      CLEAN ✓
-WMT17            26%     34%     32%     47%     Multi-90K derived from here
-WMT18            37%     44%     27%     43%     ↕
-WMT19            27%     31%     32%     34%     ↕
-WMT20            35%     23%     31%     23%     ↕
-WMT21             0%     20%      0%     24%     mixed
-WMT22             0%      0%      0%      0%     CLEAN ✓
-IWSLT17           0.1%    0%      -       -      CLEAN ✓
+ de-en en-de ru-en en-ru
+FLORES devtest 55% 46% 41% 48% ← contaminated
+WMT15 0% 0% - - CLEAN ✓
+WMT17 26% 34% 32% 47% Multi-90K derived from here
+WMT18 37% 44% 27% 43% ↕
+WMT19 27% 31% 32% 34% ↕
+WMT20 35% 23% 31% 23% ↕
+WMT21 0% 20% 0% 24% mixed
+WMT22 0% 0% 0% 0% CLEAN ✓
+IWSLT17 0.1% 0% - - CLEAN ✓
 ```
 
 **Our htgt build is CLEAN — 0/1012 overlap** (europarl+NC+TED for de/ru; TED2020 for ar/vi; no Multi-90K sources or targets anywhere). Verified on all 8 htgt source-pool directions.
 
 **Contamination map across evaluation sets** (Multi-90K sources ∩ test):
 ```
-                de-en   en-de   ru-en   en-ru
-FLORES devtest    45%     40%     34%     37%    ← heavy
-WMT15             0%      0%      -       -      CLEAN ✓
-WMT17            26%     34%     32%     47%     Multi-90K derived from here
-WMT18            37%     44%     27%     43%     ↕
-WMT19            27%     31%     32%     34%     ↕
-WMT20            35%     23%     31%     23%     ↕
-WMT21             0%     20%      0%     24%     mixed
-WMT22             0%      0%      0%      0%     CLEAN ✓
-IWSLT17           0.1%    0%      -       -      CLEAN ✓
+ de-en en-de ru-en en-ru
+FLORES devtest 45% 40% 34% 37% ← heavy
+WMT15 0% 0% - - CLEAN ✓
+WMT17 26% 34% 32% 47% Multi-90K derived from here
+WMT18 37% 44% 27% 43% ↕
+WMT19 27% 31% 32% 34% ↕
+WMT20 35% 23% 31% 23% ↕
+WMT21 0% 20% 0% 24% mixed
+WMT22 0% 0% 0% 0% CLEAN ✓
+IWSLT17 0.1% 0% - - CLEAN ✓
 ```
 
 **Read.** Every FLORES BLEU number reported for CondA (Multi-90K + GPT-4 chunks) and CondB (Multi-90K sources + our OT chunks) is inflated by training-data memorization. The ~0.5-0.9 BLEU "gap" between Ours and CondA/CondB on FLORES is at least partly memorization advantage for CondA/CondB.
@@ -209,7 +209,7 @@ IWSLT17           0.1%    0%      -       -      CLEAN ✓
 
 **Implication for CondA/CondB reported literature numbers.** EAST-8B's own reported FLORES numbers are similarly inflated. If we compare Ours vs EAST-8B on WMT15/WMT22 rather than FLORES, we're comparing on a level playing field.
 
-**Artifact.** `_archive/results/v6b_gemma_2b/m90k_flores_contamination.txt` (produced inline; regenerate anytime via the check script). Reproducibility: exact-match, whitespace-normalized, and alnum-normalized overlap counts per direction × (dev, devtest) all logged.
+**Artifact.** `_archive/results/gemma_2b_curated/m90k_flores_contamination.txt` (produced inline; regenerate anytime via the check script). Reproducibility: exact-match, whitespace-normalized, and alnum-normalized overlap counts per direction × (dev, devtest) all logged.
 
 **Next actions.**
 1. Ensure WMT15 De→En eval cells complete for CondA + CondB + Ours (5 latencies each = 15 cells). Currently queued as Strategy B.
@@ -233,28 +233,28 @@ test data, so references SHOULD exist for each Multi-90K source string.
 
 **Approach.**
 1. Fetched WMT17-21 De/Ru bidirectional test sets via sacrebleu +
-   supplementary (wmt14/full, wmt18/test-ts, wmt23, wmt24).
+ supplementary (wmt14/full, wmt18/test-ts, wmt23, wmt24).
 2. Tried exact-string overlap → 34-45% hit rate. Suspicious variance
-   across directions (en-de 44.8%, de-en 34.6%) suggested normalization
-   issues, not truly missing data.
+ across directions (en-de 44.8%, de-en 34.6%) suggested normalization
+ issues, not truly missing data.
 3. Ladder of increasingly aggressive matching:
-   - **Tier 1** (`norm_alnum`): NFKC + quote/dash/space unification +
-     lowercase + alnum-only tokens. Corrects punctuation-only preprocessing
-     differences.
-   - **Tier 2** (8-token-prefix + jaccard≥0.75): catches trailing-clause
-     paraphrases (Multi-90K sometimes truncates/edits sentence tails).
-   - **Tier 3** (5-token-prefix + jaccard≥0.85): last-resort near-match.
+ - **Tier 1** (`norm_alnum`): NFKC + quote/dash/space unification +
+ lowercase + alnum-only tokens. Corrects punctuation-only preprocessing
+ differences.
+ - **Tier 2** (8-token-prefix + jaccard≥0.75): catches trailing-clause
+ paraphrases (Multi-90K sometimes truncates/edits sentence tails).
+ - **Tier 3** (5-token-prefix + jaccard≥0.85): last-resort near-match.
 
 **Result.**
 ```
-direction    m90k    tier1_alnum   +tier2   +tier3   total    hit%
+direction m90k tier1_alnum +tier2 +tier3 total hit%
 ─────────────────────────────────────────────────────────────────
-de-en       6,283      3,904        310      105    4,319   68.7%
-en-de       6,186      4,619        134       40    4,793   77.5%
-ru-en       5,625      3,890        126       48    4,064   72.2%
-en-ru       8,153      5,678        144       49    5,871   72.0%
+de-en 6,283 3,904 310 105 4,319 68.7%
+en-de 6,186 4,619 134 40 4,793 77.5%
+ru-en 5,625 3,890 126 48 4,064 72.2%
+en-ru 8,153 5,678 144 49 5,871 72.0%
 ─────────────────────────────────────────────────────────────────
-AVERAGE                                                      72.6%
+AVERAGE 72.6%
 ```
 
 **Semantic verification** (5 de-en samples): matched sources give WMT refs
@@ -271,21 +271,21 @@ Not worth pushing further with expensive edit-distance matching for a ~10%
 gain.
 
 **Artifacts.**
-- `_archive/results/v6b_gemma_2b/m90k_wmt_recovery.pkl` — dict `{direction → {m90k_src →
-  wmt_ref}}`, 19,047 (multi90k_source, wmt_ref) pairs total across 4 dirs.
+- `_archive/results/gemma_2b_curated/m90k_wmt_recovery.pkl` — dict `{direction → {m90k_src →
+ wmt_ref}}`, 19,047 (multi90k_source, wmt_ref) pairs total across 4 dirs.
 - WMT17-24 De/Ru test sets on disk at
-  `/g/data/ba39/dipankar/simul-mt/data/eval/{de-en,ru-en}/wmt{yy}.*`.
+ `/g/data/ba39/dipankar/simul-mt/data/eval/{de-en,ru-en}/wmt{yy}.*`.
 
 **Options for htgt2 build:**
 1. Sample ~4000/direction from recovered → 16K de/ru + 40K ar/vi = 56K.
-   Uniform per-direction; matches CondB shape at ~half the de/ru volume.
+ Uniform per-direction; matches CondB shape at ~half the de/ru volume.
 2. Use ALL recovered → ~19K de/ru + 40K ar/vi = 59K. Uneven per-direction
-   counts (4-6K each).
+ counts (4-6K each).
 3. Ship current htgt as-is (has source-domain confound). Reframe paper as
-   "trained on any human-translated corpora" rather than clean CondB
-   ablation.
+ "trained on any human-translated corpora" rather than clean CondB
+ ablation.
 4. Push harder on the 28% via edit-distance fuzzy match (~1h compute for
-   possibly +10% recovery).
+ possibly +10% recovery).
 
 **Chose (2026-08-25):** [pending user decision].
 
@@ -305,25 +305,25 @@ time either.
 
 **Change:**
 - `src/annotator/annotate.py::annotate_pair` gains `lookahead_k: int = 0`.
-  Clamped to `max(0, k)`. k=0 = current behavior. k>=1 uses a ring buffer
-  with delayed decisions so cost stays ~1× (not the 2× the handoff estimated).
-  Trailing positions {n-k+1..n} fall back to p_full (natural because
-  `min(pos+k, n) = n` for those).
+ Clamped to `max(0, k)`. k=0 = current behavior. k>=1 uses a ring buffer
+ with delayed decisions so cost stays ~1× (not the 2× the handoff estimated).
+ Trailing positions {n-k+1..n} fall back to p_full (natural because
+ `min(pos+k, n) = n` for those).
 - `scripts/phase1_tau_sweep.py` gains `--lookahead_k` and threads it
-  through; records in `summary.json` for provenance.
+ through; records in `summary.json` for provenance.
 - `jobs/phase2_annot_ot_multilang_TEMPLATE.sh` gains `LOOKAHEAD_K` env
-  var; when set, namespaces PBS files + output dirs to `_la{k}` suffix
-  so k=0 matrices already on disk stay intact.
+ var; when set, namespaces PBS files + output dirs to `_la{k}` suffix
+ so k=0 matrices already on disk stay intact.
 
 **Compute plan:**
 1. Smoke (177159955 Q) — 3 sentences × k∈{0,1,2,3} + byte-identity check
-   against on-disk pre-refactor k=0 matrix (Sinkhorn noise floor ~1e-3).
+ against on-disk pre-refactor k=0 matrix (Sinkhorn noise floor ~1e-3).
 2. Pilot (177159956 afterok:177159955) — 100 de-en sentences × k∈{0,1,2,3};
-   reports commit shift, chunk-count Δ, per-τ fire fractions. Picks k.
+ reports commit shift, chunk-count Δ, per-τ fire fractions. Picks k.
 3. Re-pick τ grid at chosen k so latency marginals match v2bal's 33/33/33
-   under the new divergence distribution.
+ under the new divergence distribution.
 4. Full 80K annotation (8 dirs × ~10K), build (v2bal-recipe), SFT,
-   40-cell N=1012 FLORES extrinsic.
+ 40-cell N=1012 FLORES extrinsic.
 
 **Revisit if:** pilot shows commit-point shift < 5% vs k=0 aggregate,
 i.e. look-ahead is essentially the same criterion. Then fall back to
@@ -341,11 +341,11 @@ constraints).
 **Concrete pipeline (v2bal):**
 ```
 For each source × latency ∈ {(τ=0.20, high), (τ=0.40, medium), (τ=0.60, low)}:
-  1. OT commit at τ (no fallbacks, keep_collapsed for cc=1 rows)
-  2. Boundary voting refinement (α=1, β=1, window=3)
-  3. EAST §3.1 merge with PER-τ min_src_words: 4 (high), 3 (medium), 2 (low)
-  4. Stranded-function-word post-emit merge
-  5. force_latency label from τ (deterministic, no cc/sw rule)
+ 1. OT commit at τ (no fallbacks, keep_collapsed for cc=1 rows)
+ 2. Boundary voting refinement (α=1, β=1, window=3)
+ 3. EAST §3.1 merge with PER-τ min_src_words: 4 (high), 3 (medium), 2 (low)
+ 4. Stranded-function-word post-emit merge
+ 5. force_latency label from τ (deterministic, no cc/sw rule)
 ```
 Total 240K rows (3× 80K).
 
@@ -453,7 +453,7 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 
 #### 9. Repository state at end of session
 
-**Trained models kept (in `_archive/results/v6b_gemma_2b/`):**
+**Trained models kept (in `_archive/results/gemma_2b_curated/`):**
 - `sft_multilingual_v6b_ctrl` — raw OT baseline (9.6 GB)
 - `sft_multilingual_v6b_ctrl_merged` — EAST §3.1 min=2 (9.6 GB)
 - `sft_multilingual_v6b_ctrl_merged3` — EAST §3.1 min=4 (9.6 GB)
@@ -485,7 +485,7 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 - Various intermediate tausweep_uniform/relaxed files
 - Old PBS files for cancelled/legacy jobs
 
-**Total disk at session end:** ~104 GB in `_archive/results/v6b_gemma_2b/`.
+**Total disk at session end:** ~104 GB in `_archive/results/gemma_2b_curated/`.
 
 **Currently running / queued at end of session:**
 - `177157036` v2bal_v3 training (R at ~10 min elapsed)
@@ -507,10 +507,10 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 #### 10. Code changes this session
 
 - `scripts/03_build_sft_dataset.py`:
-  - Added `--refine_boundaries`, `--refine_window`, `--refine_alpha`, `--refine_beta` (opt-in voting)
-  - Added `--force_latency` (override latency label from CLI, for τ-sweep)
-  - Added `--keep_collapsed` (keep cc=1 rows instead of dropping — needed for τ-sweep balance)
-  - Escaped `%%` in help strings that were breaking argparse
+ - Added `--refine_boundaries`, `--refine_window`, `--refine_alpha`, `--refine_beta` (opt-in voting)
+ - Added `--force_latency` (override latency label from CLI, for τ-sweep)
+ - Added `--keep_collapsed` (keep cc=1 rows instead of dropping — needed for τ-sweep balance)
+ - Escaped `%%` in help strings that were breaking argparse
 - `scripts/phase2_build_condA_dataset.py`: fixed dedup bug (line 92-100) — keep ALL Multi-90K latency variants per source
 - `scripts/05_score_comet.py`: added `--n_suffix` flag; XLMR resolution patch for the transformers 4.55+ cache regression
 - `scripts/plot_bleu_vs_al_all_conditions.py`: added `--n_suffix` flag, per-N COMET file fallback, restructured CONDITIONS list
@@ -521,7 +521,7 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 
 1. **v2bal_v3 result:** does the loosened τ_high fix the AL=50 collapse? Compare its 5-latency curve to v2bal + cond-A when its 40 sanity outputs land.
 2. **Semantic salience follow-up:** if v2bal_v3 doesn't close the ~0.5 BLEU gap to cond-A, try look-ahead OT (ideas backlog §8).
-3. **v6b main paper table:** freeze the "final ship" configuration once v2bal_v3 results are in.
+3. **main paper table:** freeze the "final ship" configuration once v2bal_v3 results are in.
 4. **Retraining nothing else unless needed** — we've explored the τ+merge design space enough. Bigger levers are annotator-level.
 
 **Everything above is HANDOFF STATE for the new chat. If picking up this project fresh, start by reading this entry.**
@@ -534,7 +534,7 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 augmented rows unless `--use_augmentation` is passed:
 ```python
 if not use_augmentation:
-    rows = [r for r in rows if not ((r.get("_annotator_meta") or {}).get("augmented_from_base") or False)]
+ rows = [r for r in rows if not ((r.get("_annotator_meta") or {}).get("augmented_from_base") or False)]
 ```
 Our `phase2_sft_multilingual_v6b_ctrl_merged3_rb_fw_aug.pbs` did NOT pass
 the flag → all 17,269 aug rows silently dropped at load time. Training
@@ -557,7 +557,7 @@ intended ablation half). Only the aug half needed to be redone.
 - 177094325 — rb_fw_aug train (with --use_augmentation flag now)
 - 177094326-330 — 5 chained sanity jobs (H, afterok on 177094325)
 - Kept: 177089379/381/383/385/387 — rb_fw sanity (released now that
-  177089377 finished; 379 already running)
+ 177089377 finished; 379 already running)
 
 ---
 
@@ -580,9 +580,9 @@ scratch.
 **Fix.** Restored to pinned `transformers==5.14.1` per `.venv-freeze.txt` via uv:
 ```
 /g/data/po67/dipankar/uv/bin/uv pip install --python .venv-fil/bin/python \
-  --reinstall-package transformers 'transformers==5.14.1'
+ --reinstall-package transformers 'transformers==5.14.1'
 /g/data/po67/dipankar/uv/bin/uv pip install --python .venv-fil/bin/python \
-  'huggingface-hub==1.24.0'
+ 'huggingface-hub==1.24.0'
 ```
 
 **Transient "keras_nlp backend" red herring.** Initial reinstall of 5.14.1
@@ -664,12 +664,12 @@ Chunk count decreases after this merge → latency labels need reassignment via 
 
 **2026-08-23 run submissions (composed pipeline).**
 - `merged3_rb_fw` (stranded-merge only): job **177073247** (submitted 01:47).
-  - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw.json` (79,309 rows, marginals 6.7/14.7/78.6).
-  - Head-to-head with `merged3_rebucketed` (same size, matched training config).
+ - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw.json` (79,309 rows, marginals 6.7/14.7/78.6).
+ - Head-to-head with `merged3_rebucketed` (same size, matched training config).
 - `merged3_rb_fw_aug` (stranded-merge + latency augmentation): job **177073343** (submitted 02:00).
-  - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw_aug.json` (96,578 rows = 79K base + 17K aug; marginals **5.5/12.4/82.1** — closest we've been to cond-A target 6.1/9.0/84.9).
-  - Replaces the earlier `rb_aug` (job 177067591, cancelled) which lacked the stranded-function-word fix.
-  - This is the current best-composed candidate: OT + EAST §3.1 merge + (cc,sw) rebucket + stranded merge + latency augmentation.
+ - Corpus: `sft_dataset_multilingual_v6b_merged3_rb_fw_aug.json` (96,578 rows = 79K base + 17K aug; marginals **5.5/12.4/82.1** — closest we've been to cond-A target 6.1/9.0/84.9).
+ - Replaces the earlier `rb_aug` (job 177067591, cancelled) which lacked the stranded-function-word fix.
+ - This is the current best-composed candidate: OT + EAST §3.1 merge + (cc,sw) rebucket + stranded merge + latency augmentation.
 
 Both jobs queued; expect ~1h wall each once running. Extrinsic sanity (5 latency × 8 dir) fires after models land.
 
@@ -771,17 +771,17 @@ Prioritise the German case first if punct-aware chunking is implemented (highest
 **Fix.** Made `phase2_build_sft_dataset.py` the single source of truth:
 
 - Replaced `latency_from_chunk_count(cc)` with `latency_from_chunk_stats(cc, sw)`:
-  - `cc <= LATENCY_CC1_MAX (=2)` → `high`
-  - else `cc / sw >= LATENCY_LOW_CCSW (=0.20)` → `low`
-  - else `cc / sw >= LATENCY_MED_CCSW (=0.13)` → `medium`
-  - else `high`
+ - `cc <= LATENCY_CC1_MAX (=2)` → `high`
+ - else `cc / sw >= LATENCY_LOW_CCSW (=0.20)` → `low`
+ - else `cc / sw >= LATENCY_MED_CCSW (=0.13)` → `medium`
+ - else `high`
 - Added `_count_source_words(source, src_lang)` helper (matches condA convention).
 - Rewrote `augment_row_at_lower_chunk_counts` to:
-  - Skip early if `cc <= LATENCY_CC1_MAX` (already at the `high` floor; can't be coarsened further).
-  - Compute `sw` once from `row["source"]`.
-  - Consider 3 candidate coarser sizes: `ceil(k/2)` (aug2), `ceil(k/4)` (aug4), and `LATENCY_CC1_MAX` (aug_cc1) — de-duplicated by `target_n`.
-  - Label each coarser variant with `latency_from_chunk_stats(new_cc, sw)`.
-  - Emit only variants whose new label differs from the base and from previously-emitted augs.
+ - Skip early if `cc <= LATENCY_CC1_MAX` (already at the `high` floor; can't be coarsened further).
+ - Compute `sw` once from `row["source"]`.
+ - Consider 3 candidate coarser sizes: `ceil(k/2)` (aug2), `ceil(k/4)` (aug4), and `LATENCY_CC1_MAX` (aug_cc1) — de-duplicated by `target_n`.
+ - Label each coarser variant with `latency_from_chunk_stats(new_cc, sw)`.
+ - Emit only variants whose new label differs from the base and from previously-emitted augs.
 - Updated `build_dataset` reassignment path to pass `sw`.
 - Retired `scripts/rebucket_latency.py`'s hardcoded rule — now imports and delegates to `latency_from_chunk_stats` for one-shot post-hoc relabelling.
 - Updated CLI arg help text and top-of-module docstring.
@@ -793,13 +793,13 @@ Prioritise the German case first if punct-aware chunking is implemented (highest
 
 **Ran augmentation on rebucketed merged3.** 25,097 augmented rows added (+31.6% on 79K base), all going up the latency ladder:
 - `medium` → `high`: 14,905 (every base-medium row gets a high aug)
-- `low` → `high`:  9,506 (every base-low gets a high aug)
-- `low` → `medium`:   686 (few base-low rows land in medium after halving)
+- `low` → `high`: 9,506 (every base-low gets a high aug)
+- `low` → `medium`: 686 (few base-low rows land in medium after halving)
 
 Combined marginals: **low 9.1%, medium 14.9%, high 76.0%** (n=104,406). Closer to condA target (6.1/9.0/84.9) than rebucket-only (12/19/69). The remaining marginal gap reflects that our OT chunks are still finer-grained than GPT-4's; augmentation only walks labels *up* the ladder.
 
 **Files.**
-- Corpus: `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_merged3_rb_aug.json` (104K rows, 134 MB)
+- Corpus: `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b_merged3_rb_aug.json` (104K rows, 134 MB)
 - PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_aug.pbs`
 - JobID: `177067591.gadi-pbs` (Q as of submission)
 
@@ -842,14 +842,14 @@ Per-bucket contents now match condA in every measurable dimension:
 | bucket | source | src_words | chunks | sw/cc |
 |---|---|---:|---:|---:|
 | low | condA | 20.6 | 4.78 | 4.28 |
-|  | m3-current | 45.3 | 7.92 | 5.74 |
-|  | **m3-new** | **18.4** | **3.96** | **4.64** |
+| | m3-current | 45.3 | 7.92 | 5.74 |
+| | **m3-new** | **18.4** | **3.96** | **4.64** |
 | medium | condA | 19.1 | 3.06 | 6.36 |
-|  | m3-current | 27.1 | 4.55 | 5.97 |
-|  | **m3-new** | **24.7** | **4.06** | **6.11** |
+| | m3-current | 27.1 | 4.55 | 5.97 |
+| | **m3-new** | **24.7** | **4.06** | **6.11** |
 | high | condA | 15.8 | 1.66 | 10.0 |
-|  | m3-current | 13.8 | 1.82 | 8.14 |
-|  | **m3-new** | **14.1** | **1.66** | **8.71** |
+| | m3-current | 13.8 | 1.82 | 8.14 |
+| | **m3-new** | **14.1** | **1.66** | **8.71** |
 
 Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotator + merge=3 produces more mid-range chunk-count rows than GPT-4's semantic chunking. Bucket *semantics* now match though: a `low` merged3 row looks like a `low` condA row on sw, cc, and sw/cc.
 
@@ -857,9 +857,9 @@ Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotato
 
 **Files.**
 - Rebucket script: `scripts/rebucket_latency.py`
-- Rebucketed corpus: `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79,309 rows, unchanged; `latency` field overwritten, prior label stored in `_annotator_meta.rebucket_rule.prior_latency`)
+- Rebucketed corpus: `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79,309 rows, unchanged; `latency` field overwritten, prior label stored in `_annotator_meta.rebucket_rule.prior_latency`)
 - PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rebucketed.pbs`
-- Output dir: `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3_rebucketed/`
+- Output dir: `_archive/results/gemma_2b_curated/sft_multilingual_v6b_ctrl_merged3_rebucketed/`
 
 **Revisit if.** BLEU-vs-latency curve on the rebucketed model does not smooth relative to merged3-current at the low-latency end — would indicate the ugly curve was not driven by starved-low-bucket training.
 
@@ -867,7 +867,7 @@ Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotato
 
 ### [RUN] 2026-08-22 — v6b-ctrl-merged3-rebucketed SFT submitted
 **Config.** Gemma-4-E2B-it (2B), α=1, 2 epochs, direct-ids splice, descriptive_init, best-model by eval_loss.
-**Data.** `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79K rows; latency marginals 12/19/69).
+**Data.** `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b_merged3_rebucketed.json` (79K rows; latency marginals 12/19/69).
 **Command.** `qsub jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rebucketed.pbs`
 **JobID.** `177046448.gadi-pbs` (Q as of submission).
 **Read.** Awaiting completion (~1h GPU per prior merged3 run). Next: extrinsic 5-latency × 8-direction sanity at N=50 FLORES, compare BLEU-vs-DAL curve to merged3-current and cond-A.
@@ -880,7 +880,7 @@ Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotato
 
 **EAST §3.1 merge rule.** Merge chunks with < N source words (or < CJK-char threshold) into the next chunk. Preserves monotonicity + adaptive commit points but coarsens the chunk-size distribution toward semantic units.
 
-**Swept threshold on the same v6b annotator matrices, retrained each variant with the ship recipe (α=1, 2 epochs, best-model, direct-ids splice):**
+**Swept threshold on the same annotator matrices, retrained each variant with the ship recipe (α=1, 2 epochs, best-model, direct-ids splice):**
 
 | variant | 1-3 chunks % | mean BLEU | mean AL | mean chunks/sent | vs cond-A |
 |---|---|---|---|---|---|
@@ -905,9 +905,9 @@ Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotato
 **Chose.** Ship v6b-ctrl-merged3 as the primary method: our OT chunks + EAST §3.1 merge at <=3-word threshold. Story: "backbone-derived commit points with EAST-style chunk consolidation match/beat GPT-4 chunks on our backbone, extend to 4 additional language pairs (ar, vi) Multi-90K doesn't cover, and outperform naive scaling from 2B to 4B."
 
 **Files (ship model + supporting artifacts):**
-- Ship model: `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3/final/` (Gemma-4-E2B-it, 2B, α=1, 2ep)
-- Training data: `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_merged3.json` (79K rows)
-- Eval outputs: `_archive/results/v6b_gemma_2b/extrinsic/flores_stream_v6bmerged3_checkargmax_*_n50.json` (40 files)
+- Ship model: `_archive/results/gemma_2b_curated/sft_multilingual_v6b_ctrl_merged3/final/` (Gemma-4-E2B-it, 2B, α=1, 2ep)
+- Training data: `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b_merged3.json` (79K rows)
+- Eval outputs: `_archive/results/gemma_2b_curated/extrinsic/flores_stream_v6bmerged3_checkargmax_*_n50.json` (40 files)
 - Dataset builder: `scripts/03_build_sft_dataset.py` (adds `--merge_small_chunks --min_src_words 4`)
 - Merge helper: `merge_small_chunks()` in same file
 - Comparison plot: `figures/phase2/bleu_vs_al_all_conditions_flores_n50.{pdf,png}`
@@ -958,17 +958,17 @@ Code left in `annotate.py` has a comment documenting both attempts.
 **Test.** `scripts/probe_tau_sweep.py` — replay commit_from_matrix on all 10K de-en rows at tau ∈ {0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50}. Report % collapsed-to-1-chunk, mean/median chunks, chunks/src-word:
 
 ```
-   tau   %coll1     %<=3   mean_c   med_c   c/srcw
- 0.030   100.0%   100.0%     2.00     2.0    0.052
- 0.050    99.7%   100.0%     2.09     2.0    0.052
- 0.075    98.8%    99.9%     2.54     2.0    0.053
- 0.100    95.4%    99.4%     2.56     2.0    0.054
- 0.150    79.9%    95.0%     3.19     2.0    0.067
- 0.200    59.9%    83.6%     4.08     3.0    0.094
- 0.250    44.8%    71.3%     4.88     4.0    0.128
- 0.300    34.2%    57.1%     5.86     5.0    0.168   ← current
- 0.400    19.4%    35.3%     7.44     6.0    0.244
- 0.500     9.6%    22.3%     7.81     7.0    0.284
+ tau %coll1 %<=3 mean_c med_c c/srcw
+ 0.030 100.0% 100.0% 2.00 2.0 0.052
+ 0.050 99.7% 100.0% 2.09 2.0 0.052
+ 0.075 98.8% 99.9% 2.54 2.0 0.053
+ 0.100 95.4% 99.4% 2.56 2.0 0.054
+ 0.150 79.9% 95.0% 3.19 2.0 0.067
+ 0.200 59.9% 83.6% 4.08 3.0 0.094
+ 0.250 44.8% 71.3% 4.88 4.0 0.128
+ 0.300 34.2% 57.1% 5.86 5.0 0.168 ← current
+ 0.400 19.4% 35.3% 7.44 6.0 0.244
+ 0.500 9.6% 22.3% 7.81 7.0 0.284
 ```
 
 **Reads.**
@@ -985,7 +985,7 @@ Code left in `annotate.py` has a comment documenting both attempts.
 
 ### [DECISION] 2026-08-22 — Retire α=5 special-token upweighting; α=1 (plain SFT) is the ship model
 
-**Context.** v6b main (α=5, EAST convention Test B) produced BLEU that beat v6 by +2.26 mean but with alarming AL numbers — 0.88-1.6 at low latencies, off the low-latency end of every EAST BLEU-vs-AL plot (their leftmost AL is ~2). Investigation revealed the training annotator produces ~6 chunks/sent at tau=0.30 (`scripts/probe_tau_sweep.py`), but the α=5 model was generating ~20 chunks/sent at inference — a 3-4× inflation. Hypothesis: α=5 taught the model to fire EOR too eagerly.
+**Context.** main (α=5, EAST convention Test B) produced BLEU that beat v6 by +2.26 mean but with alarming AL numbers — 0.88-1.6 at low latencies, off the low-latency end of every EAST BLEU-vs-AL plot (their leftmost AL is ~2). Investigation revealed the training annotator produces ~6 chunks/sent at tau=0.30 (`scripts/probe_tau_sweep.py`), but the α=5 model was generating ~20 chunks/sent at inference — a 3-4× inflation. Hypothesis: α=5 taught the model to fire EOR too eagerly.
 
 **Test.** Ran v6b_ctrl: same config, only `--special_token_loss_weight 1.0`. Same 79K rows, 2 epochs, best-model-by-eval-loss, descriptive_init. Wall 3482s (vs 3571s main).
 
@@ -1010,15 +1010,15 @@ Biggest BLEU wins (main → ctrl): vi-en low_medium 15.81 → 24.91 (+9.10), vi-
 
 **Files:**
 - `jobs/phase2_sft_multilingual_v6b_ctrl.pbs` (identical to main except `--special_token_loss_weight 1.0`)
-- `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl/final/` (best checkpoint 2000; eval_loss 1.825)
+- `_archive/results/gemma_2b_curated/sft_multilingual_v6b_ctrl/final/` (best checkpoint 2000; eval_loss 1.825)
 - `jobs/phase2_extrinsic_stream_v6b_ctrl_sanity_TEMPLATE.sh` (5 latency PBS)
-- `_archive/results/v6b_gemma_2b/extrinsic/flores_stream_v6bctrl_checkargmax_*_n50.json` (40 outputs)
+- `_archive/results/gemma_2b_curated/extrinsic/flores_stream_v6bctrl_checkargmax_*_n50.json` (40 outputs)
 - `scripts/compute_dal_from_stream.py` (DAL from cached per_sent traces)
 - `scripts/probe_tau_sweep.py` (tau operating-curve diagnostic — confirms tau=0.30 fine)
 
 ---
 
-### [DECISION] 2026-08-22 — v6b fix: bypass string round-trip in training + inference tokenization
+### [DECISION] 2026-08-22 — fix: bypass string round-trip in training + inference tokenization
 
 **Context.** v6 SFT dataset silently dropped **40-47% of AR/VI training rows** at the "leading-space retokenization" gate in `scripts/03_build_sft_dataset.py:274-278`. Root cause: the builder tokenized source/target twice — once as the annotator saw it (`tok(src)`) and once with a leading space prepended (`tok(" " + src)`) to match a v1-v5 streaming-alignment convention. For AR (RTL) and VI (Latin-with-diacritics), prepending a leading space changes SentencePiece's segmentation boundaries → different token counts → row rejected. Only DE/EN happened to be resilient.
 
@@ -1030,9 +1030,9 @@ Investigation: ran `scripts/probe_v6_roundtrip.py`. **0/16 sample rows** preserv
 3. **`src/eval/extrinsic.py::tokenize_source_by_words`**: word[0] tokenized WITHOUT leading space; word[i>0] WITH leading space. Concatenation equals `tok(src)` — matches annotator's canonical tokenization and thus training.
 4. **Sanity test** (`scripts/probe_v6_sanity.py`): verifies training input_ids body == chunk_ids concat, labels correctly mask prefix, streaming tokenization == annotator tokenization, per-chunk replay recovers chunks. **24/24 rows pass across all 8 directions.**
 
-**Result.** v6b multilingual dataset: **79,309 base rows** (vs. 55,075 for the same 8 directions on v5 with the broken gate → +44%). All 8 directions now land at 9,781-9,999 rows (out of 10K pool). Max body length = 273 ids → zero truncation risk at max_length=1024.
+**Result.** multilingual dataset: **79,309 base rows** (vs. 55,075 for the same 8 directions on v5 with the broken gate → +44%). All 8 directions now land at 9,781-9,999 rows (out of 10K pool). Max body length = 273 ids → zero truncation risk at max_length=1024.
 
-**Additional v6b training changes (this cycle's user requests):**
+**Additional training changes (this cycle's user requests):**
 - 2 epochs (was 1).
 - `load_best_model_at_end=True` + `metric_for_best_model="eval_loss"` + aligned save/eval cadences (both every 200 steps).
 - Post-train cleanup: `rm -rf checkpoint-*` — only `final/` (best model) kept.
@@ -1046,9 +1046,9 @@ Investigation: ran `scripts/probe_v6_roundtrip.py`. **0/16 sample rows** preserv
 - `scripts/probe_v6_roundtrip.py`, `scripts/probe_v6_directids.py`, `scripts/probe_v6_sanity.py` (probes/tests)
 - `jobs/phase2_sft_multilingual_v6b.pbs` (2 epochs, best-model, cleanup)
 - `jobs/phase2_extrinsic_stream_v6b_TEMPLATE.sh` (8 directions, 5 latencies, N=1012 full FLORES devtest)
-- `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b.json` (regenerated corpus)
+- `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b.json` (regenerated corpus)
 
-**Compute submitted.** v6b SFT queued as job `176907685` — gpuhopper, 5h walltime, batch 16 × 4 accum, ~2352 steps expected at 2 epochs.
+**Compute submitted.** SFT queued as job `176907685` — gpuhopper, 5h walltime, batch 16 × 4 accum, ~2352 steps expected at 2 epochs.
 
 ---
 
@@ -1066,7 +1066,7 @@ Other directions demonstrated the v6 fix works cleanly:
 
 **Actions:**
 - Archive zh annotation matrices (annot_ot_multi_{zh-en,en-zh}/) + per-direction source pool files
-- Retrain v6b on 8 directions only (rebuild dataset filtering out zh)
+- Retrain on 8 directions only (rebuild dataset filtering out zh)
 - EDA of the 8-direction base-only dataset — validate the corpus stats are still balanced
 
 **Revisit if.** Reviewer specifically asks about Chinese. Then debug the en-zh generation issue (likely tokenizer/prompt: Chinese target chunks may benefit from explicit separators or a Gemma-4 CJK-specific chat template variant).
@@ -1096,9 +1096,9 @@ Other directions demonstrated the v6 fix works cleanly:
 **Pivot to v6:**
 1. **Backbone**: gemma-4-E2B → **gemma-4-E2B-it** (already on disk)
 2. **Prompt**: Gemma chat template + natural-language instruction
-   - System: "You are a helpful assistant."
-   - User: "Translate the following text from {SRC_LANG_ENGLISH_NAME} into {TGT_LANG_ENGLISH_NAME} with {LATENCY} latency."
-   - Assistant: interleaved EAST-format chunks
+ - System: "You are a helpful assistant."
+ - User: "Translate the following text from {SRC_LANG_ENGLISH_NAME} into {TGT_LANG_ENGLISH_NAME} with {LATENCY} latency."
+ - Assistant: interleaved EAST-format chunks
 3. **Latency string**: 5 options — `low`, `low-medium`, `medium`, `medium-high`, `high`. Training uses 3 base; inference gets 2 interpolated for free (EAST §3.3 interpolation effect via natural language — much cleaner than embedding averaging).
 4. **EAST specials**: still add `<|end-of-read|>` + `<|end-of-write|>` to tokenizer. **Drop** `<|low-latency|>` etc. tokens (replaced by NL text).
 5. **Descriptive init**: applies to EOR/EOW only (no latency tokens to initialize).
@@ -1122,7 +1122,7 @@ Other directions demonstrated the v6 fix works cleanly:
 - PPL < 100: marginal (annotator output may be noisy; report caveat)
 - PPL ≥ 100: insufficient (backbone doesn't know this language — skip that (backbone, pair) cell)
 
-**Fired.** `scripts/phase2_probe_multilang_ppl_multibackbone.py` → job **176833274** (~40 min real work). Reports full 4×10 = 40-cell matrix. Output: `_archive/results/v6b_gemma_2b/probe_multilang_ppl_multibackbone.json`.
+**Fired.** `scripts/phase2_probe_multilang_ppl_multibackbone.py` → job **176833274** (~40 min real work). Reports full 4×10 = 40-cell matrix. Output: `_archive/results/gemma_2b_curated/probe_multilang_ppl_multibackbone.json`.
 
 **Already have.** Gemma-4-E2B row (from `probe_multilang_ppl.json`, 176764057) — all 10 directions PPL 2.93–5.08 (well under 10). Expected but need to lock via this multi-backbone rerun.
 
@@ -1132,19 +1132,19 @@ Other directions demonstrated the v6 fix works cleanly:
 **Sequence** (each step gated on the prior):
 
 **Phase 1 — v5 SFT (immediate, ~4h GPU total).** Once all 10 direction annotations complete:
-- Build combined dataset: `python scripts/03_build_sft_dataset.py --matrices _archive/results/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl --corpus_json _archive/results/v6b_gemma_2b/multilingual_source_pool_v5.json --tau 0.30 --tau_fallbacks 0.50,0.70,1.00 --augment_latency --output _archive/results/v6b_gemma_2b/sft_dataset_multilingual_v5.json`
-  (Builder was patched 2026-08-20 to accept multiple `--matrices` files + `--corpus_json` override — see `scripts/03_build_sft_dataset.py`.)
+- Build combined dataset: `python scripts/03_build_sft_dataset.py --matrices _archive/results/gemma_2b_curated/annot_ot_multi_*/matrices.jsonl --corpus_json _archive/results/gemma_2b_curated/multilingual_source_pool_v5.json --tau 0.30 --tau_fallbacks 0.50,0.70,1.00 --augment_latency --output _archive/results/gemma_2b_curated/sft_dataset_multilingual_v5.json`
+ (Builder was patched 2026-08-20 to accept multiple `--matrices` files + `--corpus_json` override — see `scripts/03_build_sft_dataset.py`.)
 - Fire multilingual v5 SFT with v4 recipe stack (fixed_tokenization + descriptive_init + Test B α=5). Expected ~1h SFT + 2 min smoke.
 - Evaluate on newstest2013 wait_k∈{3,5,7} + check_argmax at low/medium/high latency. Expected: multilingual model shows similar Pareto to single-language v4; the "adaptivity vs wait_k" story replays across all 10 directions.
 
 **Phase 2 — M9 KV-cache reuse (~1 day engineering).** After v5 SFT lands:
 - Refactor `src/annotator/annotate.py` inner loop to use HF `past_key_values` (two-tier: prompt cache + per-prefix-i cache). See _archive/docs/OPTIONALS.md §M9 for the concrete sketch.
-- Regression test: byte-compare divergence matrices on 50 sentences from `_archive/results/v6b_gemma_2b/annot_ot_n10k/matrices.jsonl` (already-annotated DE→EN subset). L∞ diff must be <1e-4.
+- Regression test: byte-compare divergence matrices on 50 sentences from `_archive/results/gemma_2b_curated/annot_ot_n10k/matrices.jsonl` (already-annotated DE→EN subset). L∞ diff must be <1e-4.
 - Expected 2-5× wall-clock speedup, up to 40× reduction on attention alone.
 
 **Phase 3 — cross-backbone matrices (~10-15 GPU-hours with M9).** With the faster annotator:
-- Re-annotate all 10 directions on **Qwen3.5-2B** → `_archive/results/v6b_gemma_2b/annot_ot_multi_qwen35_<DIR>/matrices.jsonl`
-- Re-annotate all 10 directions on **Gemma-4-E4B** → `_archive/results/v6b_gemma_2b/annot_ot_multi_e4b_<DIR>/matrices.jsonl`
+- Re-annotate all 10 directions on **Qwen3.5-2B** → `_archive/results/gemma_2b_curated/annot_ot_multi_qwen35_<DIR>/matrices.jsonl`
+- Re-annotate all 10 directions on **Gemma-4-E4B** → `_archive/results/gemma_2b_curated/annot_ot_multi_e4b_<DIR>/matrices.jsonl`
 - Provides H14 backbone-transfer evidence (does OT-SFT generalize across backbone?)
 
 **Phase 4 — undergrad ships 3 baselines in parallel** on Gemma-4-E2B (matched to our anchor):
@@ -1266,7 +1266,7 @@ Other directions demonstrated the v6 fix works cleanly:
 - src-exh rate at scale — 1/100 was encouraging but 3000-sent could reveal edge cases.
 
 **Next-session plan (updated):**
-1. **Read `_archive/results/v6b_gemma_2b/extrinsic/full_stream_{waitk3,waitk5,waitk7,checkargmax}_v4.json`** once 176733336 completes.
+1. **Read `_archive/results/gemma_2b_curated/extrinsic/full_stream_{waitk3,waitk5,waitk7,checkargmax}_v4.json`** once 176733336 completes.
 2. Build BLEU-vs-AL scatter plot: v4 4 policies + optionally v1 as reference degenerate baseline.
 3. **Ablation grid** (if v4 is confirmed at scale) — 2×2 to isolate: fixed_tokenization only / +descriptive_init / +Test B / all. This tells reviewers WHICH intervention did the work.
 4. **Test A re-run** on v4 checkpoint — soft-commit thresholds (check_prob_thresh, check_rank, check_ratio) now that adaptivity is proven present.
@@ -1303,11 +1303,11 @@ Other directions demonstrated the v6 fix works cleanly:
 
 **Descriptive init map** (unchanged from v3, carried into v4):
 ```
-END_OF_READ    ← mean(embed("end"), embed("of"), embed("read"), embed(<eos>))
-END_OF_WRITE   ← mean(embed("end"), embed("of"), embed("write"), embed(<eos>))
-low-latency    ← mean(embed("low"), embed("latency"))    + N(0, 0.01²)
+END_OF_READ ← mean(embed("end"), embed("of"), embed("read"), embed(<eos>))
+END_OF_WRITE ← mean(embed("end"), embed("of"), embed("write"), embed(<eos>))
+low-latency ← mean(embed("low"), embed("latency")) + N(0, 0.01²)
 medium-latency ← mean(embed("medium"), embed("latency")) + N(0, 0.01²)
-high-latency   ← mean(embed("high"), embed("latency"))   + N(0, 0.01²)
+high-latency ← mean(embed("high"), embed("latency")) + N(0, 0.01²)
 ```
 
 **Operational failures / lessons learned this session:**
@@ -1320,11 +1320,11 @@ high-latency   ← mean(embed("high"), embed("latency"))   + N(0, 0.01²)
 **Open question for next session (paper positioning):** the fixed_tokenization path is a bug-fix, not a novel intervention — reviewers won't be impressed by "we fixed our tokenizer." The interesting research questions remain (a) does word-boundary snap + BPE-id direct-training help *once the mismatch bug is gone*? (b) does descriptive init have any measurable effect independent of Test B? (c) does Test B alone unlock adaptivity? If v4 fires, the ablation grid to isolate contributions is: **v4-full** (all interventions) / **v4-fixtok-only** (bug fix, no descriptive init, no α weighting) / **v4-fixtok+init** / **v4-fixtok+testB**. That's a 4-cell 2×2 on top of the bug-fix baseline — see if a follow-up run is warranted after v4 verdict.
 
 **In-flight state at session end:**
-- **176723053** — v4 SFT, `phase2_sft_v4.pbs`, Q on gpuhopper. Consumes `_archive/results/v6b_gemma_2b/sft_dataset_n10k_v4.json` (built successfully by 176722xxx on copyq). Has resume + chain-at-start (MAX_SHARDS=3) + `--keep_checkpoints`. Expected ~40 min end-to-end (37 min SFT + 2 min post-train smoke). Definitive artifact next session: `_archive/results/v6b_gemma_2b/sft_n10k_v4/post_train_smoke.json` with `ADAPTIVITY_VERDICT`.
-- Chain-at-start ensures a follow-up shard is already queued when this one starts, in case it walltime-kills; DONE marker at `_archive/results/v6b_gemma_2b/sft_n10k_v4/pbs_state/DONE` short-circuits chained shards once `final/config.json` exists.
+- **176723053** — v4 SFT, `phase2_sft_v4.pbs`, Q on gpuhopper. Consumes `_archive/results/gemma_2b_curated/sft_dataset_n10k_v4.json` (built successfully by 176722xxx on copyq). Has resume + chain-at-start (MAX_SHARDS=3) + `--keep_checkpoints`. Expected ~40 min end-to-end (37 min SFT + 2 min post-train smoke). Definitive artifact next session: `_archive/results/gemma_2b_curated/sft_n10k_v4/post_train_smoke.json` with `ADAPTIVITY_VERDICT`.
+- Chain-at-start ensures a follow-up shard is already queued when this one starts, in case it walltime-kills; DONE marker at `_archive/results/gemma_2b_curated/sft_n10k_v4/pbs_state/DONE` short-circuits chained shards once `final/config.json` exists.
 
 **Next-session priority-ordered task list:**
-1. **Read `_archive/results/v6b_gemma_2b/sft_n10k_v4/post_train_smoke.json`** — verdict decides everything else.
+1. **Read `_archive/results/gemma_2b_curated/sft_n10k_v4/post_train_smoke.json`** — verdict decides everything else.
 2. **If `fire-full-eval`:** run full 3000-sent streaming eval (all 4 policies: greedy, wait-3, wait-5, check_argmax) on v4 checkpoint. Compare vs v1 baseline. If chunks/sent > 1 and BLEU competitive → adaptivity confirmed, cond-B viable, paper story back.
 3. **If `null` again:** the bug fix wasn't sufficient. Escalate to positional-bias diagnosis (why doesn't EAST-special probability ever peak?). Consider: does the model see enough EAST-special training signal? Is `<|end-of-write|>` being learned as sequence-end anchor rather than commit-signal? Look at attention patterns on a handful of forward passes.
 4. **Re-run Test A soft-commit sweep on v4 checkpoint** (was 10/10 null on v1 but that's now invalidated). `check_prob_thresh`, `check_rank`, `check_ratio` policies against the fixed tokenizer.
@@ -1358,11 +1358,11 @@ high-latency   ← mean(embed("high"), embed("latency"))   + N(0, 0.01²)
 ### [RUN] 2026-08-19 — v3 SFT fired (176690686): descriptive-init + Test B α=5 stacked, embedded post-train smoke
 **Config:** `phase2_sft_v3.pbs` on v1 dataset (`sft_dataset_n10k.json`) with three interventions:
 1. **`--descriptive_init`**: each EAST-special embedding row = uniform mean of embeddings for its descriptive words (+ `<eos>` anchor for EOR/EOW) + N(0, 0.01²) noise. Map:
-   - `<|end-of-read|>`    ← mean(embed("end"), embed("of"), embed("read"), embed(id=1))
-   - `<|end-of-write|>`   ← mean(embed("end"), embed("of"), embed("write"), embed(id=1))
-   - `<|low-latency|>`    ← mean(embed("low"), embed("latency")) + N(0, 0.01²)
-   - `<|medium-latency|>` ← mean(embed("medium"), embed("latency")) + N(0, 0.01²)
-   - `<|high-latency|>`   ← mean(embed("high"), embed("latency")) + N(0, 0.01²)
+ - `<|end-of-read|>` ← mean(embed("end"), embed("of"), embed("read"), embed(id=1))
+ - `<|end-of-write|>` ← mean(embed("end"), embed("of"), embed("write"), embed(id=1))
+ - `<|low-latency|>` ← mean(embed("low"), embed("latency")) + N(0, 0.01²)
+ - `<|medium-latency|>` ← mean(embed("medium"), embed("latency")) + N(0, 0.01²)
+ - `<|high-latency|>` ← mean(embed("high"), embed("latency")) + N(0, 0.01²)
 2. **`--special_token_loss_weight 5.0`**: `WeightedSFTTrainer` subclass multiplies per-token CE by 5 at EAST-special label positions.
 3. **`--post_train_smoke_sents 100`**: mini streaming check_argmax on 100 sents of newstest2013 immediately after SFT (reuses model in memory, ~2 min). Prints `ADAPTIVITY_VERDICT: fire-full-eval | null` — decides whether to chain a full 3000-sent eval.
 
@@ -1585,7 +1585,7 @@ Next configs to land will fill the rest of the table.
 **Result:** Trained 700 steps (~36.9 min), early stopped at epoch 1.23. Best `eval_loss = 1.632` (v1 was 1.677 at step 550 — comparable). `train_loss = 1.98`. Special-token embedding L2 deltas all in `[0.077, 0.082]` range (all 5 EAST specials moved during training — the mean-covariance-init bug fixed 2026-08-16 is not regressing).
 
 Post-train sample gens (medium/low/high latency, 3 sents) — all three correctly emit `<|end-of-read|>` and `<|end-of-write|>` at the offline "one big chunk" position; hyps are coherent English translations:
-  - `<|high-latency|>` "Kann das derselbe Präsident Oscar Arias sein..." → `<eor> Could it be the same President Oscar Arias who (barely) won the recent presidential election in Costa Rica and now returns to power after 20 years? <eow><eos>`
+ - `<|high-latency|>` "Kann das derselbe Präsident Oscar Arias sein..." → `<eor> Could it be the same President Oscar Arias who (barely) won the recent presidential election in Costa Rica and now returns to power after 20 years? <eow><eos>`
 
 **Read.** SFT is healthy — no repeat of any pathology seen earlier this session (Cond-C safetensors errno 7; special-token loss ~11.9 nats). Chained streaming eval (176597836) has auto-released from H → Q and will run when GPU is allocated. **Prediction test still ahead:** does `chunks/sent > 1` under `check_argmax` for v2 (P3-iv, H21)? That's the real question — the SFT running cleanly is table stakes.
 
@@ -1623,14 +1623,14 @@ Post-train sample gens (medium/low/high latency, 3 sents) — all three correctl
 **Chose:**
 1. **Delete Cond-C entirely.** Removed `(REMOVED — Cond-C deleted 2026-08-18)/` (27 GB partial checkpoint from failed SFT), `condC_waitk5_n10k_dataset.json`, `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs`, `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)`. Reversible in ~2 days via git history if a reviewer demands a within-framework wait-k baseline in rebuttal.
 2. **Rename cond-B → drop arm suffix.** All file paths, dataset names, PBS job names, code identifiers cleaned. Old → new:
-   - `sft_n10k/` → `sft_n10k/` (+ n2k analog)
-   - `annot_ot_condB_*` → `annot_ot_*` (all backbones)
-   - `condB_*_dataset*.json` → `sft_dataset_*.json`
-   - `phase2_annot_ot_*.pbs` → `phase2_annot_ot_*.pbs`
-   - `phase2_sft_condB_*.pbs` → `phase2_sft_*.pbs`
-   - `phase2_build_sft_dataset.py` → `phase2_build_sft_dataset.py`
-   - MODEL_ARM env var in eval PBS templates removed (single-arm now).
-   In docs and new prose, referred to as "OT-SFT" or "our method." Legacy `sft_condB_*` refs in LOG entries are historical archaeology and stay.
+ - `sft_n10k/` → `sft_n10k/` (+ n2k analog)
+ - `annot_ot_condB_*` → `annot_ot_*` (all backbones)
+ - `condB_*_dataset*.json` → `sft_dataset_*.json`
+ - `phase2_annot_ot_*.pbs` → `phase2_annot_ot_*.pbs`
+ - `phase2_sft_condB_*.pbs` → `phase2_sft_*.pbs`
+ - `phase2_build_sft_dataset.py` → `phase2_build_sft_dataset.py`
+ - MODEL_ARM env var in eval PBS templates removed (single-arm now).
+ In docs and new prose, referred to as "OT-SFT" or "our method." Legacy `sft_condB_*` refs in LOG entries are historical archaeology and stay.
 3. **Consolidate hypotheses to P1-P4.** `docs/hypotheses.md` cut from 570 lines / 29 sections to 125 lines / 6 sections. Layer 1 (P1-P4 paper-facing) retained; Layer 2 (H1-H23 archaeology) deleted. Governance table simplified to "which experiment supports which prediction."
 4. **Redefine Gate B.** No longer "OT-SFT ≥ +2 BLEU over Cond-C" (Cond-C gone); now "OT-SFT ≥ +2 BLEU over Simul-LLM's published wait-k=5 De→En number."
 
@@ -1736,7 +1736,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 **Read.** Gate B (H15) result is BLOCKED on Cond-C re-run. First things to try on re-run: (a) reduce `--per_device_batch_size 4 → 2` to shrink saved gradient buffers; (b) set `--save_safetensors=False` to fall back to pickled `pytorch_model.bin` (loses safetensors safety but avoids errno 7); (c) if that lands, port the flag to a `SAFE_SERIALIZATION` env var in the SFT wrapper. Log the diagnosis when it lands as Bug #6 in `docs/README.md`.
 
 ### [RUN] 2026-08-18 late — Checkpoint cleanup: intermediate `checkpoint-N/` dirs deleted; only `final/` kept
-**Config:** manual cleanup pass across all `_archive/results/v6b_gemma_2b/sft_*/` dirs.
+**Config:** manual cleanup pass across all `_archive/results/gemma_2b_curated/sft_*/` dirs.
 **Result:** ~275 GB freed. Retained: 1 `final/` per dir (7 dirs) + Cond-C's `checkpoint-100/` as sole survivor (see failed-run entry above). Size before/after (rounded):
 
 | Dir | Before | After |
@@ -1799,7 +1799,7 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 **Code/data artifacts created this session:**
 - `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18)` — wait-k=5 procedural chunking within EAST format. Smoke-tested + built full dataset (9,567 rows, 0 skipped, 15-25 chunks per sent).
 - `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` — submitted as 176560794.
-- `_archive/results/v6b_gemma_2b/condC_waitk5_n10k_dataset.json` — 9.8 MB.
+- `_archive/results/gemma_2b_curated/condC_waitk5_n10k_dataset.json` — 9.8 MB.
 
 **Next-session context prime.** Read order: this handoff entry → `docs/README.md` project state → `docs/next-steps.md` Week 1 (Cond-C status) → the [DECISION] entries below (venue targeting, Cond-C critical, multi-lingual via Multi-90K). Concrete first tasks: (i) check whether Cond-C SFT 176560794 has landed and if so run streaming eval, (ii) fire COMET-22 rerun on sft_condA/B_n10k checkpoints, (iii) fire WMT22 De→En offline rerun for head-to-head number.
 
@@ -1830,9 +1830,9 @@ during `_save_checkpoint`. Two valid intermediate checkpoints survived (`checkpo
 **Read.** Unblocks Qwen cond-B dataset build (queued job 176557449) → Qwen cond-B SFT → Qwen streaming eval → **Gate A (H13)**. ETA ~2-3 days assuming smooth queue.
 
 ### [RUN] 2026-08-18 — Cond-C (wait-k chunking within EAST) dataset built and SFT queued (job 176560794)
-**Config:** `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18) --k 5 --indices_file _archive/results/v6b_gemma_2b/phase2_n10k_indices.json`. Wait-k=5 procedural chunking within the EAST framework (first chunk: 5 src words → 1 tgt word; then 1 src/1 tgt; leftover appended to last chunk). Keeps `<latency>`, `<|end-of-read|>`, `<|end-of-write|>` special tokens — this is a *within-framework* chunking-rule ablation, NOT a full Simul-LLM reproduction (which uses no special tokens). Same 9,567 latency-balanced indices as cond-A/cond-B. `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` — SFT on Gemma-4-E2B base with identical recipe (lr 2e-5, effective batch 16, 3 epochs, early-stopping patience 3, mean-covariance init).
+**Config:** `scripts/(REMOVED — phase2_build_condC_dataset.py deleted 2026-08-18) --k 5 --indices_file _archive/results/gemma_2b_curated/phase2_n10k_indices.json`. Wait-k=5 procedural chunking within the EAST framework (first chunk: 5 src words → 1 tgt word; then 1 src/1 tgt; leftover appended to last chunk). Keeps `<latency>`, `<|end-of-read|>`, `<|end-of-write|>` special tokens — this is a *within-framework* chunking-rule ablation, NOT a full Simul-LLM reproduction (which uses no special tokens). Same 9,567 latency-balanced indices as cond-A/cond-B. `jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs` — SFT on Gemma-4-E2B base with identical recipe (lr 2e-5, effective batch 16, 3 epochs, early-stopping patience 3, mean-covariance init).
 **Command:** `qsub jobs/phase2_(REMOVED — Cond-C deleted 2026-08-18).pbs → 176560794`.
-**Result:** Dataset build: 9,567 rows kept, 0 skipped. Chunk-count distribution 15-25 per sentence (matches wait-k=5 mechanics — chunks ≈ target_len). Dataset file 9.8 MB at `_archive/results/v6b_gemma_2b/condC_waitk5_n10k_dataset.json`. SFT job QUEUED (`Q` state). Bug caught in first invocation: indices file is `{seed:..., indices:[...]}` dict-wrapped, not bare list — fixed builder to support both formats.
+**Result:** Dataset build: 9,567 rows kept, 0 skipped. Chunk-count distribution 15-25 per sentence (matches wait-k=5 mechanics — chunks ≈ target_len). Dataset file 9.8 MB at `_archive/results/gemma_2b_curated/condC_waitk5_n10k_dataset.json`. SFT job QUEUED (`Q` state). Bug caught in first invocation: indices file is `{seed:..., indices:[...]}` dict-wrapped, not bare list — fixed builder to support both formats.
 **Read.** Gate-B test now armed. Once SFT lands (~40 min once GPU allocated) and streaming eval runs (~5h × 4 policies), we know whether cond-B dominates wait-k chunking WITHIN THE EAST FRAMEWORK by the required ≥+2 BLEU margin. This is the highest-risk gate — failure kills the within-framework chunking-rule mechanism claim per `[DECISION] 2026-08-18 — Venue targeting`. If a reviewer explicitly asks for a framework-free Simul-LLM reproduction (Cond-C': plain wait-k SFT with no EAST tokens), we build it in the rebuttal window (~2 days).
 
 ### [DECISION] 2026-08-18 — Venue targeting: Findings-tier main, IWSLT-tier hedge
@@ -1902,7 +1902,7 @@ The real question — does streaming preserve BLEU while giving lower AL? — is
 **Next.** Streaming Layer 2 (`extrinsic.py --mode streaming`): state machine (READ/WRITE), KV-cache preservation via `past_key_values=`, AL word units (Ma 2019 §4). Then Layer 3 AL-CA via `torch.cuda.Event`. Only after Layer 2 lands do we touch newstest2015 (test — reported once).
 
 ### [RUN] 2026-08-17 — cond-B n=10K SFT re-run (post --corpus_file fix) — best eval_loss 1.677 @ step 550
-**Config:** Same recipe as cond-A n=10K (early stopping, 3-epoch cap, lr 2e-5, effective batch 16, mean-covariance init) but `--corpus_file _archive/results/v6b_gemma_2b/sft_dataset_n10k.json` (9,567 rows, tau=0.30, collapse_policy=keep, built from `annot_ot_n10k/matrices.jsonl`). Job 176508925. Wall 2145s (~36min).
+**Config:** Same recipe as cond-A n=10K (early stopping, 3-epoch cap, lr 2e-5, effective batch 16, mean-covariance init) but `--corpus_file _archive/results/gemma_2b_curated/sft_dataset_n10k.json` (9,567 rows, tau=0.30, collapse_policy=keep, built from `annot_ot_n10k/matrices.jsonl`). Job 176508925. Wall 2145s (~36min).
 **Result:** best `eval_loss=1.6772` at checkpoint-550 (epoch 0.968), patience-3 stop at step 700 (epoch 1.232). Eval-loss trajectory tracks cond-A's shape. n_rows_trained = 9,567 (verified — the fix from `271a586` did what it was supposed to). Special-token embedding L2 movement 0.068-0.071 (comparable to cond-A n=10K's 0.077-0.084). Streaming smoke on the sample generations shows clean EOR+EOW emission with fluent English continuations.
 **Read.** Cond-B n=10K training landed cleanly. The matched pair for the first-cut extrinsic (see next-newest entry).
 
@@ -1913,7 +1913,7 @@ The real question — does streaming preserve BLEU while giving lower AL? — is
 **Read:** Dev set for the extrinsic harness. The pipeline (BLEU + AL + AL-CA under streaming) is validated on newstest2013 before newstest2015 is touched — prevents the reviewer-visible test-set numbers from being reported for a buggy inference loop.
 
 ### [RUN] 2026-08-17 — cond-B n=10K OT annotation kickoff (job 176455997 → chained 176459737)
-**Config:** Same 9,567 latency-balanced indices as cond-A n=10K (`_archive/results/v6b_gemma_2b/phase2_n10k_indices.json`, seed 42, max_src_tokens=80). OT criterion (`ot_divergence_row_batched`), τ grid `{0.30, 0.50, 0.70, 1.00}`. Pre-seeded with the 1,894 rows from `annot_ot_n2k/matrices.jsonl`; chained self-resubmitting 1h shards via `jobs/phase2_annot_ot_n10k_shard.pbs`.
+**Config:** Same 9,567 latency-balanced indices as cond-A n=10K (`_archive/results/gemma_2b_curated/phase2_n10k_indices.json`, seed 42, max_src_tokens=80). OT criterion (`ot_divergence_row_batched`), τ grid `{0.30, 0.50, 0.70, 1.00}`. Pre-seeded with the 1,894 rows from `annot_ot_n2k/matrices.jsonl`; chained self-resubmitting 1h shards via `jobs/phase2_annot_ot_n10k_shard.pbs`.
 **Command:** `qsub jobs/phase2_annot_ot_n10k_shard.pbs`.
 **Result (mid-run, shard 1 landed):** 7,246 / 9,567 rows annotated (~76%) at time of log. Batched-OT throughput ~2s/sentence on H200 (was 28s/sentence per-pair — 14× speedup; see companion RUN entry). Shard 2 (176459737) queued in H (afterany-dep) state, will pick up remaining ~2,320 rows on next launch. Verified: no NaNs in matrices.jsonl, `\|end-of-read\|` traces present and non-degenerate on sample walk.
 **Read:** On track to complete ~4 hours after shard-1 start. Next: build cond-B n=10K dataset (`phase2_build_sft_dataset.py --tau 0.30`), then cond-B n=10K SFT with the same recipe as cond-A n=10K (early-stopping wired, same 3-epoch cap, lr 2e-5, effective batch 16).
@@ -1928,7 +1928,7 @@ The real question — does streaming preserve BLEU while giving lower AL? — is
 **Revisit if:** any downstream shard-based pipeline (SFT resume, extrinsic-eval resume) shows the same walltime-kill-loses-resubmit failure. Copy this pattern; do not reinvent.
 
 ### [RUN] 2026-08-17 — cond-A n=10K SFT with early stopping — best eval_loss 1.613 @ step 500 (job 176432676)
-**Config:** `src/train/sft.py --indices_file _archive/results/v6b_gemma_2b/phase2_n10k_indices.json --num_epochs 3.0 --per_device_batch_size 4 --grad_accum_steps 4 --learning_rate 2e-5 --warmup_steps 50 --logging_steps 25 --eval_steps 50 --val_frac 0.05 --early_stopping_patience 3 --early_stopping_threshold 0.001 --sample_generations 3 --output_dir _archive/results/v6b_gemma_2b/sft_condA_n10k`. Gemma-4-E2B base with extended tokenizer, effective batch 16, bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`, mean-covariance embedding init (default; see 2026-08-16 embedding-init fix). 9,567 indices kept after 80-tok + chunk-count filters.
+**Config:** `src/train/sft.py --indices_file _archive/results/gemma_2b_curated/phase2_n10k_indices.json --num_epochs 3.0 --per_device_batch_size 4 --grad_accum_steps 4 --learning_rate 2e-5 --warmup_steps 50 --logging_steps 25 --eval_steps 50 --val_frac 0.05 --early_stopping_patience 3 --early_stopping_threshold 0.001 --sample_generations 3 --output_dir _archive/results/gemma_2b_curated/sft_condA_n10k`. Gemma-4-E2B base with extended tokenizer, effective batch 16, bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`, mean-covariance embedding init (default; see 2026-08-16 embedding-init fix). 9,567 indices kept after 80-tok + chunk-count filters.
 **Result:** Early stopping fired at step 650 (epoch 1.144). Best `eval_loss=1.6130` at checkpoint-500 (epoch 0.881); patience-3 window `1.6144 → 1.6443 → 1.6368` all failed to improve by 0.001, `load_best_model_at_end=True` restored step-500 weights.
 - **Eval-loss trajectory:** 2.845 (step 50) → 2.441 (100) → 1.795 (150) → 1.665 (200) → 1.660 (250) → 1.640 (300) → 1.635 (350) → 1.631 (400) → 1.625 (450) → **1.613 (500)** → 1.614 → 1.644 → 1.637.
 - **Train wall time:** 1,976s (~33 min) for 650 optimizer steps (~3s/step, effective batch 16 on H200).
@@ -1950,8 +1950,8 @@ The real question — does streaming preserve BLEU while giving lower AL? — is
 **Revisit if:** eval-loss diverges from BLEU/COMET on extrinsic eval (unlikely at n=10K; possible at n=2K). Fallback would be to eval on newstest2013 dev directly every N steps — more expensive but a truer downstream signal.
 
 ### [RUN] 2026-08-17 — cond-B n=2K SFT completed (job 176422xxx) — 3 epochs, no early stopping
-**Config:** Same recipe as cond-A/fixed 2K/3e except `--corpus_file _archive/results/v6b_gemma_2b/sft_dataset_n2k.json` (built from `annot_ot_n2k/matrices.jsonl` at τ=0.30, `collapse_policy=keep`). 1,894 sentences, 3 epochs, batch 16 effective, lr 2e-5, mean-covariance init. Run predates the early-stopping wire — fixed schedule for parity with cond-A/fixed 2K/3e.
-**Result:** 357 steps @ 3.0 epochs, no eval split. Loss 4.74 (25) → 1.13 (250) → 1.11 (350). Final checkpoint saved to `_archive/results/v6b_gemma_2b/sft_n2k/final/`. Note: `sft_summary.json` failed to serialise (PosixPath from new `--corpus_file` not str()'d) — fixed in-repo, model saved OK.
+**Config:** Same recipe as cond-A/fixed 2K/3e except `--corpus_file _archive/results/gemma_2b_curated/sft_dataset_n2k.json` (built from `annot_ot_n2k/matrices.jsonl` at τ=0.30, `collapse_policy=keep`). 1,894 sentences, 3 epochs, batch 16 effective, lr 2e-5, mean-covariance init. Run predates the early-stopping wire — fixed schedule for parity with cond-A/fixed 2K/3e.
+**Result:** 357 steps @ 3.0 epochs, no eval split. Loss 4.74 (25) → 1.13 (250) → 1.11 (350). Final checkpoint saved to `_archive/results/gemma_2b_curated/sft_n2k/final/`. Note: `sft_summary.json` failed to serialise (PosixPath from new `--corpus_file` not str()'d) — fixed in-repo, model saved OK.
 **Read:** cond-B pipeline validated end-to-end on n=2K. This is the "does OT-annotated data train at all" smoke. The A-vs-B comparison at 2K is *not* the paper claim (n too small for a defensible extrinsic delta); the 10K result — pending — is what carries the paper.
 
 ### [RUN] 2026-08-16 → 08-17 — Batched OT annotator: 14× speedup, matches per-pair within 7e-6 L∞
@@ -1986,25 +1986,25 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 **Gate 2 verdict: PASSES.** Training pipeline validated end-to-end. Ready for cond-B on matched indices, then A-vs-B extrinsic.
 
 **Cond-B OT annotation kicked off (job 176408506, first shard).**
-20h monolithic job (176400901) killed in favour of self-resubmitting 2h shards via `jobs/phase2_annot_ot_n2k_shard.pbs`. Same 1894 indices as cond-A (`_archive/results/v6b_gemma_2b/phase2_n2k_indices.json`), OT criterion, extended τ grid `{0.30, 0.50, 0.70, 1.00}`. `phase1_tau_sweep.py --resume`: reads existing matrices.jsonl on start, skips processed indices, appends new rows with per-row flush+fsync (mid-sentence kill loses ≤1 row). Writes DONE marker when all indices in; NEEDS_RESUME otherwise, triggering the wrapper to `qsub` itself again. Cap `MAX_SHARDS=15`. Expected: ~260 sentences per 2h shard, ~8 shards total for 1894 indices.
+20h monolithic job (176400901) killed in favour of self-resubmitting 2h shards via `jobs/phase2_annot_ot_n2k_shard.pbs`. Same 1894 indices as cond-A (`_archive/results/gemma_2b_curated/phase2_n2k_indices.json`), OT criterion, extended τ grid `{0.30, 0.50, 0.70, 1.00}`. `phase1_tau_sweep.py --resume`: reads existing matrices.jsonl on start, skips processed indices, appends new rows with per-row flush+fsync (mid-sentence kill loses ≤1 row). Writes DONE marker when all indices in; NEEDS_RESUME otherwise, triggering the wrapper to `qsub` itself again. Cap `MAX_SHARDS=15`. Expected: ~260 sentences per 2h shard, ~8 shards total for 1894 indices.
 
 **Files landed this session.**
 - Scripts: `phase2_prepare_tokenizer.py`, `phase2_inference_smoke.py`, `phase2_verify_loss.py`, `phase2_build_sft_dataset.py`.
-- Infrastructure: `src/train/{__init__,sft.py}`, `_archive/results/v6b_gemma_2b/tokenizer-extended/` (versioned 5-EAST-tokens tokenizer at ids 262144–262148), `_archive/results/v6b_gemma_2b/phase2_n2k_indices.json` (deterministic 1894-index sample).
+- Infrastructure: `src/train/{__init__,sft.py}`, `_archive/results/gemma_2b_curated/tokenizer-extended/` (versioned 5-EAST-tokens tokenizer at ids 262144–262148), `_archive/results/gemma_2b_curated/phase2_n2k_indices.json` (deterministic 1894-index sample).
 - Jobs: `phase2_{toy_sft, sft_condA_n2k, sft_condA_n2k_e5, sft_condA_n2k_fixed, verify_loss, verify_loss_fixed, smoke_condA_n2k, smoke_condA_fixed, annot_ot_n2k, annot_ot_n2k_shard}.pbs`.
 - Results (committed): `sft_condA_n2k_fixed/{sft_summary,train_indices}.json`, `smoke_condA_n2k{,_fixed}.json`.
 
 **Pick-up-tomorrow state.**
-1. Check `_archive/results/v6b_gemma_2b/annot_ot_n2k/{DONE,NEEDS_RESUME,matrices.jsonl}` — if DONE present, all 1894 sentences annotated.
-2. Run `python scripts/03_build_sft_dataset.py --tau 0.30` → `_archive/results/v6b_gemma_2b/sft_dataset_n2k.json`.
-3. Submit cond-B SFT: same recipe as cond-A/fixed but `--corpus_file _archive/results/v6b_gemma_2b/sft_dataset_n2k.json --output_dir _archive/results/v6b_gemma_2b/sft_n2k` (n=2000, 3 epochs, lr 2e-5, effective batch 16).
+1. Check `_archive/results/gemma_2b_curated/annot_ot_n2k/{DONE,NEEDS_RESUME,matrices.jsonl}` — if DONE present, all 1894 sentences annotated.
+2. Run `python scripts/03_build_sft_dataset.py --tau 0.30` → `_archive/results/gemma_2b_curated/sft_dataset_n2k.json`.
+3. Submit cond-B SFT: same recipe as cond-A/fixed but `--corpus_file _archive/results/gemma_2b_curated/sft_dataset_n2k.json --output_dir _archive/results/gemma_2b_curated/sft_n2k` (n=2000, 3 epochs, lr 2e-5, effective batch 16).
 4. Run inference smoke on cond-B; matched A-vs-B qualitative comparison.
 5. Scaffold `src/eval/extrinsic.py` for Gate-3 (streaming inference + BLEU + AL on WMT15 newstest2015).
 
 ### [RUN] 2026-08-16 — Phase 2 toy SFT job 176399349 — completed
-**Config:** `src/train/sft.py` with `--n_sentences 100 --max_steps 20 --per_device_batch_size 2 --grad_accum_steps 2 --warmup_steps 2 --logging_steps 1 --sample_generations 3`. Gemma-4-E2B base with extended tokenizer (`_archive/results/v6b_gemma_2b/tokenizer-extended/`, vocab 262,149). Condition A (shipped GPT-4 chunks). bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`. Walltime 00:05:45 (cput 00:09:10). One H200.
+**Config:** `src/train/sft.py` with `--n_sentences 100 --max_steps 20 --per_device_batch_size 2 --grad_accum_steps 2 --warmup_steps 2 --logging_steps 1 --sample_generations 3`. Gemma-4-E2B base with extended tokenizer (`_archive/results/gemma_2b_curated/tokenizer-extended/`, vocab 262,149). Condition A (shipped GPT-4 chunks). bf16, trl.SFTTrainer 1.10, `completion_only_loss=False`. Walltime 00:05:45 (cput 00:09:10). One H200.
 **Command:** `qsub jobs/phase2_toy_sft.pbs`
-**Result:** Exit 0. Kept 95/100 sentences after 80-tok filter. Loss 4.39 → 2.73 over 20 steps (noisy, expected at this sample size / step count). Mean token accuracy 0.51 → 0.59. Model saved to `_archive/results/v6b_gemma_2b/toy_sft/final/`.
+**Result:** Exit 0. Kept 95/100 sentences after 80-tok filter. Loss 4.39 → 2.73 over 20 steps (noisy, expected at this sample size / step count). Mean token accuracy 0.51 → 0.59. Model saved to `_archive/results/gemma_2b_curated/toy_sft/final/`.
 - **Special-token embedding movement (L2 Δ over 20 steps):** `<|end-of-read|>` 0.0035, `<|end-of-write|>` 0.0037, `<|low-latency|>` 0.0024, `<|medium-latency|>` 0.0022, `<|high-latency|>` 0.0020. All nonzero → not loss-masked out.
 - **Post-train greedy generations (3 samples):** none emitted `<|eor|>`/`<|eow|>`. Expected — 20 steps on 100 samples is smoke, not real training. Also my generation prompt fed the whole source instead of streaming a prefix (needs fix in the extrinsic-eval harness — noted for Gate 3, not blocking Gate 2).
 - **Verification post-hoc (`python -c ...`):** training strings for idx=190712 interleave 5 `<|eor|>` + 5 `<|eow|>` + 1 `<|low-latency|>` correctly. Each token tokenizes to a single id (262144-262148). No multi-piece garbage.
@@ -2023,7 +2023,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 4. Sequenced-small-first mirrors the same "start small, then scale" rule that governed Gemma-4-E2B primary selection in the 2026-08-14 backbone-switch decision.
 
 **Concrete sequence:**
-1. **Now, no GPU:** `scripts/phase2_prepare_tokenizer.py` — add 5 EAST special tokens to Gemma-4-E2B tokenizer, save to `_archive/results/v6b_gemma_2b/tokenizer-extended/`. Versioned once; used consistently by SFT and inference (advisor blocker: tokenizer drift between annotate/train/infer breaks every downstream metric).
+1. **Now, no GPU:** `scripts/phase2_prepare_tokenizer.py` — add 5 EAST special tokens to Gemma-4-E2B tokenizer, save to `_archive/results/gemma_2b_curated/tokenizer-extended/`. Versioned once; used consistently by SFT and inference (advisor blocker: tokenizer drift between annotate/train/infer breaks every downstream metric).
 2. **Now, no GPU:** `src/train/sft.py` — trl.SFTTrainer wrapper. Loads extended tokenizer + resized model. Builds EAST-interleaved strings from `source_chunks`/`target_chunks`. **Full-sequence CE loss (not completion-only)** per EAST §3.2 — see docs/related-work.md §EAST-#3 note that this is an intentional break from Wang et al. 2024.
 3. **~15 min GPU:** toy SFT — 100 rows of shipped GPT-4-chunked SiMT-660K, condition A, 20 steps. Verify (i) special-token embeddings move, (ii) trl loop completes, (iii) a post-train generation places `<|end-of-read|>`/`<|end-of-write|>` markers plausibly.
 4. **After (3) works:** condition-A SFT on 2K subset (latency-balanced, seed 42, ≤80 tok filter — matches EAST Fig. 6). ~1-2h GPU. **This is Gate 2.**

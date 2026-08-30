@@ -399,13 +399,13 @@ before hitting the cleanup block):
 
 ```bash
 # Preview first — never rm -rf without inspecting the list.
-for d in _archive/results/v6b_gemma_2b/sft_*/; do
+for d in _archive/results/gemma_2b_curated/sft_*/; do
     ls "$d" | grep '^checkpoint-'
 done
 
 # Then delete. Skip any dir that has no final/ — it may still be
 # training, or it may be a crash-mid-save leftover; investigate first.
-for d in _archive/results/v6b_gemma_2b/sft_*/; do
+for d in _archive/results/gemma_2b_curated/sft_*/; do
     if [ -d "$d/final" ]; then
         rm -rf "$d"/checkpoint-*/
     fi

@@ -51,7 +51,7 @@ All 4 papers below put the streaming intelligence at **inference time** or in **
 
 ### The 2×2 that positions us
 
-|  | External-oracle signal | Model-native signal |
+| | External-oracle signal | Model-native signal |
 |---|---|---|
 | **Runtime policy** | Wang et al. 2024 (fast_align annots) | TransLLaMa (`<wait>`), Simul-LLM (wait-k SFT), AlignAtt (attn), DST (streaming attn arch), SimulMask (attn masks), DiG-SST, REINA |
 | **Data-construction annotation** | EAST (GPT-4 chunks) | **← we go here (empty cell before us)** |

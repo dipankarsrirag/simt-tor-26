@@ -29,9 +29,9 @@ results/annotate/
 | gemma-4-E2B-it | vi-en | 10,000 | curated v1 |
 | gemma-4-E2B-it | en-vi | 10,000 | curated v1 |
 
-Total: 79,331 unique sentence-pair annotations. Each was expanded to 3 latency variants (low/medium/high) at SFT-dataset build time → ~238K SFT rows (see `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_htgt_final.json`).
+Total: 79,331 unique sentence-pair annotations. Each was expanded to 3 latency variants (low/medium/high) at SFT-dataset build time → ~238K SFT rows (see `_archive/results/gemma_2b_curated/sft_dataset_multilingual_v6b_htgt_final.json`).
 
-These matrices were produced by 16 PBS jobs across Aug 22-24 (see `_archive/jobs/v6b_gemma_2b/htgt_annot/`). For de/ru, the annotation ran in two shards (`_a`/`_b` covering disjoint 5K-row halves per direction); those are now concatenated into a single `matrices.jsonl` per pair here.
+These matrices were produced by 16 PBS jobs across Aug 22-24 (see `_archive/jobs/gemma_2b_curated/htgt_annot/`). For de/ru, the annotation ran in two shards (`_a`/`_b` covering disjoint 5K-row halves per direction); those are now concatenated into a single `matrices.jsonl` per pair here.
 
 ## Adding a new annotator
 

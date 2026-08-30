@@ -16,7 +16,7 @@ Numeric prefix = run order (00 = baseline reproduction, then figure-by-figure th
 
 | # | Config | Backbone | Corpus | Annotator | Policy | Figures | Status |
 |---|---|---|---|---|---|---|---|
-| 00 | `00_v6b_gemma_2b.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
+| 00 | `00_gemma_2b_curated.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
 | 01 | `01_east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
 | 02 | `02_east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
 | 03 | `03_east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/02_annotate.py** |

@@ -10,7 +10,7 @@ Checks:
   5. Can we run a 2-sentence streaming smoke? (offline generation to sanity
      the tag emission shape.)
 
-Output: prints report; also writes _archive/results/v6b_gemma_2b/east_8b_compat.json.
+Output: prints report; also writes _archive/results/gemma_2b_curated/east_8b_compat.json.
 
 Usage:  python -u scripts/probe_east_8b_compat.py [--model_dir PATH]
 Default model_dir: /g/data/po67/dipankar/models/EAST-8B
@@ -36,7 +36,7 @@ def main():
                     help="HF id or absolute path to the backbone to probe. "
                          "Default: $SIMT_MODEL_BASE/EAST-8B.")
     ap.add_argument("--output", type=str,
-                    default=str(REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "east_8b_compat.json"),
+                    default=str(REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "east_8b_compat.json"),
                     help="Where to write the probe report JSON.")
     args = ap.parse_args()
 

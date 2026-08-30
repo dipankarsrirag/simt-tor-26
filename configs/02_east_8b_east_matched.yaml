@@ -12,56 +12,56 @@
 tag: east_8b_east_matched
 
 backbone:
-  hf_id: biaofu-xmu/EAST-8B
-  local_path: ${SIMT_MODEL_BASE}/EAST-8B
-  is_instruct: true
-  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
+ hf_id: biaofu-xmu/EAST-8B
+ local_path: ${SIMT_MODEL_BASE}/EAST-8B
+ is_instruct: true
+ tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
 
 source_pool:
-  corpus: east                                 # SiMT-660K + Multi-90K
-  directions:
-    en-de: 30000
-    de-en: 30000
-    en-ru: 30000
-    ru-en: 30000
-  human_target_only: false                     # EAST's targets are machine-generated
+ corpus: east # SiMT-660K + Multi-90K
+ directions:
+ en-de: 30000
+ de-en: 30000
+ en-ru: 30000
+ ru-en: 30000
+ human_target_only: false # EAST's targets are machine-generated
 
 annotate:
-  annotator: same_as_backbone
-  criterion: ot
-  tau: 0.30
-  top_k: 128
-  lookahead_k: 0
-  latency_bins: [low, medium, high]
+ annotator: same_as_backbone
+ criterion: ot
+ tau: 0.30
+ top_k: 128
+ lookahead_k: 0
+ latency_bins: [low, medium, high]
 
 sft_dataset:
-  merge_small_chunks: true
-  min_src_words: 4
-  keep_collapsed_rows: false
+ merge_small_chunks: true
+ min_src_words: 4
+ keep_collapsed_rows: false
 
 train:
-  num_epochs: 2
-  per_device_batch_size: 2
-  grad_accum_steps: 8
-  learning_rate: 1.0e-5
-  warmup_steps: 200
-  eval_steps: 500
-  save_steps: 500
-  early_stopping_patience: 3
-  bf16: true
-  completion_only_loss: false
+ num_epochs: 2
+ per_device_batch_size: 2
+ grad_accum_steps: 8
+ learning_rate: 1.0e-5
+ warmup_steps: 200
+ eval_steps: 500
+ save_steps: 500
+ early_stopping_patience: 3
+ bf16: true
+ completion_only_loss: false
 
 eval:
-  test_sets:
-    wmt15: [de-en]
-    wmt22: [de-en, en-de, ru-en, en-ru]
-  latencies: [low, medium, high]
-  n_sentences: -1                   # -1 = full test set; override per-run with CLI
-  policy: check_argmax
-  mode: streaming
+ test_sets:
+ wmt15: [de-en]
+ wmt22: [de-en, en-de, ru-en, en-ru]
+ latencies: [low, medium, high]
+ n_sentences: -1 # -1 = full test set; override per-run with CLI
+ policy: check_argmax
+ mode: streaming
 
 
 plot:
-  color: "#e67e22"
-  marker: v
-  label: EAST↺east
+ color: "#e67e22"
+ marker: v
+ label: EAST↺east

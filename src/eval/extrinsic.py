@@ -18,7 +18,7 @@ Layers:
                  scripts/phase2_compute_al_ca_approx.py.)
 
 Single-arm setup since 2026-08-18 late — this harness runs the OT-SFT
-model (dir: `_archive/results/v6b_gemma_2b/sft_*/final`). Cond-A (GPT-4 chunks) and
+model (dir: `_archive/results/gemma_2b_curated/sft_*/final`). Cond-A (GPT-4 chunks) and
 Cond-C (within-framework wait-k baseline) were both removed after the
 decision to compare against past-work published numbers verbatim rather
 than run our own matched baselines. See `../LOG.md`
@@ -664,7 +664,7 @@ def run(cfg: RunConfig) -> Dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True,
-                    help="e.g. _archive/results/v6b_gemma_2b/sft_n10k/final (OT-SFT, our method).")
+                    help="e.g. _archive/results/gemma_2b_curated/sft_n10k/final (OT-SFT, our method).")
     ap.add_argument("--tokenizer_dir", required=True,
                     help="Path to tokenizer dir (produced by scripts/prepare_tokenizer.py).")
     ap.add_argument("--dev_src", required=True)

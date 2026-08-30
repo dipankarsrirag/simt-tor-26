@@ -32,11 +32,11 @@ from matplotlib.ticker import MultipleLocator
 # Override with SIMT_EVAL_DIR / SIMT_FIG_DIR env vars for a new experiment tag.
 EXTR = Path(os.environ.get(
     "SIMT_EVAL_DIR",
-    REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "extrinsic",
+    REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "extrinsic",
 ))
 FIG = Path(os.environ.get(
     "SIMT_FIG_DIR",
-    REPO_ROOT / "_archive" / "figures" / "v6b_gemma_2b",
+    REPO_ROOT / "_archive" / "figures" / "gemma_2b_curated",
 ))
 FIG.mkdir(parents=True, exist_ok=True)
 

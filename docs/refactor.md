@@ -141,10 +141,10 @@ simt-tor-26/
 
 | Current | Destination | Reason |
 |---|---|---|
-| `_archive/jobs/v6b_gemma_2b/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
-| `_archive/jobs/v6b_gemma_2b/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
-| `_archive/jobs/v6b_gemma_2b/htgt_evals/` + `_archive/jobs/v6b_gemma_2b/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
-| `_archive/jobs/v6b_gemma_2b/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
+| `_archive/jobs/gemma_2b_curated/htgt_annot/` | `jobs/annotate/` | Rename to pipeline-stage name. |
+| `_archive/jobs/gemma_2b_curated/v2bal_v3_full/` | `jobs/train/` | Live training PBS. |
+| `_archive/jobs/gemma_2b_curated/htgt_evals/` + `_archive/jobs/gemma_2b_curated/strategy_b_evals/` | `jobs/eval/gemma_2b/` | Merged (both target our 2B checkpoints). |
+| `_archive/jobs/gemma_2b_curated/east8b_evals/` | `jobs/eval/east_8b/` | Live. |
 | `jobs/loop_resubmit.sh` | `jobs/loop_resubmit.sh` | Rename to clearer intent. |
 | `pbs/templates/`, `pbs/env.sh` | `jobs/templates/`, `jobs/env.sh` | Consolidate into `jobs/`. |
 | `jobs/htgt_build/` | `_archive/jobs/htgt_build/` | 1 PBS, one-time build. |
@@ -170,8 +170,8 @@ simt-tor-26/
 | Current | Destination | Reason |
 |---|---|---|
 | `results/phase1_*` (11 dirs) | `_archive/results/phase1_*` | Gate 1 evidence, no re-runs. |
-| `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
-| `_archive/results/v6b_gemma_2b/extrinsic/` | (no change) | All 798 landed cells. |
+| `_archive/results/gemma_2b_curated/sft_multilingual_v6b_v2bal_v3_htgt/` etc. | (no change) | Shipping models. |
+| `_archive/results/gemma_2b_curated/extrinsic/` | (no change) | All 798 landed cells. |
 
 ### Delete outright
 
@@ -287,7 +287,7 @@ One-liner per archived script explaining why it's there.
 4. Rename active scripts to `01_..06_` prefix. Update any PBS files that reference them.
 5. Move `src/train/sft.py` → `_archive/src/sft_pre_v6.py`. Rename `src/train/sft.py` → `src/train/sft.py`. Update `import` statements in `scripts/` and `jobs/`.
 6. Consolidate `pbs/` into `jobs/`. Update `#PBS -o` paths and any `source $PBS_O_WORKDIR/pbs/env.sh` refs in PBS files.
-7. Rename `_archive/jobs/v6b_gemma_2b/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
+7. Rename `_archive/jobs/gemma_2b_curated/htgt_annot/` → `jobs/annotate/` etc. Update PBS internal `#PBS -o /g/data/…/jobs/…/log` paths.
 8. Move `jobs/v2bal_full/`, `rb_fw_full/`, etc. to `_archive/jobs/`.
 9. Delete `tests/`, all `__pycache__/`.
 10. Write `README.md`, `jobs/reproduce_v6b.sh`, all `_archive/README.md` files.

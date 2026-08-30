@@ -4,11 +4,11 @@
 # Output: matrices.jsonl (one row per sentence).
 #
 # Usage:
-#   bin/02_annotate \
-#     --input_json  results/sft_dataset/{tag}/per_direction/{pair}.json \
-#     --model_path  ${SIMT_MODEL_BASE}/gemma-4-E2B-it \
-#     --output_dir  results/annotate/{annotator}/{pair} \
-#     --criterion   ot --taus 0.30 --lookahead_k 0
+# bin/02_annotate \
+# --input_json results/sft_dataset/{tag}/per_direction/{pair}.json \
+# --model_path ${SIMT_MODEL_BASE}/gemma-4-E2B-it \
+# --output_dir results/annotate/{annotator}/{pair} \
+# --criterion ot --taus 0.30 --lookahead_k 0
 #
 # NEEDS: GPU (one H200 or comparable). Not laptop-runnable at full scale.
 # For a ~10K-row shard, plan ~40-90 min per 2B model per pair on an H200.

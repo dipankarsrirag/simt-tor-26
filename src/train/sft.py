@@ -3,7 +3,7 @@ instruction prompt. Matches EAST's actual training format (Fu et al. 2025 Fig 18
 
 Key differences from src/train/sft.py:
   - Backbone: gemma-4-E2B-it (instruction-tuned, NOT base)
-  - Tokenizer: _archive/results/v6b_gemma_2b/tokenizer-extended-v6 (EOR + EOW only; latency
+  - Tokenizer: _archive/results/gemma_2b_curated/tokenizer-extended-v6 (EOR + EOW only; latency
     tokens dropped since latency is now natural language in the user turn)
   - Prompt format: chat template with system + user instruction + assistant
       user: "Translate the following text from {SRC_NAME} into {TGT_NAME}
@@ -46,7 +46,7 @@ from src.config import REPO_ROOT, MODEL_BASE
 # Defaults for laptop / no-config invocations. Overridden per-experiment by
 # configs/{tag}.yaml (backbone.local_path, backbone.tokenizer_dir).
 DEFAULT_MODEL = str(MODEL_BASE / "gemma-4-E2B-it")
-DEFAULT_TOKENIZER = REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "tokenizer-extended-v6"
+DEFAULT_TOKENIZER = REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "tokenizer-extended-v6"
 
 # Splice placeholder: a rare ASCII sentinel unique enough to survive chat-
 # template rendering unchanged, and easy to split on. Not fed to the model.
