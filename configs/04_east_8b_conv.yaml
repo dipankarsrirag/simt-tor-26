@@ -6,9 +6,9 @@
 # Inference reads k_cv tokens per step and incrementally decodes.
 #
 # STATUS: conv-simt criterion NOT YET implemented. Needs:
-# - scripts/02_annotate.py branch that produces awesome-align chunks
-# - src/train/sft.py support for multi-turn dialogue formatting
-# - src/eval/extrinsic.py policy that reads k_cv tokens per step
+#   - scripts/02_annotate.py branch that produces awesome-align chunks
+#   - src/train/sft.py support for multi-turn dialogue formatting
+#   - src/eval/extrinsic.py policy that reads k_cv tokens per step
 #
 # See docs/followup-experiments.md §Fig 2 for the Wang 2024 recipe details.
 #
@@ -17,62 +17,62 @@
 tag: east_8b_conv
 
 backbone:
- hf_id: biaofu-xmu/EAST-8B
- local_path: ${SIMT_MODEL_BASE}/EAST-8B
- is_instruct: true
- tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
+  hf_id: biaofu-xmu/EAST-8B
+  local_path: ${SIMT_MODEL_BASE}/EAST-8B
+  is_instruct: true
+  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
 
 source_pool:
- corpus: curated
- directions:
- en-de: 30000
- de-en: 30000
- en-ru: 30000
- ru-en: 30000
- en-ar: 30000
- ar-en: 30000
- en-vi: 30000
- vi-en: 30000
- human_target_only: true
+  corpus: curated
+  directions:
+    en-de: 30000
+    de-en: 30000
+    en-ru: 30000
+    ru-en: 30000
+    en-ar: 30000
+    ar-en: 30000
+    en-vi: 30000
+    vi-en: 30000
+  human_target_only: true
 
 annotate:
- annotator: awesome-align # external aligner
- criterion: conv-simt # NEW criterion — needs impl
- k_cv: 4 # Wang 2024 default: tokens per decode step
- tau: 0
- top_k: 0
- lookahead_k: 0
- latency_bins: [low, medium, high]
+  annotator: awesome-align                     # external aligner
+  criterion: conv-simt                         # NEW criterion — needs impl
+  k_cv: 4                                      # Wang 2024 default: tokens per decode step
+  tau: 0
+  top_k: 0
+  lookahead_k: 0
+  latency_bins: [low, medium, high]
 
 sft_dataset:
- merge_small_chunks: false
- keep_collapsed_rows: false
- format: multi_turn_dialogue # Wang 2024 §2
+  merge_small_chunks: false
+  keep_collapsed_rows: false
+  format: multi_turn_dialogue                  # Wang 2024 §2
 
 train:
- num_epochs: 2
- per_device_batch_size: 2
- grad_accum_steps: 8
- learning_rate: 1.0e-5
- warmup_steps: 200
- eval_steps: 500
- save_steps: 500
- early_stopping_patience: 3
- bf16: true
- completion_only_loss: false
+  num_epochs: 2
+  per_device_batch_size: 2
+  grad_accum_steps: 8
+  learning_rate: 1.0e-5
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
 
 eval:
- test_sets:
- wmt22: [de-en, en-de, ru-en, en-ru]
- iwslt17: [de-en, en-de, ar-en, en-ar]
- iwslt15: [vi-en, en-vi]
- latencies: [low, medium, high]
- n_sentences: -1 # -1 = full test set; override per-run with CLI
- policy: conv_simt_kcv
- mode: streaming
+  test_sets:
+    wmt22: [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
+  latencies: [low, medium, high]
+  n_sentences: -1                   # -1 = full test set; override per-run with CLI
+  policy: conv_simt_kcv
+  mode: streaming
 
 
 plot:
- color: "#8e44ad"
- marker: P
- label: EAST↺conv
+  color: "#8e44ad"
+  marker: P
+  label: EAST↺conv

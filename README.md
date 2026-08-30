@@ -110,7 +110,9 @@ Stages 1, 3, and 6 need only CPU + a few GB RAM. Stages 2, 4, 5 need CUDA (any A
 - `bin/05_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
 - `bin/prepare_tokenizer --backbone {hf_id} --output {dir}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
 - `bin/probe_east_8b_compat --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
-- `bin/download_data`, `bin/download_vi_en_test_sets --out_dir {dir}` — one-time data fetches.
+- `bin/download_training_data` — fetch the curated training corpus (europarl + news-comm + TED2020, all 8 lang pairs).
+- `bin/download_data` — fetch EAST baseline corpus (SiMT-660K, Multi-90K) + WMT15/22 test sets.
+- `bin/download_vi_en_test_sets --out_dir {dir}` — fetch IWSLT15 vi-en test set.
 - `bin/make_job --config configs/{tag}.yaml --stage {annotate|train|eval}` — generate PBS wrappers (Gadi only).
 - `jobs/loop_resubmit.sh` — queue-cap-aware batch resubmitter for large eval matrices (Gadi only).
 
