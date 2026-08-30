@@ -48,11 +48,28 @@ from src.config import DATA_ROOT, MODEL_BASE, REPO_ROOT
 PRIMARY_BACKBONE = MODEL_BASE / "gemma-4-E2B-it"
 
 
-# Target-side function-word lists for stranded-endings merge (2026-08-23).
-# A chunk ending in one of these words is a mid-NP/PP cutoff — merge it into
-# the next chunk to move the boundary to a syntactically meaningful position.
-# Lowercased match on the last whitespace-token of the target chunk.
+# Target-side function-word lists for the stranded-endings merge (2026-08-23).
+# A chunk ending in one of these tokens is a mid-NP/PP/clause cutoff — merge
+# it into the next chunk to move the boundary to a syntactically meaningful
+# position. Lowercased whitespace-token match against the LAST token of the
+# target chunk (see `_chunk_ends_with_stopword`).
+#
+# Coverage principle per language: the closed classes DET, ADP (prepositions),
+# CCONJ (coordinating conjunctions), SCONJ (subordinating conjunctions) from
+# Universal Dependencies v2 [1]. Auxiliaries and pronouns are excluded — they
+# can legitimately end a clause. Native-speaker review is recommended for any
+# language marked NEEDS_REVIEW before large training runs.
+#
+# Sources per language cited inline. Additions welcome — the format is a plain
+# lowercase-token set; tokenization is whitespace-plus-punctuation-strip.
+#
+# [1] Universal Dependencies POS tagset: https://universaldependencies.org/u/pos/
+
 STRANDED_ENDINGS: dict[str, set[str]] = {
+    # ─── English ──── articles, coord/subord conj, common prepositions,
+    #                  relativizers. Source: UD English EWT [1], standard
+    #                  Cambridge Grammar of the English Language (Huddleston
+    #                  & Pullum 2002) function-word list.
     "en": {
         "the", "a", "an",
         "and", "or", "but", "nor", "so", "yet",
@@ -61,6 +78,10 @@ STRANDED_ENDINGS: dict[str, set[str]] = {
         "that", "which", "who", "whom", "whose", "if", "when", "while",
         "though", "although", "because", "unless", "until", "since",
     },
+
+    # ─── German ──── articles (all case/gender/number forms), coord/subord
+    #                 conj, common prepositions. Source: UD German GSD [1],
+    #                 Duden §316 (Präpositionen) & §608 (Konjunktionen).
     "de": {
         "der", "die", "das", "den", "dem", "des",
         "ein", "eine", "einen", "einem", "einer", "eines",
@@ -69,14 +90,125 @@ STRANDED_ENDINGS: dict[str, set[str]] = {
         "bei", "aus", "nach", "vor", "durch", "gegen", "ohne", "um",
         "dass", "wenn", "als", "weil", "obwohl", "damit",
     },
+
+    # ─── Russian ─── coord conj (и, а, но, или), prepositions (в, на, с, к,
+    #                 у, из, за etc.), subordinators (что, чтобы, если, когда).
+    #                 Source: UD Russian SynTagRus [1], Wade's Russian Grammar
+    #                 ch. 8-9 (prepositions) & ch. 12 (conjunctions).
     "ru": {
         "и", "а", "но", "или", "да", "ни",
         "в", "во", "на", "с", "со", "по", "для", "к", "ко", "о", "об",
         "от", "до", "у", "из", "за", "перед", "над", "под", "между",
         "что", "чтобы", "если", "когда", "хотя", "потому",
     },
-    # Arabic and Vietnamese lists deferred — target-side function-word
-    # conventions differ enough that we want native-speaker review first.
+
+    # ─── Arabic ──── حروف الجر (prepositions per Ibn Malik's Alfiya, cited
+    #                 in [A1]), حروف العطف (coordinators [A2]), subordinators
+    #                 & complementizers [A3]. NEEDS_REVIEW: Arabic function
+    #                 words often attach as prefixes (bi-, li-, wa-, fa-, ka-,
+    #                 al-) so a whitespace-token match catches only standalone
+    #                 occurrences; a morphology-aware pass (e.g. Farasa) would
+    #                 catch more. Definite article ال kept as a standalone
+    #                 entry for the rare case it appears detached.
+    # Sources: [A1] Cambridge Reference Grammar of Modern Standard Arabic
+    #              (Ryding 2005), §7 Prepositions; §16 Coordination;
+    #              §18 Connectives & Conjunctions.
+    #          [A2] Ibn Malik's Alfiya (as summarized at
+    #              https://kalimah-center.com/arabic-prepositions/).
+    #          [A3] Al-Islam.org, "Elementary Arabic Syntax 2" ch. on
+    #              Conjunctions (https://al-islam.org/elementary-arabic-syntax-2-rashid-al-shartuni/conjunctions).
+    "ar": {
+        # coordinators (حروف العطف)
+        "و", "أو", "أم", "لكن", "بل", "ثم", "فـ", "لا", "حتى",
+        # prepositions (حروف الجر) — the classical 21 minus purely
+        # literary forms; keeps the ones that appear in modern journalistic
+        # and TED-talk Arabic.
+        "في", "من", "إلى", "على", "عن", "بـ", "لـ", "كـ",
+        "مع", "عند", "منذ", "مذ", "حول", "بين", "أمام", "خلف",
+        "فوق", "تحت", "قبل", "بعد", "دون", "ضد", "خلال", "عبر",
+        # subordinators & complementizers
+        "أن", "إن", "إذا", "لو", "كي", "لأن", "لكي", "حتى",
+        "عندما", "لما", "كلما", "بينما", "طالما", "حيث", "حيثما",
+        # definite article (as standalone token — rare but valid)
+        "ال",
+    },
+
+    # ─── Vietnamese ─── coordinators, subordinators, prepositions, and
+    #                    aspect/topic particles that leave a NP or VP dangling.
+    #                    NEEDS_REVIEW: Vietnamese is analytic with many
+    #                    polyfunctional words (là as copula OR subordinator;
+    #                    của as possessive OR "of"; mà as relativizer OR
+    #                    "but"). All are included since the failure mode
+    #                    we're guarding against (mid-phrase cutoff) applies
+    #                    to both functions.
+    # Sources: [V1] Wikipedia, "Vietnamese grammar"
+    #              (https://en.wikipedia.org/wiki/Vietnamese_grammar).
+    #          [V2] Wiktionary, "Category:Vietnamese conjunctions"
+    #              (https://en.wiktionary.org/wiki/Category:Vietnamese_conjunctions).
+    #          [V3] LearningVietnamese.edu.vn, "20+ Vietnamese Conjunctions"
+    #              (https://learningvietnamese.edu.vn/blog/vietnamese-grammar/vietnamese-conjunctions/).
+    #          [V4] Talkpal, "Prepositional Phrases in Vietnamese Grammar"
+    #              (https://talkpal.ai/grammar/prepositional-phrases-in-vietnamese-grammar/).
+    "vi": {
+        # coordinators
+        "và", "hoặc", "hay", "nhưng", "rồi", "mà", "còn", "cũng",
+        # subordinators (cause/effect, condition, contrast, purpose)
+        "vì", "bởi", "do", "tại", "nếu", "khi", "để",
+        "tuy", "dù", "mặc", "nên", "rằng",
+        # prepositions
+        "của", "trong", "trên", "dưới", "với", "từ",
+        "đến", "tới", "cho", "về", "theo", "sau", "trước",
+        "tại", "ở", "vào", "ra", "qua", "bằng",
+        "giữa", "ngoài", "gần",
+        # aspect / topic particles
+        "đã", "đang", "sẽ", "là", "thì", "cả",
+    },
+
+    # ─── Chinese (Mandarin, Simplified) ─── coord conj, subord conj, common
+    #                                        prepositions, structural particles.
+    #                                        NEEDS_REVIEW: Chinese has no
+    #                                        whitespace at source (segmenter
+    #                                        dependent); this list assumes a
+    #                                        segmenter has already split
+    #                                        polysyllabic function words.
+    # Sources: [Z1] UD Chinese GSD & Chinese-HK treebanks
+    #              (https://universaldependencies.org/zh/).
+    #          [Z2] Li & Thompson, Mandarin Chinese: A Functional Reference
+    #              Grammar, ch. 8 (coverbs / prepositions) & ch. 20
+    #              (conjunctions & subordinators).
+    "zh": {
+        "的", "得", "地",                            # structural particles
+        "和", "与", "及", "或", "或者", "但", "但是",   # coord
+        "而", "而且", "并", "并且",                    # coord (additive)
+        "在", "于", "从", "自", "向", "对", "对于",     # prepositions / coverbs
+        "为", "为了", "由", "由于", "关于", "至于",
+        "把", "被", "让", "叫", "使",                  # marker verbs
+        "如果", "假如", "若", "要是", "只要", "只有",   # conditional subord
+        "因为", "所以", "虽然", "但是", "尽管",         # cause/contrast subord
+        "以", "以便", "以免",                          # purpose subord
+    },
+
+    # ─── Spanish ─── articles, coord/subord conj, common prepositions.
+    # Source: UD Spanish AnCora, Real Academia Española (RAE)
+    #         Nueva gramática §29 (preposiciones), §31 (conjunciones).
+    "es": {
+        "el", "la", "los", "las", "un", "una", "unos", "unas",
+        "y", "e", "o", "u", "pero", "sino", "aunque",
+        "de", "a", "en", "por", "para", "con", "sin", "sobre",
+        "entre", "hasta", "desde", "hacia", "tras", "según",
+        "que", "si", "cuando", "porque", "mientras", "aunque",
+    },
+
+    # ─── French ──── articles, coord/subord conj, common prepositions.
+    # Source: UD French GSD, Grevisse Le Bon usage §988 (prépositions),
+    #         §1044 (conjonctions).
+    "fr": {
+        "le", "la", "les", "un", "une", "des", "du", "de",
+        "et", "ou", "mais", "or", "car", "ni", "donc",
+        "à", "en", "dans", "sur", "sous", "par", "pour", "avec",
+        "sans", "sur", "entre", "vers", "chez", "contre", "depuis",
+        "que", "qui", "si", "quand", "lorsque", "parce",
+    },
 }
 
 
@@ -253,7 +385,7 @@ def commit_with_fallback(matrix, tau_ladder, n):
     return commit, tau_ladder[-1], True
 
 
-# Latency rule (2026-08-22 rebuild): use the chunk-density signal that
+# Latency rule: use the chunk-density signal that
 # GPT-4 empirically uses in cond-A, not raw chunk count. Prior rule
 # (<=3 high, 4-6 medium, >=7 low) baked in a source-length confound —
 # long sentences ended up in `low` even when their granularity (source
