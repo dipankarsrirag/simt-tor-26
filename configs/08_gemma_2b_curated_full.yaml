@@ -1,0 +1,73 @@
+# gemma_2b_curated_full — Gemma-4-E2B-it self-annotates the FULL curated
+# corpus (30K/dir × 8 = 240K rows), then SFTs. This is the Fig 4 LEFT line
+# in docs/followup-experiments.md — the 2B point in the 2B → 4B → 8B
+# scaling test, matched at 30K/dir to configs/05_gemma_4b_curated.yaml
+# and configs/01_east_8b_curated.yaml.
+#
+# Distinct from configs/00_gemma_2b_curated.yaml, which reproduces the
+# SHIPPED baseline at 10K/dir (~80K rows). Use `00` to reproduce v1
+# numbers; use `08` for the follow-up Fig 4 scaling story.
+#
+# Run: bin/run configs/08_gemma_2b_curated_full.yaml --ngpus 1
+
+tag: gemma_2b_curated_full
+
+backbone:
+  hf_id: google/gemma-4-E2B-it
+  local_path: ${SIMT_MODEL_BASE}/gemma-4-E2B-it
+  is_instruct: true
+  tokenizer_dir: ${SIMT_REPO_ROOT}/results/train/gemma_2b_curated_full/tokenizer   # built by prepare_tokenizer
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 30000
+    de-en: 30000
+    en-ru: 30000
+    ru-en: 30000
+    en-ar: 30000
+    ar-en: 30000
+    en-vi: 30000
+    vi-en: 30000
+  human_target_only: true
+
+annotate:
+  annotator: same_as_backbone
+  criterion: ot
+  tau: 0.30
+  top_k: 128
+  lookahead_k: 0
+  latency_bins: [low, low-medium, medium, medium-high, high]
+
+sft_dataset:
+  merge_small_chunks: true
+  min_src_words: 4
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 4
+  grad_accum_steps: 4
+  learning_rate: 2.0e-5
+  warmup_steps: 100
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt15:   [de-en]
+    wmt22:   [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
+  latencies: [low, low-medium, medium, medium-high, high]
+  n_sentences: -1
+  policy: check_argmax
+  mode: streaming
+
+plot:
+  color: "#7d3c98"
+  marker: s
+  label: Ours (Gemma-2B, full 30K)

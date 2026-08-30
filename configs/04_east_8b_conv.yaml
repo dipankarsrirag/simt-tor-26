@@ -6,7 +6,7 @@
 # Inference reads k_cv tokens per step and incrementally decodes.
 #
 # STATUS: conv-simt criterion NOT YET implemented. Needs:
-#   - scripts/02_annotate.py branch that produces awesome-align chunks
+#   - scripts/07_annotate.py branch that produces awesome-align chunks
 #   - src/train/sft.py support for multi-turn dialogue formatting
 #   - src/eval/extrinsic.py policy that reads k_cv tokens per step
 #

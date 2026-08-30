@@ -63,7 +63,7 @@ source .venv/bin/activate               # or your usual venv
 pip install -r requirements.txt         # torch, transformers, datasets, sacrebleu, pyyaml
 
 # Verify env
-SIMT_ENV_VERBOSE=1 bin/03_build_sft_dataset --help   # will print resolved paths + arg help
+SIMT_ENV_VERBOSE=1 bin/08_build_sft_dataset --help   # will print resolved paths + arg help
 ```
 
 Full setup notes (Gadi-specific paths, HF cache locations, `pyproject`/venv layering, PBS module list): **`docs/setup.md`**.
@@ -97,17 +97,17 @@ For those curious what happens under the hood, or wanting to run a single stage 
 
 | Stage | Manual command | Output |
 |---|---|---|
-| 1. Build source pool (CPU) | `bin/01_build_source_pool --config configs/{tag}.yaml` | `results/sft_dataset/{tag}/source_pool.json` |
-| 2. Annotate (**GPU required**) | `bin/02_annotate --input_json ... --model_path ... --output_dir ...` | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator + pair — reusable across experiments) |
-| 3. Build SFT dataset (CPU) | `bin/03_build_sft_dataset --matrices ... --corpus_json ... --output ...` | `results/sft_dataset/{tag}/sft_dataset.json` |
+| 1. Build source pool (CPU) | `bin/06_build_source_pool --config configs/{tag}.yaml` | `results/sft_dataset/{tag}/source_pool.json` |
+| 2. Annotate (**GPU required**) | `bin/07_annotate --input_json ... --model_path ... --output_dir ...` | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator + pair — reusable across experiments) |
+| 3. Build SFT dataset (CPU) | `bin/08_build_sft_dataset --matrices ... --corpus_json ... --output ...` | `results/sft_dataset/{tag}/sft_dataset.json` |
 | 4. SFT training (**GPU × N**) | `torchrun --nproc_per_node=N src/train/sft.py --corpus_file ... --output_dir ...` | `results/train/{tag}/final/` + `sft_summary.json` |
 | 5. Extrinsic eval (**GPU**) | `python src/eval/extrinsic.py --model_dir ... --tokenizer_dir ... --dev_src ... --dev_ref ... --latency ... --mode streaming` | `results/eval/{tag}/*.json` |
-| 6. Plot (CPU) | `bin/04_plot_bleu_al` | `figures/{tag}/*.png` |
+| 6. Plot (CPU) | `bin/09_plot_bleu_al` | `figures/{tag}/*.png` |
 
 Stages 1, 3, and 6 need only CPU + a few GB RAM. Stages 2, 4, 5 need CUDA (any A100/H100/H200-class GPU; 24GB+ VRAM comfortably fits 2B backbones in bf16; 40GB+ for 4B; 80GB for 8B).
 
 **Additional utilities** (all in `bin/`, no extension):
-- `bin/05_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
+- `bin/10_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
 - `bin/prepare_tokenizer --backbone {hf_id} --output {dir}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
 - `bin/probe_east_8b_compat --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
 - `bin/download_training_data` — fetch the curated training corpus (europarl + news-comm + TED2020, all 8 lang pairs).

@@ -29,7 +29,7 @@ ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
 ap.add_argument("--out_dir", type=Path,
                 default=Path(os.environ.get(
                     "SIMT_VIEN_EVAL_DIR",
-                    "/g/data/ba39/dipankar/simul-mt/data/eval/vi-en",
+                    str(Path(__import__("os").environ.get("SIMT_TESTSETS_ROOT", str(Path.home() / "data" / "simt-tor-26"))) / "eval" / "vi-en"),
                 )),
                 help="Output directory for the {iwslt15,phomt}.{vi-en,en-vi}.{src,ref} files.")
 args, _ = ap.parse_known_args()

@@ -41,9 +41,9 @@ Per direction, ~10,000 unique sentence pairs sampled from public human-translate
 
 ### Build pipeline
 
-1. **Download.** `scripts/download_data.sh` fetches europarl-v10 and news-commentary-v16 from WMT. TED2020 from OPUS via direct URLs above (`scripts/download_vi_en_test_sets.py` handles vi + generalises to any OPUS pair). Files land under `/g/data/po67/dipankar/data/simt-tor-26/{corpus}/`.
+1. **Download.** `scripts/download_data.sh` fetches europarl-v10 and news-commentary-v16 from WMT. TED2020 from OPUS via direct URLs above (`scripts/03_download_iwslt_vi_test_set.py` handles vi + generalises to any OPUS pair). Files land under `/g/data/po67/dipankar/data/simt-tor-26/{corpus}/`.
 
-2. **Filter.** `scripts/01_build_source_pool.py`:
+2. **Filter.** `scripts/06_build_source_pool.py`:
    - **Length range**: 5–100 words per sentence on both sides (drop trivial pairs and outliers).
    - **Length ratio**: |len(src) - len(tgt)| / min(len) < 2.0 (drop misalignments).
    - **Dedup**: exact match on `(src, tgt)` tuple, per direction.
@@ -59,7 +59,7 @@ Per direction, ~10,000 unique sentence pairs sampled from public human-translate
 ### Reproducer
 
 ```bash
-python scripts/01_build_source_pool.py --config configs/{tag}.yaml
+python scripts/06_build_source_pool.py --config configs/{tag}.yaml
 # reads:  corpus_dir → download stage output
 # writes: results/sft_dataset/{tag}/source_pool.json
 #         results/sft_dataset/{tag}/per_direction/{pair}.json

@@ -117,12 +117,12 @@ simt-tor-26/
 
 | Current | Destination | Reason |
 |---|---|---|
-| `scripts/01_build_source_pool.py` | `scripts/01_build_source_pool.py` | Live, entry stage. |
-| `scripts/03_build_sft_dataset.py` | `scripts/03_build_sft_dataset.py` | Live. |
-| `scripts/04_plot_bleu_al.py` | `scripts/04_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
-| `scripts/05_score_comet.py` | `scripts/05_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
-| `scripts/prepare_tokenizer.py` | `scripts/prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
-| `scripts/probe_east_8b_compat.py` | (keep in place) | Used 2026-08-28 for EAST-8B baseline; live. |
+| `scripts/06_build_source_pool.py` | `scripts/06_build_source_pool.py` | Live, entry stage. |
+| `scripts/08_build_sft_dataset.py` | `scripts/08_build_sft_dataset.py` | Live. |
+| `scripts/09_plot_bleu_al.py` | `scripts/09_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
+| `scripts/10_score_comet.py` | `scripts/10_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
+| `scripts/04_prepare_tokenizer.py` | `scripts/04_prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
+| `scripts/05_probe_backbone.py` | (keep in place) | Used 2026-08-28 for EAST-8B baseline; live. |
 | `scripts/make_job.py`, `download_*.py`, `download_data.sh` | (keep in place) | Utilities. |
 | `scripts/phase1_*.py` (all 8) | `_archive/scripts/` | Gate 1 passed 2026-08-16; not re-runnable. |
 | `scripts/probe_v6_*.py`, `probe_lookahead_*.py`, `probe_tau_sweep.py`, `smoke_load_gemma4.py`, `phase0_verify_east_format.py`, `phase2_streaming_smoke.py`, `phase2_inference_smoke.py`, `phase2_batched_ot_smoke.py`, `probe_annotator_batched.py`, `probe_annotator_kv_cache.py`, `probe_v6b_latency_diag.py` | `_archive/scripts/` | Diagnostics for closed bugs; historical only. |
@@ -219,12 +219,12 @@ Full reproduction takes ~325 GPU-h on H200:
 ```
 bash jobs/reproduce_v6b.sh                    # end-to-end
 # or step by step:
-python scripts/01_build_source_pool.py --config configs/curated.yaml
+python scripts/06_build_source_pool.py --config configs/curated.yaml
 qsub jobs/annotate/annot_ot_multi_htgt_de-en.pbs   # × 8 directions
-python scripts/03_build_sft_dataset.py --config configs/curated.yaml
+python scripts/08_build_sft_dataset.py --config configs/curated.yaml
 qsub jobs/train/sft_multilingual_v6b_v2bal_v3_htgt.pbs
 qsub jobs/eval/gemma_2b/wmt15_v2balv3htgt_medium.pbs   # × per-latency-per-dir
-python scripts/04_plot_bleu_al.py
+python scripts/09_plot_bleu_al.py
 ```
 
 ## Where to read next

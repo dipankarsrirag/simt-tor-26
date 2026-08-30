@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Utility — fetch IWSLT15 vi-en test set (or any OPUS pair with matching URL).
 #
-# Usage: bin/download_vi_en_test_sets [args...]
+# Usage: bin/03_download_iwslt_vi_test_set [args...]
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${DIR}/_env.sh"
-exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/download_vi_en_test_sets.py" "$@"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/03_download_iwslt_vi_test_set.py" "$@"

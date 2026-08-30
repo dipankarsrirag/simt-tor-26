@@ -58,7 +58,7 @@ def render(cfg: dict, ngpus: int) -> list[str]:
 
     # ─── Stage 1 ───
     out.append("##STAGE_1_BUILD_SOURCE_POOL")
-    out.append(_sh("bin/01_build_source_pool", "--config", cfg["__config_path"]))
+    out.append(_sh("bin/06_build_source_pool", "--config", cfg["__config_path"]))
 
     # ─── Stage 2 ───
     out.append("##STAGE_2_ANNOTATE")
@@ -66,7 +66,7 @@ def render(cfg: dict, ngpus: int) -> list[str]:
         in_json = f"results/sft_dataset/{tag}/per_direction/{pair}.json"
         out_dir = f"results/annotate/{annotator_name}/{pair}"
         out.append(_sh(
-            "bin/02_annotate",
+            "bin/07_annotate",
             "--input_json", in_json,
             "--model_path", annotator_path,
             "--output_dir", out_dir,
@@ -82,7 +82,7 @@ def render(cfg: dict, ngpus: int) -> list[str]:
     dset_json = f"results/sft_dataset/{tag}/sft_dataset.json"
     src_pool = f"results/sft_dataset/{tag}/source_pool.json"
     args = [
-        "bin/03_build_sft_dataset",
+        "bin/08_build_sft_dataset",
         "--matrices", matrix_glob,       # supports glob via shell expansion
         "--corpus_json", src_pool,
         "--tokenizer_path", tokenizer_dir,
@@ -154,7 +154,7 @@ def render(cfg: dict, ngpus: int) -> list[str]:
     # ─── Stage 6 ───
     out.append("##STAGE_6_PLOT")
     fig_dir = f"figures/{tag}"
-    out.append(f"SIMT_EVAL_DIR={eval_out} SIMT_FIG_DIR={fig_dir} bin/04_plot_bleu_al")
+    out.append(f"SIMT_EVAL_DIR={eval_out} SIMT_FIG_DIR={fig_dir} bin/09_plot_bleu_al")
 
     return out
 

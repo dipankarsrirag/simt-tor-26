@@ -3,9 +3,9 @@
 # Reads: HF backbone
 # Writes: results/train/{tag}/tokenizer/ (or path from --output)
 #
-# Usage: bin/prepare_tokenizer --backbone google/gemma-4-E2B-it --output results/train/{tag}/tokenizer/
+# Usage: bin/04_prepare_tokenizer --backbone google/gemma-4-E2B-it --output results/train/{tag}/tokenizer/
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${DIR}/_env.sh"
-exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/prepare_tokenizer.py" "$@"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/04_prepare_tokenizer.py" "$@"

@@ -19,7 +19,7 @@ Numeric prefix = run order (00 = baseline reproduction, then figure-by-figure th
 | 00 | `00_gemma_2b_curated.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
 | 01 | `01_east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
 | 02 | `02_east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
-| 03 | `03_east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/02_annotate.py** |
+| 03 | `03_east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/07_annotate.py** |
 | 04 | `04_east_8b_conv.yaml` | EAST-8B | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | **needs criterion + policy impl** |
 | 05 | `05_gemma_4b_curated.yaml` | Gemma-4-E4B-it (4B) | curated | self | OT | Fig 4 middle | ready |
 | 06 | `06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it | curated | Gemma-2B | OT | Fig 5 middle | ready (skip Stage 2) |

@@ -4,7 +4,7 @@
 # Output: matrices.jsonl (one row per sentence).
 #
 # Usage:
-# bin/02_annotate \
+# bin/07_annotate \
 # --input_json results/sft_dataset/{tag}/per_direction/{pair}.json \
 # --model_path ${SIMT_MODEL_BASE}/gemma-4-E2B-it \
 # --output_dir results/annotate/{annotator}/{pair} \
@@ -16,4 +16,4 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${DIR}/_env.sh"
-exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/02_annotate.py" "$@"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/07_annotate.py" "$@"

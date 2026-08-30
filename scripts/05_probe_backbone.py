@@ -12,8 +12,8 @@ Checks:
 
 Output: prints report; also writes _archive/results/gemma_2b_curated/east_8b_compat.json.
 
-Usage:  python -u scripts/probe_east_8b_compat.py [--model_dir PATH]
-Default model_dir: /g/data/po67/dipankar/models/EAST-8B
+Usage:  python -u scripts/05_probe_backbone.py [--model_dir PATH]
+Default model_dir: ${SIMT_MODEL_BASE}/EAST-8B
 """
 from __future__ import annotations
 

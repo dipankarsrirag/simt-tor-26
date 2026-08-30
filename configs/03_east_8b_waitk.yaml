@@ -5,7 +5,7 @@
 # 1 write. No OT annotation involved — chunks are procedural, one per pair of
 # source token + target token beyond k.
 #
-# STATUS: waitk criterion NOT YET implemented in scripts/02_annotate.py.
+# STATUS: waitk criterion NOT YET implemented in scripts/07_annotate.py.
 # The annotator currently supports {js, kl, ot}; wait-k needs a new branch
 # that emits fixed chunks without a divergence matrix. See docs/followup-
 # experiments.md §Pre-registered hyperparameters for k per latency.

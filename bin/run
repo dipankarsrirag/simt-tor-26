@@ -19,12 +19,12 @@
 #   --skip 1,2,3   Comma-separated list of stages to skip entirely.
 #
 # Stages:
-#   1  build_source_pool     scripts/01_build_source_pool.py       (CPU)
-#   2  annotate              scripts/02_annotate.py, per lang-pair (GPU)
-#   3  build_sft_dataset     scripts/03_build_sft_dataset.py       (CPU)
+#   1  build_source_pool     scripts/06_build_source_pool.py       (CPU)
+#   2  annotate              scripts/07_annotate.py, per lang-pair (GPU)
+#   3  build_sft_dataset     scripts/08_build_sft_dataset.py       (CPU)
 #   4  train                 src/train/sft.py                      (GPU × N)
 #   5  eval                  src/eval/extrinsic.py, per (test,pair,latency) (GPU)
-#   6  plot                  scripts/04_plot_bleu_al.py            (CPU)
+#   6  plot                  scripts/09_plot_bleu_al.py            (CPU)
 # ─────────────────────────────────────────────────────────────────────
 
 set -euo pipefail

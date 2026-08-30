@@ -18,7 +18,7 @@ backbone:
   tokenizer_dir: ${SIMT_REPO_ROOT}/_archive/results/gemma_2b_curated/tokenizer-extended-v6
 
 # ─────────── source pool ───────────
-# (Stage 1 — scripts/01_build_source_pool.py)
+# (Stage 1 — scripts/06_build_source_pool.py)
 source_pool:
   # Which corpus to pull raw parallel data from.
   corpus: curated         # one of: curated (europarl+news-comm+TED2020), east (SiMT-660K+Multi-90K)
@@ -55,7 +55,7 @@ annotate:
   latency_bins: [low, medium, high] # 3-bin (EAST-style) or 5-bin (low, low-medium, medium, medium-high, high)
 
 # ─────────── SFT dataset ───────────
-# (Stage 3 — scripts/03_build_sft_dataset.py)
+# (Stage 3 — scripts/08_build_sft_dataset.py)
 sft_dataset:
   merge_small_chunks: true          # EAST §3.1 merge rule
   min_src_words: 4                  # merge threshold
@@ -93,7 +93,7 @@ eval:
   mode: streaming
 
 # ─────────── plot ───────────
-# (Stage 6 — scripts/04_plot_bleu_al.py)
+# (Stage 6 — scripts/09_plot_bleu_al.py)
 plot:
   x_label: AL                       # AL | LAAL | AL-CA
   y_label: SacreBLEU                # SacreBLEU | COMET

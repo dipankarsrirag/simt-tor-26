@@ -8,7 +8,7 @@ Per-sentence outputs go to `matrices.jsonl`; sweep statistics to `summary.json`.
 
 Typical follow-up-experiment invocation (Stage 2 in the pipeline):
 
-    bin/02_annotate \\
+    bin/07_annotate \\
       --input_json  results/sft_dataset/{tag}/per_direction/{pair}.json \\
       --model_path  ${SIMT_MODEL_BASE}/gemma-4-E2B-it \\
       --output_dir  results/annotate/{annotator}/{pair} \\

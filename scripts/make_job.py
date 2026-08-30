@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Generate GADI PBS job scripts for simt-tor-26.
+Generate PBS job scripts (Gadi conventions by default; portable via env).
 
 Ported from ../simul-mt/scripts/make_job.py with two differences:
   * Only gpuhopper and copyq queues are supported — see HOUSEKEEPING §6.
   * Caches point at the shared po67 gdata cache
-    (/g/data/po67/dipankar/cache/), not scratch — see HOUSEKEEPING §6.3.
+    ($SIMT_HF_CACHE, defaulting to ~/.cache/huggingface).
 
 Usage:
     python scripts/make_job.py \\
@@ -51,13 +51,13 @@ QUEUE_SPECS = {
 
 import os
 PROJECT = os.environ.get("SIMT_PBS_PROJECT", "po67")
-STORAGE = os.environ.get("SIMT_PBS_STORAGE", "gdata/ba39+gdata/po67")
+STORAGE = os.environ.get("SIMT_PBS_STORAGE", "gdata/ba39+gdata/po67")  # override per site
 WORK_DIR = os.environ.get("SIMT_REPO_ROOT", str(Path(__file__).resolve().parents[1]))
 # Venv activated by the PBS job. Override with SIMT_VENV.
-VENV = os.environ.get("SIMT_VENV", "/scratch/po67/ds9561/.venv-fil") + "/bin/activate"
+VENV = os.environ.get("SIMT_VENV", str(Path.home() / ".venv")) + "/bin/activate"
 LOG_DIR = f"{WORK_DIR}/logs"
 # Shared HF/torch cache; override with SIMT_HF_CACHE.
-HF_CACHE = os.environ.get("SIMT_HF_CACHE", "/g/data/po67/dipankar/cache")
+HF_CACHE = os.environ.get("SIMT_HF_CACHE", str(Path.home() / ".cache" / "huggingface"))
 
 
 def make_job(name, queue, ngpus, walltime, script, output=None, extra_modules=None):

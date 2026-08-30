@@ -1,13 +1,14 @@
 #!/bin/bash
-# download_data.sh — pull all Phase 0 datasets onto po67 gdata.
-# Runs on copyq (has internet); assumes .venv-fil is active.
+# 02_download_wmt_test_sets — fetch EAST corpus (SiMT-660K, Multi-90K)
+# + WMT15/WMT22 test sets. Idempotent; skips already-present downloads.
+# Requires: internet + hf-cli + sacrebleu.
 # See HOUSEKEEPING.md §3 and EXPERIMENTS.md for how each dataset is used.
 #
 # Idempotent — safe to re-run; already-present datasets are skipped.
 
 set -euo pipefail
 
-DATA_ROOT=/g/data/po67/dipankar/data/simt-tor-26
+DATA_ROOT="${SIMT_DATA_ROOT:-$HOME/data/simt-tor-26}"
 mkdir -p "$DATA_ROOT"
 
 # --- SFT data ----------------------------------------------------------------
