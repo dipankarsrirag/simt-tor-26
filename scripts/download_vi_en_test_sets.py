@@ -1,21 +1,39 @@
 """Download IWSLT'15 EN-VI (Luong+Manning) + PhoMT test sets from HuggingFace.
 
-Outputs canonical files under /g/data/ba39/dipankar/simul-mt/data/eval/vi-en/:
-  iwslt15.vi-en.src, iwslt15.vi-en.ref,  iwslt15.en-vi.src, iwslt15.en-vi.ref
-  phomt.vi-en.src, phomt.vi-en.ref,      phomt.en-vi.src, phomt.en-vi.ref
+Outputs canonical vi-en / en-vi eval files. Defaults land under
+$SIMT_TESTSETS_ROOT/../eval/vi-en/ (Gadi convention); override with
+--out_dir on any filesystem.
+
+Usage:
+    bin/download_vi_en_test_sets [--out_dir /path/to/eval/vi-en]
 """
-import os, sys
+import argparse
+import os
+import sys
 from pathlib import Path
 
-# Turn OFF offline mode for this download (only on login/copyq)
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+from src.config import HF_CACHE
+
+# Turn OFF offline mode for this download (only run on login/copyq/laptop)
 for var in ["HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE"]:
     os.environ.pop(var, None)
 
-os.environ["HF_HOME"] = "/g/data/po67/dipankar/cache"
-os.environ["HF_HUB_CACHE"] = "/g/data/po67/dipankar/cache/hub"
-os.environ["HF_DATASETS_CACHE"] = "/g/data/po67/dipankar/cache/datasets"
+# Inherit HF cache from src.config (which respects SIMT_HF_CACHE / HF_HOME env).
+os.environ["HF_HOME"] = str(HF_CACHE)
+os.environ["HF_HUB_CACHE"] = str(HF_CACHE / "hub")
+os.environ["HF_DATASETS_CACHE"] = str(HF_CACHE / "datasets")
 
-OUT_DIR = Path("/g/data/ba39/dipankar/simul-mt/data/eval/vi-en")
+ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+ap.add_argument("--out_dir", type=Path,
+                default=Path(os.environ.get(
+                    "SIMT_VIEN_EVAL_DIR",
+                    "/g/data/ba39/dipankar/simul-mt/data/eval/vi-en",
+                )),
+                help="Output directory for the {iwslt15,phomt}.{vi-en,en-vi}.{src,ref} files.")
+args, _ = ap.parse_known_args()
+OUT_DIR = args.out_dir
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 from datasets import load_dataset

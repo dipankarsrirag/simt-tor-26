@@ -28,12 +28,19 @@ from typing import List, Dict
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-DEEN_ROOT = Path("/g/data/ba39/dipankar/simul-mt/data/parallel_clean/de-en")
-RUEN_ROOT = Path("/g/data/ba39/dipankar/simul-mt/data/parallel_clean/ru-en")
-AREN_ROOT = Path("/g/data/ba39/dipankar/simul-mt/data/parallel_clean/ar-en")
+from src.config import DATA_ROOT
+
+# Corpus roots. Overridable via CLI (--deen_root, --ruen_root, etc.) or via
+# SIMT_CORPUS_ROOT env var. Default layout assumes DATA_ROOT/parallel_clean/
+# and DATA_ROOT/raw/ (matches the shared sibling repo simul-mt/).
+import os
+CORPUS_ROOT = Path(os.environ.get("SIMT_CORPUS_ROOT", DATA_ROOT))
+DEEN_ROOT = CORPUS_ROOT / "parallel_clean" / "de-en"
+RUEN_ROOT = CORPUS_ROOT / "parallel_clean" / "ru-en"
+AREN_ROOT = CORPUS_ROOT / "parallel_clean" / "ar-en"
 VIEN_TED = {
-    "src": Path("/g/data/ba39/dipankar/simul-mt/data/raw/ted2020-en-vi/TED2020.en-vi.vi"),
-    "tgt": Path("/g/data/ba39/dipankar/simul-mt/data/raw/ted2020-en-vi/TED2020.en-vi.en"),
+    "src": CORPUS_ROOT / "raw" / "ted2020-en-vi" / "TED2020.en-vi.vi",
+    "tgt": CORPUS_ROOT / "raw" / "ted2020-en-vi" / "TED2020.en-vi.en",
 }
 
 # Corpus preference order per direction. First-hit wins per row up to quota.

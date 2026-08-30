@@ -7,11 +7,15 @@
 tag: example_run   # short lowercase-with-underscores; must be filesystem-safe
 
 # ─────────── backbone ───────────
+# `${VAR}` placeholders below are expanded from environment vars by
+# src/config.load_config(). `SIMT_MODEL_BASE` and `SIMT_REPO_ROOT` are set by
+# `bin/_env.sh` (or override via the shell before invoking the pipeline).
+# Use `local_path` when the model is on disk, `hf_id` if downloading from HF.
 backbone:
-  hf_id: google/gemma-4-E2B-it      # HF model id (or local path)
-  local_path: /g/data/po67/dipankar/models/gemma-4-E2B-it
-  is_instruct: true                 # true → use chat template, natural-language latency
-  tokenizer_dir: _archive/results/v6b_gemma_2b/tokenizer-extended-v6
+  hf_id: google/gemma-4-E2B-it              # HF model id (used if local_path missing)
+  local_path: ${SIMT_MODEL_BASE}/gemma-4-E2B-it
+  is_instruct: true                          # true → chat template, NL latency
+  tokenizer_dir: ${SIMT_REPO_ROOT}/_archive/results/v6b_gemma_2b/tokenizer-extended-v6
 
 # ─────────── source pool ───────────
 # (Stage 1 — scripts/01_build_source_pool.py)

@@ -28,7 +28,7 @@ DATA_ROOT = Path(os.environ.get(
 
 MODEL_BASE = Path(os.environ.get(
     "SIMT_MODEL_BASE",
-    "/g/data/po67/dipankar/models",
+    Path.home() / ".cache" / "simt-models",
 ))
 
 HF_CACHE = Path(os.environ.get(
@@ -38,8 +38,29 @@ HF_CACHE = Path(os.environ.get(
 
 
 # ─────────── YAML config loader ───────────
+import re
+_ENVVAR_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}")
+
+
+def _expand_env(obj: Any) -> Any:
+    """Recursively replace ${ENV_VAR} in string leaves of a nested dict/list.
+
+    Missing env vars leave the placeholder untouched (fail-loud at path use).
+    """
+    if isinstance(obj, str):
+        return _ENVVAR_RE.sub(lambda m: os.environ.get(m.group(1), m.group(0)), obj)
+    if isinstance(obj, dict):
+        return {k: _expand_env(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_expand_env(x) for x in obj]
+    return obj
+
+
 def load_config(path: Path | str) -> dict[str, Any]:
     """Load a configs/{tag}.yaml as a nested dict.
+
+    Env-var placeholders `${VAR}` in string values are expanded from the
+    process environment. Missing vars leave the placeholder in place.
 
     Every pipeline entry-point (scripts/01_..04_*.py) accepts
     `--config configs/{tag}.yaml`. See configs/example.yaml for the schema.
@@ -50,7 +71,8 @@ def load_config(path: Path | str) -> dict[str, Any]:
         raise ImportError(
             "PyYAML required for config loading — pip install pyyaml"
         ) from e
-    return yaml.safe_load(Path(path).read_text())
+    raw = yaml.safe_load(Path(path).read_text())
+    return _expand_env(raw)
 
 
 def resolve_backbone_path(config: dict[str, Any]) -> Path:

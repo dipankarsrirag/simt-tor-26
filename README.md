@@ -61,7 +61,6 @@ Additional utilities (all in `bin/`, no extension):
 - `bin/04_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
 - `bin/prepare_tokenizer --backbone {hf_id}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
 - `bin/probe_east_8b_compat --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
-- `bin/rebucket_latency --input {file} --output {file}` — post-annotation latency-bin recomputation.
 - `bin/download_data`, `bin/download_vi_en_test_sets` — one-time data fetches.
 - `bin/make_job --config configs/{tag}.yaml --stage {annotate|train|eval}` — generate PBS wrappers.
 - `jobs/loop_resubmit.sh` — queue-cap-aware batch resubmitter for large eval matrices.

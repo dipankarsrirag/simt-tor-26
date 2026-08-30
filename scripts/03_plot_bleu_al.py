@@ -18,13 +18,26 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import os
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.config import REPO_ROOT
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
-EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic")
-FIG = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/figures/v6b_gemma_2b")
+# Default targets: regenerate the v6b baseline figures from archive.
+# Override with SIMT_EVAL_DIR / SIMT_FIG_DIR env vars for a new experiment tag.
+EXTR = Path(os.environ.get(
+    "SIMT_EVAL_DIR",
+    REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "extrinsic",
+))
+FIG = Path(os.environ.get(
+    "SIMT_FIG_DIR",
+    REPO_ROOT / "_archive" / "figures" / "v6b_gemma_2b",
+))
 FIG.mkdir(parents=True, exist_ok=True)
 
 LAT = ["low", "low_medium", "medium", "medium_high", "high"]

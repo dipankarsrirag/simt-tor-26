@@ -1,22 +1,37 @@
-"""Score all v6b flores extrinsic outputs with wmt22-comet-da (ref-based).
+"""Score extrinsic eval outputs with wmt22-comet-da (ref-based).
 
-Reads: _archive/results/v6b_gemma_2b/extrinsic/flores_stream_{PREFIX}_checkargmax_{LAT}_{DIR}_n50.json
-For each JSON, reads `hyps`, `refs`, and the source sentences (re-loaded from
-FLORES devtest since the eval JSONs don't cache the raw src). Computes COMET
-per sentence + mean, writes:
-  _archive/results/v6b_gemma_2b/extrinsic/comet_scores_{PREFIX}.json
+For each `results/eval/{tag}/*.json` (or archived `extrinsic/*.json`), reads
+`hyps`, `refs`, and re-loads source sentences from the corresponding test-set
+file. Computes COMET per sentence + mean, writes `comet_scores_*.json`
+alongside.
 
-Runs inside the isolated /g/data/po67/dipankar/venvs/comet venv (comet 2.2.7).
-Model checkpoint: /g/data/po67/dipankar/models/wmt22-comet-da/checkpoints/model.ckpt
+Runs inside the isolated COMET venv (comet 2.2.7). Paths below default to
+env vars (SIMT_COMET_CKPT, SIMT_XLMR_LOCAL, SIMT_TESTSETS_ROOT); override
+with CLI --ckpt / --xlmr_local / --testsets_root.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import sys
 
-EXTR = Path("/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/extrinsic")
-FLORES = Path("/g/data/ba39/dipankar/simul-mt/data/raw/flores200/flores200_dataset/devtest")
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+from src.config import MODEL_BASE, REPO_ROOT
+
+# Defaults (all overridable via env or CLI).
+EXTR = Path(os.environ.get(
+    "SIMT_EVAL_DIR",
+    REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "extrinsic",
+))
+TESTSETS_ROOT = Path(os.environ.get(
+    "SIMT_TESTSETS_ROOT",
+    "/g/data/ba39/dipankar/simul-mt/data/raw",  # Gadi sibling repo default
+))
+FLORES = TESTSETS_ROOT / "flores200" / "flores200_dataset" / "devtest"
+
 LANG_FILE = {
     "en": "eng_Latn.devtest", "de": "deu_Latn.devtest", "ar": "arb_Arab.devtest",
     "ru": "rus_Cyrl.devtest",  "vi": "vie_Latn.devtest",
@@ -24,8 +39,14 @@ LANG_FILE = {
 LAT = ["low", "low_medium", "medium", "medium_high", "high"]
 DIR = ["de-en", "en-de", "ar-en", "en-ar", "ru-en", "en-ru", "vi-en", "en-vi"]
 
-CKPT = "/g/data/po67/dipankar/models/wmt22-comet-da/checkpoints/model.ckpt"
-XLMR_LOCAL = "/g/data/po67/dipankar/models/xlm-roberta-large"
+CKPT = os.environ.get(
+    "SIMT_COMET_CKPT",
+    str(MODEL_BASE / "wmt22-comet-da" / "checkpoints" / "model.ckpt"),
+)
+XLMR_LOCAL = os.environ.get(
+    "SIMT_XLMR_LOCAL",
+    str(MODEL_BASE / "xlm-roberta-large"),
+)
 
 
 def _patch_xlmr_resolution():

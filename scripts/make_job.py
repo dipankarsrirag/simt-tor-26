@@ -49,14 +49,15 @@ QUEUE_SPECS = {
     },
 }
 
-PROJECT = "po67"
-STORAGE = "gdata/ba39+gdata/po67"
 import os
+PROJECT = os.environ.get("SIMT_PBS_PROJECT", "po67")
+STORAGE = os.environ.get("SIMT_PBS_STORAGE", "gdata/ba39+gdata/po67")
 WORK_DIR = os.environ.get("SIMT_REPO_ROOT", str(Path(__file__).resolve().parents[1]))
-VENV = "/scratch/po67/ds9561/.venv-fil/bin/activate"
+# Venv activated by the PBS job. Override with SIMT_VENV.
+VENV = os.environ.get("SIMT_VENV", "/scratch/po67/ds9561/.venv-fil") + "/bin/activate"
 LOG_DIR = f"{WORK_DIR}/logs"
-# Shared po67 cache — same as ../arabic-dial-mt/pbs/env.sh. Not scratch.
-HF_CACHE = "/g/data/po67/dipankar/cache"
+# Shared HF/torch cache; override with SIMT_HF_CACHE.
+HF_CACHE = os.environ.get("SIMT_HF_CACHE", "/g/data/po67/dipankar/cache")
 
 
 def make_job(name, queue, ngpus, walltime, script, output=None, extra_modules=None):

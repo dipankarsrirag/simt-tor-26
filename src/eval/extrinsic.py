@@ -665,8 +665,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True,
                     help="e.g. _archive/results/v6b_gemma_2b/sft_n10k/final (OT-SFT, our method).")
-    ap.add_argument("--tokenizer_dir",
-                    default="/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/tokenizer-extended")
+    ap.add_argument("--tokenizer_dir", required=True,
+                    help="Path to tokenizer dir (produced by scripts/prepare_tokenizer.py).")
     ap.add_argument("--dev_src", required=True)
     ap.add_argument("--dev_ref", required=True)
     ap.add_argument("--latency", type=str, default="medium",

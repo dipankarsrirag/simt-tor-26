@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.config import MODEL_BASE, REPO_ROOT
 
 import torch
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
@@ -31,9 +32,12 @@ from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", type=str,
-                    default="/g/data/po67/dipankar/models/EAST-8B")
+                    default=str(MODEL_BASE / "EAST-8B"),
+                    help="HF id or absolute path to the backbone to probe. "
+                         "Default: $SIMT_MODEL_BASE/EAST-8B.")
     ap.add_argument("--output", type=str,
-                    default="/g/data/ba39/dipankar/simt-tor-26/_archive/results/v6b_gemma_2b/east_8b_compat.json")
+                    default=str(REPO_ROOT / "_archive" / "results" / "v6b_gemma_2b" / "east_8b_compat.json"),
+                    help="Where to write the probe report JSON.")
     args = ap.parse_args()
 
     print(f"=== EAST-8B compat probe ===")
