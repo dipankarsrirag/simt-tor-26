@@ -21,6 +21,17 @@ set -euo pipefail
 # ─────────── repo root ───────────
 export SIMT_REPO_ROOT="${SIMT_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
+# ─────────── per-user site config (gitignored) ───────────
+# Operators put site-specific paths in `.simtrc` at the repo root:
+#     export SIMT_VENV=/scratch/po67/ds9561/.venv-fil   # (Gadi example)
+#     export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+#     export SIMT_HF_CACHE=/g/data/po67/dipankar/cache
+# Never tracked in git; see .simtrc.example for the template.
+if [ -f "${SIMT_REPO_ROOT}/.simtrc" ]; then
+  # shellcheck disable=SC1091
+  source "${SIMT_REPO_ROOT}/.simtrc"
+fi
+
 # ─────────── filesystem conventions ───────────
 export SIMT_DATA_ROOT="${SIMT_DATA_ROOT:-${SIMT_REPO_ROOT}/data}"
 export SIMT_CORPUS_ROOT="${SIMT_CORPUS_ROOT:-${SIMT_DATA_ROOT}}"

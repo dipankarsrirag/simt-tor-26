@@ -1,0 +1,46 @@
+# Per-user site config for simt-tor-26.
+#
+# Copy to `.simtrc` at the repo root and edit for your machine. `.simtrc` is
+# gitignored — safe to hold absolute paths / secrets. Sourced by `bin/_env.sh`
+# before it computes defaults, so anything you export here takes precedence.
+#
+# All variables are optional. Unset ones fall through to $HOME-based defaults.
+
+# ─── Python venv (must be Python 3.10+) ───
+# Point at your project's venv — activated automatically by every bin/* wrapper.
+# export SIMT_VENV="${HOME}/.venvs/simt"
+
+# ─── On-disk model weights root ───
+# HuggingFace backbones and any manually-fetched checkpoints live here.
+# export SIMT_MODEL_BASE="${HOME}/models"
+
+# ─── HuggingFace + torch cache ───
+# Shared across HF Hub, transformers, datasets, torch.hub.
+# export SIMT_HF_CACHE="${HOME}/.cache/huggingface"
+
+# ─── Parallel-corpora root ───
+# Where scripts/01_download_training_data.sh drops europarl/news-comm/TED2020.
+# export SIMT_DATA_ROOT="${HOME}/data/simt-tor-26"
+
+# ─── Training-data root (usually same as SIMT_DATA_ROOT) ───
+# Only override if you keep raw corpora on a separate filesystem.
+# export SIMT_CORPUS_ROOT="${SIMT_DATA_ROOT}"
+
+# ─── Eval test-set root (usually same as SIMT_DATA_ROOT) ───
+# WMT / IWSLT / FLORES test files. Override if separate from training data.
+# export SIMT_TESTSETS_ROOT="${SIMT_DATA_ROOT}"
+
+# ─── PBS-specific (Gadi cluster; ignore on non-cluster hosts) ───
+# export SIMT_PBS_PROJECT="po67"
+# export SIMT_PBS_STORAGE="gdata/ba39+gdata/po67"
+
+# ────────────────────────────────────────────────────────────────────────
+# Example — Gadi H200 setup at NCI (project ba39):
+#
+# export SIMT_VENV=/scratch/po67/ds9561/.venv-fil
+# export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+# export SIMT_HF_CACHE=/g/data/po67/dipankar/cache
+# export SIMT_DATA_ROOT=/g/data/po67/dipankar/data/simt-tor-26
+# export SIMT_TESTSETS_ROOT=/g/data/ba39/dipankar/simul-mt/data
+# export SIMT_PBS_PROJECT=po67
+# export SIMT_PBS_STORAGE=gdata/ba39+gdata/po67

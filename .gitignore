@@ -112,3 +112,6 @@ _archive/results/**/tokenizer-extended-v6/
 
 # Live per-tag log dirs — everything except placeholder .gitkeep.
 logs/*/**/*.log
+
+# Per-user site config (see .simtrc.example).
+.simtrc
