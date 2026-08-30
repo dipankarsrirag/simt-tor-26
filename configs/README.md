@@ -12,18 +12,20 @@ The generic runner reads the YAML, expands the pipeline into concrete shell comm
 
 ## Shipped configs (matches `docs/followup-experiments.md`)
 
-| Config | Backbone | Corpus | Annotator | Policy | Figures | Status |
-|---|---|---|---|---|---|---|
-| `v6b_gemma_2b.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
-| `east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
-| `east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
-| `east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/02_annotate.py** |
-| `east_8b_conv.yaml` | EAST-8B | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | **needs criterion + policy impl** |
-| `gemma_4b_curated.yaml` | Gemma-4-E4B-it (4B) | curated | self | OT | Fig 4 middle | ready |
-| `gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it | curated | Gemma-2B | OT | Fig 5 middle | ready (skip Stage 2) |
-| `east_8b_from_2b_annot.yaml` | EAST-8B | curated | Gemma-2B | OT | Fig 5 right | ready (skip Stage 2) |
+Numeric prefix = run order (00 = baseline reproduction, then figure-by-figure through the followup plan).
 
-Cross-annotation configs (`*_from_2b_annot`) reuse the existing
+| # | Config | Backbone | Corpus | Annotator | Policy | Figures | Status |
+|---|---|---|---|---|---|---|---|
+| 00 | `00_v6b_gemma_2b.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
+| 01 | `01_east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
+| 02 | `02_east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
+| 03 | `03_east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/02_annotate.py** |
+| 04 | `04_east_8b_conv.yaml` | EAST-8B | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | **needs criterion + policy impl** |
+| 05 | `05_gemma_4b_curated.yaml` | Gemma-4-E4B-it (4B) | curated | self | OT | Fig 4 middle | ready |
+| 06 | `06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it | curated | Gemma-2B | OT | Fig 5 middle | ready (skip Stage 2) |
+| 07 | `07_east_8b_from_2b_annot.yaml` | EAST-8B | curated | Gemma-2B | OT | Fig 5 right | ready (skip Stage 2) |
+
+Cross-annotation configs (`06_*`, `07_*`) reuse the existing
 `results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl` files — no re-annotation needed. Run with `--skip 2`.
 
 ## YAML structure
@@ -43,8 +45,9 @@ Env var placeholders `${SIMT_MODEL_BASE}`, `${SIMT_REPO_ROOT}`, etc. are expande
 
 ## Adding a new experiment
 
-1. `cp configs/example.yaml configs/{your_tag}.yaml`
-2. Edit `tag`, `backbone`, `source_pool.corpus`, `annotate.*`, and any per-run hyperparameters.
-3. Dry-run: `bin/run configs/{your_tag}.yaml --dry_run`.
-4. If it looks right: `bin/run configs/{your_tag}.yaml --ngpus N`.
-5. Add a `LOG.md` entry before starting the next experiment.
+1. `cp configs/example.yaml configs/NN_{your_tag}.yaml`  (next free `NN`)
+2. Edit `tag` (must equal the filename stem without the number, or keep the full `NN_tag` — the runner uses whatever `tag:` says as the namespace).
+3. Edit `backbone`, `source_pool.corpus`, `annotate.*`, and any per-run hyperparameters.
+4. Dry-run: `bin/run configs/NN_{your_tag}.yaml --dry_run`.
+5. If it looks right: `bin/run configs/NN_{your_tag}.yaml --ngpus N`.
+6. Add a `LOG.md` entry before starting the next experiment.
