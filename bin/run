@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# bin/run — generic pipeline runner for one experiment.
+#
+# Usage:
+#   bin/run configs/{tag}.yaml [--ngpus N] [--stage {1..6|all}] [--dry_run]
+#
+# Reads a YAML config and executes the pipeline stages for its `tag`.
+# Every experiment in configs/ can be run via this single script.
+#
+# Options:
+#   --ngpus N      Number of GPUs to use (default 1). Sets CUDA_VISIBLE_DEVICES
+#                  to 0..N-1 and uses torchrun for multi-GPU SFT training.
+#   --stage S      Run only stage S (1..6). Default: all stages in order.
+#                  Skip completed stages: if the output exists, that stage
+#                  is a no-op unless --force is passed.
+#   --force        Re-run stages even if their outputs already exist.
+#   --dry_run      Print the commands without executing them.
+#   --skip 1,2,3   Comma-separated list of stages to skip entirely.
+#
+# Stages:
+#   1  build_source_pool     scripts/01_build_source_pool.py       (CPU)
+#   2  annotate              scripts/02_annotate.py, per lang-pair (GPU)
+#   3  build_sft_dataset     scripts/03_build_sft_dataset.py       (CPU)
+#   4  train                 src/train/sft.py                      (GPU × N)
+#   5  eval                  src/eval/extrinsic.py, per (test,pair,latency) (GPU)
+#   6  plot                  scripts/04_plot_bleu_al.py            (CPU)
+# ─────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+
+# ─────────── arg parsing ───────────
+CONFIG=""
+NGPUS=1
+STAGE=all
+SKIP=""
+FORCE=0
+DRY=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ngpus)    NGPUS="$2";   shift 2;;
+    --stage)    STAGE="$2";   shift 2;;
+    --skip)     SKIP="$2";    shift 2;;
+    --force)    FORCE=1;      shift;;
+    --dry_run)  DRY=1;        shift;;
+    -h|--help)
+        sed -n '3,30p' "$0"
+        exit 0
+        ;;
+    -*) echo "unknown flag: $1"; exit 2;;
+    *)  if [ -z "$CONFIG" ]; then CONFIG="$1"; else echo "extra arg: $1"; exit 2; fi
+        shift;;
+  esac
+done
+
+if [ -z "$CONFIG" ]; then
+  echo "usage: bin/run configs/{tag}.yaml [--ngpus N] [--stage 1..6|all]"
+  exit 2
+fi
+if [ ! -f "$CONFIG" ]; then
+  echo "config not found: $CONFIG"; exit 2
+fi
+
+# ─────────── GPU device selection ───────────
+if [ "$NGPUS" -gt 0 ]; then
+  DEVICES=$(seq -s, 0 $((NGPUS - 1)))
+  export CUDA_VISIBLE_DEVICES="$DEVICES"
+fi
+
+# ─────────── read config (via helper for readable output) ───────────
+TAG=$("${PYTHON}" -c "
+import yaml, sys
+c = yaml.safe_load(open('$CONFIG'))
+print(c['tag'])
+")
+
+# Cache the config's stage-command lines by asking the helper. This keeps the
+# runner shell-only for orchestration; command construction lives in Python.
+STAGE_CMDS=$("${PYTHON}" "${SIMT_REPO_ROOT}/scripts/_render_run.py" \
+             --config "$CONFIG" --ngpus "$NGPUS")
+
+# ─────────── stage dispatch ───────────
+should_run() {
+  local n=$1
+  [ "$STAGE" != "all" ] && [ "$STAGE" != "$n" ] && return 1
+  case ",${SKIP}," in
+    *,${n},*) return 1 ;;
+  esac
+  return 0
+}
+
+run() {
+  local n=$1; shift
+  local desc=$1; shift
+  echo ""
+  echo "▶ Stage ${n}: ${desc}  (tag=${TAG}, ngpus=${NGPUS})"
+  for cmd in "$@"; do
+    echo "  \$ $cmd"
+    if [ "$DRY" = "0" ]; then
+      eval "$cmd"
+    fi
+  done
+}
+
+echo "═════════════════════════════════════════════════════════════════"
+echo "  Experiment: ${TAG}   ngpus=${NGPUS}   stage=${STAGE}"
+echo "  Config:     ${CONFIG}"
+echo "  Devices:    CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-<none>}"
+[ "$DRY" = "1" ] && echo "  DRY-RUN: no commands will execute"
+echo "═════════════════════════════════════════════════════════════════"
+
+# The helper prints stage commands as:
+#   ##STAGE_1_BUILD_SOURCE_POOL
+#   <cmd line 1>
+#   <cmd line 2>
+#   ##STAGE_2_ANNOTATE
+#   ...
+# Parse and dispatch.
+
+CURRENT_STAGE=""
+declare -a CURRENT_CMDS=()
+while IFS= read -r line; do
+  if [[ "$line" =~ ^##STAGE_([0-9]+)_(.+)$ ]]; then
+    if [ -n "$CURRENT_STAGE" ]; then
+      if should_run "$CURRENT_STAGE"; then
+        run "$CURRENT_STAGE" "$CURRENT_DESC" "${CURRENT_CMDS[@]}"
+      fi
+    fi
+    CURRENT_STAGE="${BASH_REMATCH[1]}"
+    CURRENT_DESC="${BASH_REMATCH[2]}"
+    CURRENT_CMDS=()
+  elif [ -n "$line" ]; then
+    CURRENT_CMDS+=("$line")
+  fi
+done <<< "$STAGE_CMDS"
+# Flush last stage
+if [ -n "$CURRENT_STAGE" ] && should_run "$CURRENT_STAGE"; then
+  run "$CURRENT_STAGE" "$CURRENT_DESC" "${CURRENT_CMDS[@]}"
+fi
+
+echo ""
+echo "═════════════════════════════════════════════════════════════════"
+echo "  Done: ${TAG}"
+echo "═════════════════════════════════════════════════════════════════"

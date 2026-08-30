@@ -70,22 +70,41 @@ Full setup notes (Gadi-specific paths, HF cache locations, `pyproject`/venv laye
 
 ---
 
-## Pipeline (5 stages, tag-based)
+## Running an experiment
 
-Pick a tag (short lowercase-with-underscores, e.g. `east_8b_curated`). Create `configs/{tag}.yaml` describing the run (see `configs/example.yaml`). Then run each stage in order.
+Every experiment is a YAML file under `configs/`. To run one end-to-end:
 
-**Two directories, one role each.** `scripts/*.py` = the actual Python implementations. `bin/*` = extension-less shell launchers you run — they source `bin/_env.sh` for portable venv/cache handling and dispatch to `scripts/*.py`.
+```bash
+bin/run configs/{tag}.yaml --ngpus N
+```
 
-| Stage | Command (any machine) | Cluster option | Output |
-|---|---|---|---|
-| 1. Build source pool | `bin/01_build_source_pool --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/source_pool.json` |
-| 2. Annotate (OT chunk placement) — **GPU required** | `bin/02_annotate --input_json ... --model_path ... --output_dir ...` | `qsub jobs/annotate/{tag}_<pair>.pbs` per direction | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator model + lang-pair — reusable across experiments) |
-| 3. Build SFT dataset | `bin/03_build_sft_dataset --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
-| 4. SFT training — **GPU required** | `python -m src.train.sft --corpus_file ... --output_dir ...` | `qsub jobs/train/{tag}.pbs` | `results/train/{tag}/final/` + `sft_summary.json` |
-| 5. Extrinsic eval — **GPU required** | `python -m src.eval.extrinsic --model_dir ... --tokenizer_dir ... --dev_src ... --dev_ref ... --latency ... --mode streaming` | `qsub jobs/eval/{tag}_<test>_<lat>_<dir>.pbs` × many | `results/eval/{tag}/*.json` |
-| 6. Plot | `bin/04_plot_bleu_al` | same | `figures/{tag}/*.png` |
+That's it. The runner reads the YAML, expands it into per-stage shell commands, sets `CUDA_VISIBLE_DEVICES=0..N-1`, and dispatches each stage in order.
 
-Stages 1, 3, and 6 need only CPU + a few GB RAM. Stages 2, 4, 5 need CUDA (any A100/H100/H200-class GPU; 24GB+ VRAM comfortably fits 2B backbones in bf16).
+Options:
+
+| Flag | Purpose |
+|---|---|
+| `--ngpus N` | GPUs to use (default 1). Multi-GPU training uses `torchrun`. |
+| `--stage 1..6` | Run only that stage. Default: all stages. |
+| `--skip 1,3` | Skip stages (e.g. cross-annotation experiments skip Stage 2 — matrices already exist). |
+| `--dry_run` | Print the commands without executing. Always do this first. |
+
+## Pipeline (6 stages, tag-based)
+
+For those curious what happens under the hood, or wanting to run a single stage manually:
+
+**Two directories, one role each.** `scripts/*.py` = Python implementations. `bin/*` = shell launchers you run — they source `bin/_env.sh` for portable venv/cache handling and dispatch to `scripts/*.py`.
+
+| Stage | Manual command | Output |
+|---|---|---|
+| 1. Build source pool (CPU) | `bin/01_build_source_pool --config configs/{tag}.yaml` | `results/sft_dataset/{tag}/source_pool.json` |
+| 2. Annotate (**GPU required**) | `bin/02_annotate --input_json ... --model_path ... --output_dir ...` | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator + pair — reusable across experiments) |
+| 3. Build SFT dataset (CPU) | `bin/03_build_sft_dataset --matrices ... --corpus_json ... --output ...` | `results/sft_dataset/{tag}/sft_dataset.json` |
+| 4. SFT training (**GPU × N**) | `torchrun --nproc_per_node=N src/train/sft.py --corpus_file ... --output_dir ...` | `results/train/{tag}/final/` + `sft_summary.json` |
+| 5. Extrinsic eval (**GPU**) | `python src/eval/extrinsic.py --model_dir ... --tokenizer_dir ... --dev_src ... --dev_ref ... --latency ... --mode streaming` | `results/eval/{tag}/*.json` |
+| 6. Plot (CPU) | `bin/04_plot_bleu_al` | `figures/{tag}/*.png` |
+
+Stages 1, 3, and 6 need only CPU + a few GB RAM. Stages 2, 4, 5 need CUDA (any A100/H100/H200-class GPU; 24GB+ VRAM comfortably fits 2B backbones in bf16; 40GB+ for 4B; 80GB for 8B).
 
 **Additional utilities** (all in `bin/`, no extension):
 - `bin/05_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.

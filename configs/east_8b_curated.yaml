@@ -1,0 +1,66 @@
+# east_8b_curated — EAST-8B backbone, curated corpus, self-annotated.
+# The "full recipe" line in Fig 1, 2, 3, 4 of docs/followup-experiments.md.
+# Same annotator as backbone → self-annotation. OT criterion, tau=0.30.
+#
+# Run: bin/run configs/east_8b_curated.yaml --ngpus 1
+
+tag: east_8b_curated
+
+backbone:
+  hf_id: biaofu-xmu/EAST-8B
+  local_path: ${SIMT_MODEL_BASE}/EAST-8B
+  is_instruct: true                                          # Llama-3-Instruct + chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B                  # EAST-8B already ships EOR/EOW
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 30000
+    de-en: 30000
+    en-ru: 30000
+    ru-en: 30000
+    en-ar: 30000
+    ar-en: 30000
+    en-vi: 30000
+    vi-en: 30000
+  human_target_only: true
+
+annotate:
+  annotator: same_as_backbone                                # self-annotation with EAST-8B
+  criterion: ot
+  tau: 0.30
+  top_k: 128
+  lookahead_k: 0
+  latency_bins: [low, medium, high]                          # 3-bin (matches EAST paper)
+
+sft_dataset:
+  merge_small_chunks: true
+  min_src_words: 4
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2                                   # 8B needs smaller batch
+  grad_accum_steps: 8                                        # effective batch = 16
+  learning_rate: 1.0e-5                                      # lower LR for 8B
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt15:    { de-en: 2169 }
+    wmt22:    { de-en: 1979, en-de: 1904, ru-en: 2016, en-ru: 2037 }
+    iwslt17:  { de-en: 1138, en-de: 1138, ar-en: 1460, en-ar: 1460 }
+    iwslt15:  { vi-en: 1268, en-vi: 1268 }
+  latencies: [low, medium, high]
+  policy: check_argmax
+  mode: streaming
+
+plot:
+  color: "#c0392b"
+  marker: o
+  label: EAST↺ours

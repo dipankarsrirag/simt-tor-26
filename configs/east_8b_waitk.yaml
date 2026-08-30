@@ -1,0 +1,76 @@
+# east_8b_waitk — EAST-8B backbone, curated corpus, wait-k policy training.
+# Fig 2 & Fig 3 line 4 in docs/followup-experiments.md.
+#
+# Wait-k is a *fixed* schedule: read k source tokens, then alternate 1 read /
+# 1 write. No OT annotation involved — chunks are procedural, one per pair of
+# source token + target token beyond k.
+#
+# STATUS: waitk criterion NOT YET implemented in scripts/02_annotate.py.
+# The annotator currently supports {js, kl, ot}; wait-k needs a new branch
+# that emits fixed chunks without a divergence matrix. See docs/followup-
+# experiments.md §Pre-registered hyperparameters for k per latency.
+#
+# Run: bin/run configs/east_8b_waitk.yaml --ngpus 1
+
+tag: east_8b_waitk
+
+backbone:
+  hf_id: biaofu-xmu/EAST-8B
+  local_path: ${SIMT_MODEL_BASE}/EAST-8B
+  is_instruct: true
+  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 30000
+    de-en: 30000
+    en-ru: 30000
+    ru-en: 30000
+    en-ar: 30000
+    ar-en: 30000
+    en-vi: 30000
+    vi-en: 30000
+  human_target_only: true
+
+annotate:
+  annotator: none                              # policy is procedural, no LM forward pass
+  criterion: wait-k                            # NEW criterion — needs impl in 02_annotate.py
+  tau: 0                                       # unused for wait-k
+  wait_k_per_latency:                          # pre-registered per docs/followup-experiments.md
+    low:    3
+    medium: 5
+    high:   7
+  top_k: 0
+  lookahead_k: 0
+  latency_bins: [low, medium, high]
+
+sft_dataset:
+  merge_small_chunks: false                    # wait-k already gives regular chunk sizes
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2
+  grad_accum_steps: 8
+  learning_rate: 1.0e-5
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt22:    { de-en: 1979, en-de: 1904, ru-en: 2016, en-ru: 2037 }
+    iwslt17:  { de-en: 1138, en-de: 1138, ar-en: 1460, en-ar: 1460 }
+    iwslt15:  { vi-en: 1268, en-vi: 1268 }
+  latencies: [low, medium, high]
+  policy: check_argmax                         # (or "wait_k" — both give the same schedule for wait-k SFT)
+  mode: streaming
+
+plot:
+  color: "#16a085"
+  marker: X
+  label: EAST↺waitk

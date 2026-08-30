@@ -1,38 +1,50 @@
 # configs/
 
-One YAML per experiment tag. Every pipeline stage reads its parameters from the tag's config, so the tag is a complete specification of a run.
+One YAML per experiment tag. Every pipeline stage reads its parameters from the tag's config. The `tag` field is the namespace for all outputs — `results/{stage}/{tag}/`, `logs/{stage}/{tag}/`, `figures/{tag}/`, `jobs/{stage}/{tag}_*.pbs`.
 
-## Naming
+## Running an experiment
 
-`{backbone}_{corpus}_{policy_suffix}.yaml` — lowercase, underscore-separated.
+```bash
+bin/run configs/{tag}.yaml [--ngpus N] [--stage 1..6|all] [--skip 1,2] [--dry_run]
+```
 
-Examples matching the follow-up experiment plan (`docs/followup-experiments.md`):
-- `v6b_gemma_2b.yaml` — the current baseline (Gemma-4-E2B-it + curated + OT).
-- `east_8b_curated.yaml` — EAST-8B backbone, curated corpus, self-annotated (Fig 1, 2, 3, 4).
-- `east_8b_east_matched.yaml` — EAST-8B backbone, east-corpus proportion-matched (Fig 2 line 3).
-- `east_8b_waitk.yaml` — EAST-8B backbone, curated corpus, wait-k policy (Fig 2, 3 line 4).
-- `east_8b_conv.yaml` — EAST-8B backbone, curated corpus, Conv-SiMT policy (Fig 2, 3 line 5).
-- `gemma_4b_curated.yaml` — Gemma-4-E4B-it, curated, self-annotated (Fig 4 middle).
-- `gemma_4b_from_2b_annot.yaml` — Gemma-4-E4B-it, curated, tags from Gemma-2B (Fig 5 middle).
-- `east_8b_from_2b_annot.yaml` — EAST-8B, curated, tags from Gemma-2B (Fig 5 right).
+The generic runner reads the YAML, expands the pipeline into concrete shell commands, sets `CUDA_VISIBLE_DEVICES=0..N-1`, and dispatches each stage. Use `--dry_run` first to inspect what will happen.
 
-## Structure
+## Shipped configs (matches `docs/followup-experiments.md`)
 
-Every YAML has 7 top-level sections. See `example.yaml` for the canonical template.
+| Config | Backbone | Corpus | Annotator | Policy | Figures | Status |
+|---|---|---|---|---|---|---|
+| `v6b_gemma_2b.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
+| `east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
+| `east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
+| `east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | **needs criterion impl in scripts/02_annotate.py** |
+| `east_8b_conv.yaml` | EAST-8B | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | **needs criterion + policy impl** |
+| `gemma_4b_curated.yaml` | Gemma-4-E4B-it (4B) | curated | self | OT | Fig 4 middle | ready |
+| `gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it | curated | Gemma-2B | OT | Fig 5 middle | ready (skip Stage 2) |
+| `east_8b_from_2b_annot.yaml` | EAST-8B | curated | Gemma-2B | OT | Fig 5 right | ready (skip Stage 2) |
+
+Cross-annotation configs (`*_from_2b_annot`) reuse the existing
+`results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl` files — no re-annotation needed. Run with `--skip 2`.
+
+## YAML structure
+
+7 top-level sections, see `example.yaml` for the canonical template.
 
 - `tag` — the namespace (must match filename stem).
-- `backbone` — model to fine-tune. `hf_id`, `local_path`, `is_instruct`, `tokenizer_dir`.
-- `source_pool` — Stage 1. Corpus, per-direction row counts, target-quality filters.
-- `annotate` — Stage 2. Annotator (self or cross), criterion (ot/js/waitk/conv/gpt4), τ, top-k, lookahead-k, latency bins.
+- `backbone` — `hf_id`, `local_path`, `is_instruct`, `tokenizer_dir`.
+- `source_pool` — Stage 1. Corpus (`curated` | `east`), per-direction row counts, target-quality filters.
+- `annotate` — Stage 2. Annotator (`same_as_backbone` | HF id | local path), criterion (`ot` | `js` | `wait-k` | `conv-simt`), τ, top-k, lookahead-k, latency bins.
 - `sft_dataset` — Stage 3. Merge rules, collapsed-row policy.
-- `train` — Stage 4. Epochs, batch size, LR, warmup, eval/save cadence, bf16, loss masking.
-- `eval` — Stage 5. Test sets and per-direction sentence counts, latencies to run, policy (`check_argmax`/`wait_k`/...), mode.
-- `plot` — Stage 6. Axes, ticks, colour, marker, legend label.
+- `train` — Stage 4. Epochs, batch, LR, warmup, cadence, bf16, loss masking.
+- `eval` — Stage 5. Test sets → per-direction sentence counts, latencies to run, policy, mode.
+- `plot` — Stage 6. Colour, marker, legend label.
+
+Env var placeholders `${SIMT_MODEL_BASE}`, `${SIMT_REPO_ROOT}`, etc. are expanded at load time by `src/config.load_config`.
 
 ## Adding a new experiment
 
-1. `cp configs/example.yaml configs/{your_tag}.yaml`.
-2. Edit `tag`, `backbone`, `annotate.criterion`, etc.
-3. Generate PBS wrappers: `python scripts/make_job.py --config configs/{your_tag}.yaml --stage {annotate,train,eval}` (produces PBS files under `jobs/{stage}/{tag}_*.pbs`).
-4. Run the stages in order. Outputs land under `results/{stage}/{tag}/`, logs under `logs/{stage}/{tag}/`.
+1. `cp configs/example.yaml configs/{your_tag}.yaml`
+2. Edit `tag`, `backbone`, `source_pool.corpus`, `annotate.*`, and any per-run hyperparameters.
+3. Dry-run: `bin/run configs/{your_tag}.yaml --dry_run`.
+4. If it looks right: `bin/run configs/{your_tag}.yaml --ngpus N`.
 5. Add a `LOG.md` entry before starting the next experiment.
