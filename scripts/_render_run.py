@@ -124,28 +124,30 @@ def render(cfg: dict, ngpus: int) -> list[str]:
     # ─── Stage 5 ───
     out.append("##STAGE_5_EVAL")
     eval_out = f"results/eval/{tag}"
-    for test_set, per_dir in cfg["eval"]["test_sets"].items():
-        for pair, n in per_dir.items():
-            for latency in cfg["eval"]["latencies"]:
+    eval_cfg = cfg["eval"]
+    n_sentences = eval_cfg.get("n_sentences", -1)   # -1 = full test set
+    for test_set, pairs in eval_cfg["test_sets"].items():
+        for pair in pairs:
+            for latency in eval_cfg["latencies"]:
                 src_lang, tgt_lang = pair.split("-")
                 # Test-set file convention (override via SIMT_TESTSETS_ROOT).
-                # Defaults follow the sibling `simul-mt` layout.
+                # Layout: {eval_root}/{src-tgt}/{ds}.{pair}.{src,ref}
                 src_file = f"${{SIMT_TESTSETS_ROOT:-${{SIMT_DATA_ROOT}}}}/eval/{src_lang}-{tgt_lang}/{test_set}.{pair}.src"
                 ref_file = f"${{SIMT_TESTSETS_ROOT:-${{SIMT_DATA_ROOT}}}}/eval/{src_lang}-{tgt_lang}/{test_set}.{pair}.ref"
-                out_json = f"{eval_out}/{test_set}_stream_{tag}_{cfg['eval']['policy']}_{latency}_{pair}_n{n}.json"
+                out_json = f"{eval_out}/{test_set}_stream_{tag}_{eval_cfg['policy']}_{latency}_{pair}.json"
                 out.append(_sh(
                     "${PYTHON}", "-u", "src/eval/extrinsic.py",
                     "--model_dir", f"{train_out}/final",
                     "--tokenizer_dir", tokenizer_dir,
                     "--dev_src", src_file,
                     "--dev_ref", ref_file,
-                    "--n_sentences", str(n),
+                    "--n_sentences", str(n_sentences),
                     "--src_lang", src_lang,
                     "--tgt_lang", tgt_lang,
                     "--use_chat_template",
                     "--latency", latency,
-                    "--mode", cfg["eval"]["mode"],
-                    "--policy", cfg["eval"]["policy"],
+                    "--mode", eval_cfg["mode"],
+                    "--policy", eval_cfg["policy"],
                     "--output", out_json,
                 ))
 

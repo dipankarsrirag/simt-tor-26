@@ -63,12 +63,14 @@ train:
 
 eval:
   test_sets:
-    wmt22:    { de-en: 1979, en-de: 1904, ru-en: 2016, en-ru: 2037 }
-    iwslt17:  { de-en: 1138, en-de: 1138, ar-en: 1460, en-ar: 1460 }
-    iwslt15:  { vi-en: 1268, en-vi: 1268 }
+    wmt22: [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
   latencies: [low, medium, high]
-  policy: conv_simt_kcv                        # NEW policy — Wang 2024 inference loop
+  n_sentences: -1                   # -1 = full test set; override per-run with CLI
+  policy: conv_simt_kcv
   mode: streaming
+
 
 plot:
   color: "#8e44ad"
