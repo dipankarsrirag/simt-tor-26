@@ -8,7 +8,9 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 
 **Falsifiable claim:** backbone-derived tag placement matches or beats GPT-4-derived placement, with the margin growing on word-order-divergent pairs (e.g. German verb-final).
 
-**Empirical status (as of 2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `_archive/results/v6b_gemma_2b/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
+**Empirical status (2026-08-29):** Gemma-4-E2B-it self-annotated + fine-tuned dominates matched-backbone GPT-4 baseline on IWSLT17 (both de-en and en-de). Full 171-cell eval matrix in `_archive/results/v6b_gemma_2b/extrinsic/`. Follow-up experiments planned in `docs/followup-experiments.md`.
+
+---
 
 ## Repo tour (top level)
 
@@ -16,73 +18,125 @@ Undergrad research project. Supervisor: Dipankar Srirag (UNSW). Target venue: AC
 ├── README.md          ← you are here
 ├── LOG.md             append-only run + decision log — the primary record
 ├── create-venv.sh     bootstrap the Python environment
-├── src/               the library (annotator, train, eval)
-├── scripts/           Python entry-points, numbered 01→04 in run order
-├── bin/               shell launchers — run these; they call scripts/*.py with the right env
+├── src/               the library (annotator, train, eval, config)
+├── scripts/           Python entry-points, numbered 01→05 in pipeline order
+├── bin/               shell launchers — run these; call scripts/*.py with the right env
 ├── configs/           YAML configs — one per experiment tag
-├── jobs/              PBS wrappers for Gadi (annotate/, train/, eval/)
+├── jobs/              PBS wrappers for cluster batch (annotate/, train/, eval/)
 ├── results/           outputs (annotate/, sft_dataset/, train/, eval/)
 ├── logs/              PBS stdout/stderr (per-tag)
 ├── docs/              method, hypotheses, data, setup, refactor, etc.
-├── _archive/          everything from prior runs; one subdir per source dir (docs/, scripts/, jobs/, results/, src/, logs/)
-├── data → …           symlink to /g/data/po67/dipankar/data/simt-tor-26/
+├── _archive/          everything from prior runs (docs/, scripts/, jobs/, results/, src/, logs/)
+├── data → …           symlink to the shared data root (paths documented in docs/setup.md)
 └── figures/           paper output PNGs
 ```
 
-Every live user-facing subtree (`jobs/`, `results/`, `logs/`) has three subdirs — `annotate/`, `train/`, `eval/` — for per-tag outputs. All prior runs live under `_archive/{jobs,results,logs}/v6b_gemma_2b/`. Everything a new experiment produces goes under `.../annotate/{tag}/`, `.../train/{tag}/`, `.../eval/{tag}/` for that experiment's tag (e.g. `east_8b_curated`, `gemma_4b_curated`). This keeps output namespaces separate across contributors and easy to collate.
+Every live user-facing subtree (`jobs/`, `results/`, `logs/`) has three subdirs — `annotate/`, `train/`, `eval/` — for per-tag outputs. All prior runs live under `_archive/{jobs,results,logs}/v6b_gemma_2b/`. Everything a new experiment produces goes under `.../annotate/{annotator}/{pair}/`, `.../train/{tag}/`, `.../eval/{tag}/`. This keeps output namespaces separate across contributors and easy to collate.
+
+---
+
+## Prerequisites (any Linux/macOS box)
+
+- **Python 3.10+** with pip
+- **PyTorch with CUDA** for Stages 2, 4, 5 (annotation + SFT training + streaming eval). Stages 1, 3, 6 run on CPU.
+- **~80GB disk** for the current baseline's cached models + training data (less if you fetch on demand).
+- Optional: **PBS scheduler** (Gadi H200 cluster) — the `jobs/` directory has PBS wrappers; on any other GPU box just invoke `bin/*` directly.
+
+Set two env vars before your first run (adjust for your filesystem):
+
+```bash
+export SIMT_MODEL_BASE=$HOME/models              # where HF backbones will live
+export SIMT_DATA_ROOT=$HOME/data/simt-tor-26     # where parallel corpora live
+```
+
+Set them permanently in `~/.bashrc` (or `~/.zshrc`) so `bin/*` launchers pick them up automatically. `bin/_env.sh` will also fall back to sensible per-host defaults if you leave them unset (see §Environment below).
+
+---
 
 ## Quickstart
 
 ```bash
-bash create-venv.sh                                 # first time only
-source /scratch/po67/ds9561/.venv-fil/bin/activate  # every session
+git clone <this-repo>
+cd simt-tor-26
+bash create-venv.sh                    # sets up ./.venv (or reuses shared venv if present)
+source .venv/bin/activate               # or your usual venv
+pip install -r requirements.txt         # torch, transformers, datasets, sacrebleu, pyyaml
+
+# Verify env
+SIMT_ENV_VERBOSE=1 bin/03_build_sft_dataset --help   # will print resolved paths + arg help
 ```
 
-Full setup, paths, HF cache, Gadi PBS conventions, and account onboarding: **`docs/setup.md`**.
+Full setup notes (Gadi-specific paths, HF cache locations, `pyproject`/venv layering, PBS module list): **`docs/setup.md`**.
 
-## Pipeline (6 stages, tag-based)
+---
 
-Pick a tag (short lowercase-with-underscores, e.g. `east_8b_curated`). Create `configs/{tag}.yaml` describing the run (see `configs/example.yaml`). Then run each stage.
+## Pipeline (5 stages, tag-based)
 
-**Two directories, one role each.** `scripts/*.py` = the actual Python implementations. `bin/*` = extension-less shell launchers you actually run — they source `bin/_env.sh` for portable venv/cache handling and dispatch to `scripts/*.py`.
+Pick a tag (short lowercase-with-underscores, e.g. `east_8b_curated`). Create `configs/{tag}.yaml` describing the run (see `configs/example.yaml`). Then run each stage in order.
 
-| Stage | On laptop / no venv | On Gadi (cluster) | Output |
+**Two directories, one role each.** `scripts/*.py` = the actual Python implementations. `bin/*` = extension-less shell launchers you run — they source `bin/_env.sh` for portable venv/cache handling and dispatch to `scripts/*.py`.
+
+| Stage | Command (any machine) | Cluster option | Output |
 |---|---|---|---|
-| 1. Build source pool | `bin/01_build_source_pool --config configs/{tag}.yaml` | same (or `qsub` a PBS) | `results/sft_dataset/{tag}/source_pool.json` |
-| 2. Annotate (OT chunk placement) | (per-direction; slow on laptop) | `qsub jobs/annotate/{tag}_<dir>.pbs` × per direction | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator model + lang-pair, reusable across experiments) |
-| 3. Build SFT dataset | `bin/02_build_sft_dataset --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
-| 4. SFT training | (needs GPU — Gadi only) | `qsub jobs/train/{tag}.pbs` | `results/train/{tag}/final/` + `sft_summary.json` |
-| 5. Extrinsic eval | (needs GPU — Gadi only) | `qsub jobs/eval/{tag}_<test>_<lat>_<dir>.pbs` (many) | `results/eval/{tag}/*.json` |
-| 6. Plot | `bin/03_plot_bleu_al` | same | `figures/{tag}/*.png` |
+| 1. Build source pool | `bin/01_build_source_pool --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/source_pool.json` |
+| 2. Annotate (OT chunk placement) — **GPU required** | `bin/02_annotate --input_json ... --model_path ... --output_dir ...` | `qsub jobs/annotate/{tag}_<pair>.pbs` per direction | `results/annotate/{annotator}/{pair}/matrices.jsonl` (keyed by annotator model + lang-pair — reusable across experiments) |
+| 3. Build SFT dataset | `bin/03_build_sft_dataset --config configs/{tag}.yaml` | same | `results/sft_dataset/{tag}/sft_dataset.json` |
+| 4. SFT training — **GPU required** | `python -m src.train.sft --corpus_file ... --output_dir ...` | `qsub jobs/train/{tag}.pbs` | `results/train/{tag}/final/` + `sft_summary.json` |
+| 5. Extrinsic eval — **GPU required** | `python -m src.eval.extrinsic --model_dir ... --tokenizer_dir ... --dev_src ... --dev_ref ... --latency ... --mode streaming` | `qsub jobs/eval/{tag}_<test>_<lat>_<dir>.pbs` × many | `results/eval/{tag}/*.json` |
+| 6. Plot | `bin/04_plot_bleu_al` | same | `figures/{tag}/*.png` |
 
-Stages 1, 3, and 6 are laptop-runnable (no GPU). Stages 2, 4, 5 need CUDA — the same launchers work on any GPU box, but you'll typically `qsub` on Gadi.
+Stages 1, 3, and 6 need only CPU + a few GB RAM. Stages 2, 4, 5 need CUDA (any A100/H100/H200-class GPU; 24GB+ VRAM comfortably fits 2B backbones in bf16).
 
-Additional utilities (all in `bin/`, no extension):
-- `bin/04_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
-- `bin/prepare_tokenizer --backbone {hf_id}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
+**Additional utilities** (all in `bin/`, no extension):
+- `bin/05_score_comet --tag {tag}` — post-hoc COMET rescoring of eval JSONs.
+- `bin/prepare_tokenizer --backbone {hf_id} --output {dir}` — extend a backbone's tokenizer with EOR/EOW special tokens (one-time per backbone).
 - `bin/probe_east_8b_compat --model_dir {path}` — sanity-check a new backbone integrates with the pipeline.
-- `bin/download_data`, `bin/download_vi_en_test_sets` — one-time data fetches.
-- `bin/make_job --config configs/{tag}.yaml --stage {annotate|train|eval}` — generate PBS wrappers.
-- `jobs/loop_resubmit.sh` — queue-cap-aware batch resubmitter for large eval matrices.
+- `bin/download_data`, `bin/download_vi_en_test_sets --out_dir {dir}` — one-time data fetches.
+- `bin/make_job --config configs/{tag}.yaml --stage {annotate|train|eval}` — generate PBS wrappers (Gadi only).
+- `jobs/loop_resubmit.sh` — queue-cap-aware batch resubmitter for large eval matrices (Gadi only).
 
-`bin/_env.sh` (sourced by every launcher) handles:
-- Venv activation: `/scratch/po67/ds9561/.venv-fil` on Gadi, `./.venv` on laptop, or falls back to system Python.
-- HF cache: `/g/data/po67/dipankar/cache` on Gadi, `$HOME/.cache/huggingface` on laptop.
-- `PYTHONPATH` = repo root.
+---
 
-Override with `SIMT_VENV=/path`, `SIMT_HF_CACHE=/path`, `PYTHON=python3.11`. `SIMT_ENV_VERBOSE=1` logs which paths got picked.
+## Environment
 
-Reproduce the current headline (v6b Gemma-2B): follow the flow above with `tag = v6b_gemma_2b` — the completed run's artifacts already live under `_archive/results/v6b_gemma_2b/`.
+`bin/_env.sh` (sourced by every launcher) resolves paths in this priority order:
+
+| Env var | Purpose | Fallback |
+|---|---|---|
+| `SIMT_REPO_ROOT` | this repo | auto-detected from `bin/_env.sh` location |
+| `SIMT_VENV` | Python venv | Gadi shared venv → `./.venv` → `./.venv-fil` → system Python |
+| `SIMT_HF_CACHE` | HuggingFace cache | Gadi shared cache → `$HOME/.cache/huggingface` |
+| `SIMT_MODEL_BASE` | on-disk model weights root | Gadi shared cache → `$HOME/.cache/simt-models` |
+| `SIMT_DATA_ROOT` | parallel corpora root | `$SIMT_REPO_ROOT/data` (symlinked) |
+| `PYTHON` | python binary | `python3` |
+
+**Verbose:** `SIMT_ENV_VERBOSE=1 bin/…` prints the resolved values on startup.
+
+**YAML config env expansion:** placeholders like `${SIMT_MODEL_BASE}/gemma-4-E2B-it` in `configs/*.yaml` are expanded at load time (`src/config.load_config`).
+
+---
+
+## Running on Gadi (project ba39, NCI)
+
+For collaborators with Gadi access — this project's original compute environment:
+
+1. **Auth + storage:** join `ba39` and `po67` project groups. See `docs/setup.md` §1.
+2. **venv:** shared at `/scratch/po67/ds9561/.venv-fil/`. `bin/_env.sh` picks it up automatically.
+3. **Model + data caches:** shared at `/g/data/po67/dipankar/`. Same story.
+4. **Submitting jobs:** `bin/make_job --config configs/{tag}.yaml --stage annotate` generates PBS files under `jobs/annotate/`. `qsub` them. Use `jobs/loop_resubmit.sh` for large matrices.
+5. **Path convention:** every hardcoded absolute Gadi path in docs (like `/g/data/po67/dipankar/models`) is a **fallback** — override with your own `SIMT_*` env vars if you're on a different filesystem.
+
+---
 
 ## Where to read next
 
 - **Method:** `docs/method.md` — the annotator, mechanically.
-- **Setup / paths / accounts:** `docs/setup.md`.
+- **Setup / paths / accounts (Gadi):** `docs/setup.md`.
 - **What datasets, where they live, how to fetch:** `docs/data.md`.
 - **Falsifiable claims:** `docs/hypotheses.md`.
 - **Ablation grid + metrics:** `docs/experiments.md`.
 - **Follow-up experiment plan (paper-facing):** `docs/followup-experiments.md`.
-- **Refactor rationale:** `docs/refactor.md`.
+- **Refactor rationale (why the tree looks the way it does):** `docs/refactor.md`.
 - **Prior art we build on:** `docs/related-work.md`.
 - **Everything that happened, dated:** `LOG.md`.
 

@@ -1,23 +1,33 @@
 """
-Tau sweep on the Phase-1 smoke set.
+Stage 2 — annotate a parallel-corpus shard with the OT criterion.
 
-Annotates once per sentence with return_full_matrix=True (records every
-D(P_full[j], P_pre[i][j]) — one GPU forward per prefix length), then
-derives commit points at multiple tau values offline. Reports for each
-tau:
-  * fire_fraction — sentences where >=1 target token committed before n
-  * committed_fraction — mean (over sentences) of fraction of target
-    tokens that committed before n
-  * chunks_per_sentence_mean
-  * pearson_i_over_n_vs_j_over_m median / min / max / #NaN
-  * mean fired divergence (informational — where tau bites for JS)
+For each source/target pair in --input_json, forward-pass the backbone at
+each source prefix length to record `D(P_full[j], P_pre[i][j])` (one GPU
+forward per prefix), then derive commit points at each --taus value offline.
+Per-sentence outputs go to `matrices.jsonl`; sweep statistics to `summary.json`.
 
-Output:
-  results/phase1_tau_sweep/matrices.jsonl — per-sentence full matrix
-  results/phase1_tau_sweep/summary.json   — sweep table
+Typical follow-up-experiment invocation (Stage 2 in the pipeline):
 
-The matrices file lets us swap the criterion (KL / OT later) or run
-finer tau grids without re-running the model.
+    bin/02_annotate \\
+      --input_json  results/sft_dataset/{tag}/per_direction/{pair}.json \\
+      --model_path  ${SIMT_MODEL_BASE}/gemma-4-E2B-it \\
+      --output_dir  results/annotate/{annotator}/{pair} \\
+      --criterion   ot --taus 0.30 --lookahead_k 0 --resume
+
+Outputs (per shard):
+  {output_dir}/matrices.jsonl   one JSON per sentence: source, target,
+                                full-source distributions, per-tau commits
+  {output_dir}/summary.json     tau sweep statistics: fire_fraction,
+                                chunks_per_sent, Pearson i/n vs j/m
+  {output_dir}/DONE             touched when the shard is complete
+
+The matrices file lets us swap the criterion (KL / OT) or re-derive commits
+at a different τ without re-running the model.
+
+Legacy note: this file was originally `scripts/phase1_tau_sweep.py` from the
+Aug 14–16 Gate-1 sweeps. The signature and per-sentence output shape are
+unchanged; it's re-badged as Stage 2 of the current pipeline. See
+`_archive/scripts/README.md` for context on the pre-refactor role.
 """
 
 from __future__ import annotations
@@ -30,7 +40,8 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, "/g/data/ba39/dipankar/simt-tor-26")
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -40,9 +51,14 @@ from src.annotator.annotate import (
     _enforce_monotone,
     annotate_pair,
 )
-from src.constants import DATA_ROOT, PRIMARY_BACKBONE, REPO_ROOT
+from src.config import DATA_ROOT, MODEL_BASE, REPO_ROOT
 
+# Default backbone if --model_path not supplied. Overridable per-experiment
+# via configs/{tag}.yaml → backbone.local_path.
+PRIMARY_BACKBONE = MODEL_BASE / "gemma-4-E2B-it"
 
+# Fallback default corpus (only used by old Phase-1 smoke path when
+# --input_json is not passed). New pipeline uses --input_json.
 CORPUS = DATA_ROOT / "SiMT-De-En-660K" / "SiMT-De-En-660K.json"
 
 
@@ -103,8 +119,9 @@ def main():
     ap.add_argument("--criterion", type=str, default="js", choices=["js", "kl", "ot"])
     ap.add_argument("--taus", type=str, default="0.02,0.05,0.10,0.15,0.20,0.30")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--output_dir", type=Path,
-                    default=REPO_ROOT / "results" / "phase1_tau_sweep")
+    ap.add_argument("--output_dir", type=Path, required=True,
+                    help="Write matrices.jsonl + summary.json here. "
+                         "Convention: results/annotate/{annotator}/{pair}/.")
     ap.add_argument("--model_path", type=str, default=str(PRIMARY_BACKBONE))
     ap.add_argument("--max_src_tokens", type=int, default=80)
     ap.add_argument("--prompt_mode", type=str, default="raw", choices=["raw", "chat"],

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Stage 2 — annotate a source-pool shard: for each sentence, compute the
+# full-source vs prefix divergence matrix and derive OT-based commit points.
+# Output: matrices.jsonl (one row per sentence).
+#
+# Usage:
+#   bin/02_annotate \
+#     --input_json  results/sft_dataset/{tag}/per_direction/{pair}.json \
+#     --model_path  ${SIMT_MODEL_BASE}/gemma-4-E2B-it \
+#     --output_dir  results/annotate/{annotator}/{pair} \
+#     --criterion   ot --taus 0.30 --lookahead_k 0
+#
+# NEEDS: GPU (one H200 or comparable). Not laptop-runnable at full scale.
+# For a ~10K-row shard, plan ~40-90 min per 2B model per pair on an H200.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/02_annotate.py" "$@"

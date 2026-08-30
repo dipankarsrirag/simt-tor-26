@@ -107,7 +107,7 @@ Signature `nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0`. WMT22 vs
 
 **Concrete work:**
 1. **Qwen OT-SFT** on `sft_dataset_n10k_annotator-qwen35.json` (dataset built 2026-08-18). Streaming eval → Gate A result.
-2. **E4B OT-SFT** — build dataset from `annot_ot_e4b_n10k/matrices.jsonl` using `scripts/02_build_sft_dataset.py` (2026-08-18 fixes apply); SFT; streaming eval → P2 (ii) result.
+2. **E4B OT-SFT** — build dataset from `annot_ot_e4b_n10k/matrices.jsonl` using `scripts/03_build_sft_dataset.py` (2026-08-18 fixes apply); SFT; streaming eval → P2 (ii) result.
 3. Optional Test B (loss upweighting on EAST specials) if Test A doesn't find adaptivity: add `--special_token_loss_weight` to `sft.py`; sweep α ∈ {3, 5, 10}; retrain OT-SFT.
 
 **Deliverable:** Gate A pass/fail; P2 (ii) result on 4B params.

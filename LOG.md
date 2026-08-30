@@ -361,7 +361,7 @@ Total 240K rows (3× 80K).
 
 #### 3. OT-guided boundary voting refinement — implemented + bug found + fixed
 
-**New module: `src/annotator/boundary_refine.py`.** For each OT-chosen boundary at position p, search a ±window (default 3) source tokens and pick the position maximizing `α · ot_confidence(τ − D[i][j]) + β · syntactic_score(source_prefix)`. syn = +1 at sentence-end punct, +0.5 at comma, -1 at stranded function word. Preserves monotonicity. Opt-in via `--refine_boundaries` flag in `scripts/02_build_sft_dataset.py`.
+**New module: `src/annotator/boundary_refine.py`.** For each OT-chosen boundary at position p, search a ±window (default 3) source tokens and pick the position maximizing `α · ot_confidence(τ − D[i][j]) + β · syntactic_score(source_prefix)`. syn = +1 at sentence-end punct, +0.5 at comma, -1 at stranded function word. Preserves monotonicity. Opt-in via `--refine_boundaries` flag in `scripts/03_build_sft_dataset.py`.
 
 **Bug 1 (fixed):** loop started at `k=1`, skipping the FIRST chunk's end boundary refinement (implicit boundary when commit[0] equals chunk-0-end).
 
@@ -506,13 +506,13 @@ If OT/merge tuning has hit a plateau, next lever is the annotator's commit crite
 
 #### 10. Code changes this session
 
-- `scripts/02_build_sft_dataset.py`:
+- `scripts/03_build_sft_dataset.py`:
   - Added `--refine_boundaries`, `--refine_window`, `--refine_alpha`, `--refine_beta` (opt-in voting)
   - Added `--force_latency` (override latency label from CLI, for τ-sweep)
   - Added `--keep_collapsed` (keep cc=1 rows instead of dropping — needed for τ-sweep balance)
   - Escaped `%%` in help strings that were breaking argparse
 - `scripts/phase2_build_condA_dataset.py`: fixed dedup bug (line 92-100) — keep ALL Multi-90K latency variants per source
-- `scripts/04_score_comet.py`: added `--n_suffix` flag; XLMR resolution patch for the transformers 4.55+ cache regression
+- `scripts/05_score_comet.py`: added `--n_suffix` flag; XLMR resolution patch for the transformers 4.55+ cache regression
 - `scripts/plot_bleu_vs_al_all_conditions.py`: added `--n_suffix` flag, per-N COMET file fallback, restructured CONDITIONS list
 - `src/annotator/boundary_refine.py`: NEW module — voting refinement + post-emit stranded merge helper
 - `.venv-fil` transformers install rebuilt to `transformers==5.14.1` per `.venv-freeze.txt`
@@ -650,7 +650,7 @@ This mechanism naturally explains most of the observed BLEU/COMET regression pat
 Chunk count decreases after this merge → latency labels need reassignment via the (cc, sw) rule. Since `latency_from_chunk_stats` is already the single source of truth, reassignment is a one-liner in the pipeline.
 
 **Files to touch.**
-- `scripts/02_build_sft_dataset.py` — add `merge_stranded_function_word_chunks()` + wire into `build_dataset` after EAST §3.1 merge, before latency assignment.
+- `scripts/03_build_sft_dataset.py` — add `merge_stranded_function_word_chunks()` + wire into `build_dataset` after EAST §3.1 merge, before latency assignment.
 - New post-hoc script + dataset: apply on `merged3_rebucketed.json` for sanity comparison to merged3_rebucketed (matched-training-config head-to-head).
 - PBS: `jobs/phase2_sft_multilingual_v6b_ctrl_merged3_rb_fw.pbs`.
 
@@ -766,7 +766,7 @@ Prioritise the German case first if punct-aware chunking is implemented (highest
 
 ### [DECISION] 2026-08-22 — Align augmentation + latency logic in build_sft_dataset with rebucket rule
 
-**Context.** Rebucketing (previous entry) fixed merged3's static labels via a standalone script (`scripts/rebucket_latency.py`). But `scripts/02_build_sft_dataset.py` still used the old chunk-count-only rule (`latency_from_chunk_count`), and its `augment_row_at_lower_chunk_counts` used the same stale rule. Future dataset builds would produce the old labels; augmentation would emit rows whose latency label was inconsistent with the base rows. Two sources of truth → drift.
+**Context.** Rebucketing (previous entry) fixed merged3's static labels via a standalone script (`scripts/rebucket_latency.py`). But `scripts/03_build_sft_dataset.py` still used the old chunk-count-only rule (`latency_from_chunk_count`), and its `augment_row_at_lower_chunk_counts` used the same stale rule. Future dataset builds would produce the old labels; augmentation would emit rows whose latency label was inconsistent with the base rows. Two sources of truth → drift.
 
 **Fix.** Made `phase2_build_sft_dataset.py` the single source of truth:
 
@@ -908,7 +908,7 @@ Marginals don't hit condA's exactly (12/19/69 vs 6/9/85) because our OT annotato
 - Ship model: `_archive/results/v6b_gemma_2b/sft_multilingual_v6b_ctrl_merged3/final/` (Gemma-4-E2B-it, 2B, α=1, 2ep)
 - Training data: `_archive/results/v6b_gemma_2b/sft_dataset_multilingual_v6b_merged3.json` (79K rows)
 - Eval outputs: `_archive/results/v6b_gemma_2b/extrinsic/flores_stream_v6bmerged3_checkargmax_*_n50.json` (40 files)
-- Dataset builder: `scripts/02_build_sft_dataset.py` (adds `--merge_small_chunks --min_src_words 4`)
+- Dataset builder: `scripts/03_build_sft_dataset.py` (adds `--merge_small_chunks --min_src_words 4`)
 - Merge helper: `merge_small_chunks()` in same file
 - Comparison plot: `figures/phase2/bleu_vs_al_all_conditions_flores_n50.{pdf,png}`
 
@@ -1020,12 +1020,12 @@ Biggest BLEU wins (main → ctrl): vi-en low_medium 15.81 → 24.91 (+9.10), vi-
 
 ### [DECISION] 2026-08-22 — v6b fix: bypass string round-trip in training + inference tokenization
 
-**Context.** v6 SFT dataset silently dropped **40-47% of AR/VI training rows** at the "leading-space retokenization" gate in `scripts/02_build_sft_dataset.py:274-278`. Root cause: the builder tokenized source/target twice — once as the annotator saw it (`tok(src)`) and once with a leading space prepended (`tok(" " + src)`) to match a v1-v5 streaming-alignment convention. For AR (RTL) and VI (Latin-with-diacritics), prepending a leading space changes SentencePiece's segmentation boundaries → different token counts → row rejected. Only DE/EN happened to be resilient.
+**Context.** v6 SFT dataset silently dropped **40-47% of AR/VI training rows** at the "leading-space retokenization" gate in `scripts/03_build_sft_dataset.py:274-278`. Root cause: the builder tokenized source/target twice — once as the annotator saw it (`tok(src)`) and once with a leading space prepended (`tok(" " + src)`) to match a v1-v5 streaming-alignment convention. For AR (RTL) and VI (Latin-with-diacritics), prepending a leading space changes SentencePiece's segmentation boundaries → different token counts → row rejected. Only DE/EN happened to be resilient.
 
 Investigation: ran `scripts/probe_v6_roundtrip.py`. **0/16 sample rows** preserved the annotator's `source_chunk_ids`/`target_chunk_ids` through the v6 string-round-trip training path (chat template render + retokenize). Even for DE/EN, the first target token of each chunk emerged as `▁And` (with `▁`) at training time vs `And` (without) at annotator time — because `build_assistant_body` prepends `" "` before each chunk, and SentencePiece encodes ` And` as `▁And`.
 
 **Fix.** Bypass the string round-trip entirely:
-1. **`scripts/02_build_sft_dataset.py`**: use annotator's original tokenization (`src_ids_orig`, `tgt_ids_orig`) as canonical. Remove the leading-space retokenization gate.
+1. **`scripts/03_build_sft_dataset.py`**: use annotator's original tokenization (`src_ids_orig`, `tgt_ids_orig`) as canonical. Remove the leading-space retokenization gate.
 2. **`src/train/sft.py`**: add `render_chat_open_close_ids()` (splits chat template around a placeholder assistant body → prefix_ids + suffix_ids) and `build_row_ids()` (concats `prefix_ids + Σ(src_chunk_ids[k] + [EOR] + tgt_chunk_ids[k] + [EOW]) + suffix_ids`). No string round-trip on the assistant body; chunk_ids are spliced in byte-exact.
 3. **`src/eval/extrinsic.py::tokenize_source_by_words`**: word[0] tokenized WITHOUT leading space; word[i>0] WITH leading space. Concatenation equals `tok(src)` — matches annotator's canonical tokenization and thus training.
 4. **Sanity test** (`scripts/probe_v6_sanity.py`): verifies training input_ids body == chunk_ids concat, labels correctly mask prefix, streaming tokenization == annotator tokenization, per-chunk replay recovers chunks. **24/24 rows pass across all 8 directions.**
@@ -1040,7 +1040,7 @@ Investigation: ran `scripts/probe_v6_roundtrip.py`. **0/16 sample rows** preserv
 **Revisit if.** BLEU jumps on AR/VI relative to v6 don't materialize; then investigate whether v6b's training loss actually sees the correct signal (embedding delta report + inspect a saved input_ids sample byte-for-byte).
 
 **Files touched (v6b):**
-- `scripts/02_build_sft_dataset.py` (dropped leading-space gate)
+- `scripts/03_build_sft_dataset.py` (dropped leading-space gate)
 - `src/train/sft.py` (direct-ids splice + best-model + checkpoint cleanup)
 - `src/eval/extrinsic.py` (streaming tokenize word[0] no-space, word[i>0] with-space)
 - `scripts/probe_v6_roundtrip.py`, `scripts/probe_v6_directids.py`, `scripts/probe_v6_sanity.py` (probes/tests)
@@ -1132,8 +1132,8 @@ Other directions demonstrated the v6 fix works cleanly:
 **Sequence** (each step gated on the prior):
 
 **Phase 1 — v5 SFT (immediate, ~4h GPU total).** Once all 10 direction annotations complete:
-- Build combined dataset: `python scripts/02_build_sft_dataset.py --matrices _archive/results/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl --corpus_json _archive/results/v6b_gemma_2b/multilingual_source_pool_v5.json --tau 0.30 --tau_fallbacks 0.50,0.70,1.00 --augment_latency --output _archive/results/v6b_gemma_2b/sft_dataset_multilingual_v5.json`
-  (Builder was patched 2026-08-20 to accept multiple `--matrices` files + `--corpus_json` override — see `scripts/02_build_sft_dataset.py`.)
+- Build combined dataset: `python scripts/03_build_sft_dataset.py --matrices _archive/results/v6b_gemma_2b/annot_ot_multi_*/matrices.jsonl --corpus_json _archive/results/v6b_gemma_2b/multilingual_source_pool_v5.json --tau 0.30 --tau_fallbacks 0.50,0.70,1.00 --augment_latency --output _archive/results/v6b_gemma_2b/sft_dataset_multilingual_v5.json`
+  (Builder was patched 2026-08-20 to accept multiple `--matrices` files + `--corpus_json` override — see `scripts/03_build_sft_dataset.py`.)
 - Fire multilingual v5 SFT with v4 recipe stack (fixed_tokenization + descriptive_init + Test B α=5). Expected ~1h SFT + 2 min smoke.
 - Evaluate on newstest2013 wait_k∈{3,5,7} + check_argmax at low/medium/high latency. Expected: multilingual model shows similar Pareto to single-language v4; the "adaptivity vs wait_k" story replays across all 10 directions.
 
@@ -1294,7 +1294,7 @@ Other directions demonstrated the v6 fix works cleanly:
 - `src/annotator/annotate.py::_chunks_from_commit` — added `_snap_to_word_boundary` (never mid-word); now returns 4-tuple with raw `source_chunk_ids`/`target_chunk_ids`.
 - `src/eval/extrinsic.py::stream_translate` — `tokenize_source_by_words` now ALWAYS prepends leading space (word[0] included); fallback offset-map path also uses `" " + src`.
 - `src/eval/extrinsic.py` — added 3 soft-commit policies (`check_prob_thresh`, `check_rank`, `check_ratio`) for Test A.
-- `scripts/02_build_sft_dataset.py` — `.strip()` on src/tgt; verify original tokenization aligns with matrix; store raw BPE ids per chunk; recalibrated `LATENCY_MEDIUM_MAX_CHUNKS=6` (≤3 high / 4-6 med / ≥7 low); added `merge_chunks_to_n()` + `augment_row_at_lower_chunk_counts()` (k≥4 → aug2 with ⌈k/2⌉ chunks; k≥7 → aug4 with ⌈k/4⌉); `--augment_latency` CLI flag.
+- `scripts/03_build_sft_dataset.py` — `.strip()` on src/tgt; verify original tokenization aligns with matrix; store raw BPE ids per chunk; recalibrated `LATENCY_MEDIUM_MAX_CHUNKS=6` (≤3 high / 4-6 med / ≥7 low); added `merge_chunks_to_n()` + `augment_row_at_lower_chunk_counts()` (k≥4 → aug2 with ⌈k/2⌉ chunks; k≥7 → aug4 with ⌈k/4⌉); `--augment_latency` CLI flag.
 - `src/train/sft.py` — added `build_input_ids_direct()` (detects `source_chunk_ids` in dataset, builds `input_ids` directly, bypasses text-based interleave); `WeightedSFTTrainer` (Test B); `apply_descriptive_init()` (mean-of-descriptive-words + `<eos>` anchor + N(0, 0.01²) noise); `post_train_smoke()` (100-sent check_argmax on newstest2013 in-memory after SFT, prints `ADAPTIVITY_VERDICT`); auto-resume from latest `checkpoint-*/`; new CLI flags: `--fixed_tokenization`, `--descriptive_init`, `--special_token_loss_weight`, `--post_train_smoke_sents`.
 - `jobs/phase2_sft_v4.pbs` — chain-at-start pattern (`-W depend=afterany:$PBS_JOBID`, MAX_SHARDS=3, DONE marker), `--keep_checkpoints` passed, post-hoc checkpoint cleanup only after `final/` writes durably.
 - `jobs/phase2_build_v4_dataset.pbs` — new copyq/48GB build (login node had silently OOM'd loading 660K corpus).
@@ -1677,7 +1677,7 @@ Naming table added to `docs/README.md`. Legacy code identifiers (`condB`, `condC
 
 **Code shipped this session:**
 1. `src/eval/extrinsic.py` — added `compute_laal()` (Papi 2022 Length-Adaptive AL) alongside AL; every future streaming eval writes both. Smoke tests passed on analytic cases.
-2. `scripts/02_build_sft_dataset.py` — two fixes: (a) fallback τ ladder `[0.30, 0.50, 0.70, 1.00]` to escape single-chunk-collapse rows at dataset-build time; (b) latency-token reassignment per EAST-inherited chunk-count thresholds (≤3 → high, 4-5 → medium, ≥6 → low). Both provenance-logged in each row's new `_annotator_meta` field.
+2. `scripts/03_build_sft_dataset.py` — two fixes: (a) fallback τ ladder `[0.30, 0.50, 0.70, 1.00]` to escape single-chunk-collapse rows at dataset-build time; (b) latency-token reassignment per EAST-inherited chunk-count thresholds (≤3 → high, 4-5 → medium, ≥6 → low). Both provenance-logged in each row's new `_annotator_meta` field.
 3. `src/train/sft.py` — automatic post-training cleanup of intermediate `checkpoint-*/` dirs (retains only `final/`). ~275 GB freed across existing 8 sft_ dirs.
 4. `docs/setup.md §6.8` — documented post-job hygiene rule + manual cleanup snippet.
 
@@ -1996,7 +1996,7 @@ Root cause: `src/train/sft.py` overrode transformers's mean-covariance embedding
 
 **Pick-up-tomorrow state.**
 1. Check `_archive/results/v6b_gemma_2b/annot_ot_n2k/{DONE,NEEDS_RESUME,matrices.jsonl}` — if DONE present, all 1894 sentences annotated.
-2. Run `python scripts/02_build_sft_dataset.py --tau 0.30` → `_archive/results/v6b_gemma_2b/sft_dataset_n2k.json`.
+2. Run `python scripts/03_build_sft_dataset.py --tau 0.30` → `_archive/results/v6b_gemma_2b/sft_dataset_n2k.json`.
 3. Submit cond-B SFT: same recipe as cond-A/fixed but `--corpus_file _archive/results/v6b_gemma_2b/sft_dataset_n2k.json --output_dir _archive/results/v6b_gemma_2b/sft_n2k` (n=2000, 3 epochs, lr 2e-5, effective batch 16).
 4. Run inference smoke on cond-B; matched A-vs-B qualitative comparison.
 5. Scaffold `src/eval/extrinsic.py` for Gate-3 (streaming inference + BLEU + AL on WMT15 newstest2015).

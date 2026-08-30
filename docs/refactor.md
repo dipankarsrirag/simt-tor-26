@@ -118,9 +118,9 @@ simt-tor-26/
 | Current | Destination | Reason |
 |---|---|---|
 | `scripts/01_build_source_pool.py` | `scripts/01_build_source_pool.py` | Live, entry stage. |
-| `scripts/02_build_sft_dataset.py` | `scripts/02_build_sft_dataset.py` | Live. |
-| `scripts/03_plot_bleu_al.py` | `scripts/03_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
-| `scripts/04_score_comet.py` | `scripts/04_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
+| `scripts/03_build_sft_dataset.py` | `scripts/03_build_sft_dataset.py` | Live. |
+| `scripts/04_plot_bleu_al.py` | `scripts/04_plot_bleu_al.py` | Live (regenerated the 5 paper figures 2026-08-28). |
+| `scripts/05_score_comet.py` | `scripts/05_score_comet.py` | Roadmap for COMET rescoring per `docs/08` §Metrics. |
 | `scripts/prepare_tokenizer.py` | `scripts/prepare_tokenizer.py` | Utility; not numbered (one-time setup). |
 | `scripts/probe_east_8b_compat.py` | (keep in place) | Used 2026-08-28 for EAST-8B baseline; live. |
 | `scripts/make_job.py`, `download_*.py`, `download_data.sh` | (keep in place) | Utilities. |
@@ -221,10 +221,10 @@ bash jobs/reproduce_v6b.sh                    # end-to-end
 # or step by step:
 python scripts/01_build_source_pool.py --config configs/curated.yaml
 qsub jobs/annotate/annot_ot_multi_htgt_de-en.pbs   # × 8 directions
-python scripts/02_build_sft_dataset.py --config configs/curated.yaml
+python scripts/03_build_sft_dataset.py --config configs/curated.yaml
 qsub jobs/train/sft_multilingual_v6b_v2bal_v3_htgt.pbs
 qsub jobs/eval/gemma_2b/wmt15_v2balv3htgt_medium.pbs   # × per-latency-per-dir
-python scripts/03_plot_bleu_al.py
+python scripts/04_plot_bleu_al.py
 ```
 
 ## Where to read next

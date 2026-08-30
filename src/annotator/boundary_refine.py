@@ -24,7 +24,7 @@ effect on the base pipeline. It subsumes two prior monkey-patch fixes:
 - Case-1 punctuation-snap: `syn(i) = +1` at post-punctuation positions →
   boundaries are pulled toward the nearest punct within the window.
 - Stranded-function-word merge (STRANDED_ENDINGS in
-  scripts/02_build_sft_dataset.py): `syn(i) = -1` at positions where
+  scripts/03_build_sft_dataset.py): `syn(i) = -1` at positions where
   the corresponding target-side chunk would end with a determiner /
   preposition / conjunction → boundaries pushed away from mid-NP/PP splits.
 
@@ -102,7 +102,7 @@ def syntactic_score(
 
     Scores add if multiple conditions apply. `stranded_endings` is a set
     of lowercased target-side function-word forms (see STRANDED_ENDINGS
-    in scripts/02_build_sft_dataset.py).
+    in scripts/03_build_sft_dataset.py).
     """
     score = 0.0
     last_ch = _last_char(src_prefix_end)

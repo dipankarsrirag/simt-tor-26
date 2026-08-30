@@ -55,7 +55,7 @@ annotate:
   latency_bins: [low, medium, high] # 3-bin (EAST-style) or 5-bin (low, low-medium, medium, medium-high, high)
 
 # ─────────── SFT dataset ───────────
-# (Stage 3 — scripts/02_build_sft_dataset.py)
+# (Stage 3 — scripts/03_build_sft_dataset.py)
 sft_dataset:
   merge_small_chunks: true          # EAST §3.1 merge rule
   min_src_words: 4                  # merge threshold
@@ -99,7 +99,7 @@ eval:
   mode: streaming
 
 # ─────────── plot ───────────
-# (Stage 6 — scripts/03_plot_bleu_al.py)
+# (Stage 6 — scripts/04_plot_bleu_al.py)
 plot:
   x_label: AL                       # AL | LAAL | AL-CA
   y_label: SacreBLEU                # SacreBLEU | COMET
