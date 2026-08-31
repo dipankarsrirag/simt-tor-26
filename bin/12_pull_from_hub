@@ -10,12 +10,16 @@
 #     # or explicit repo:
 #   bin/12_pull_from_hub --repo {org}/{name} [--only ...]
 #
-# Common uses:
-#   # Quang: pull Dipankar's Gemma-2B annotator matrices for cross-annot experiments
-#   bin/12_pull_from_hub --tag gemma_2b_curated       # → tor-simt-gemma-2b-curated --only annotate
+# Common uses (local tags use underscores; HF repo names use hyphens —
+# translation is automatic):
 #
-#   # Full pull (annot matrices + model + logs + evals)
-#   bin/12_pull_from_hub --tag gemma_2b_curated       # → tor-simt-gemma-2b-curated
+#   # Quang: pull Dipankar's Gemma-2B annotator matrices for cross-annot experiments
+#   bin/12_pull_from_hub --tag gemma_2b_curated --only annotate
+#     → pulls from unswnlporg/tor-simt-gemma-2b-curated
+#     → drops matrices into results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl
+#
+#   # Full pull (annot matrices + model + logs + evals):
+#   bin/12_pull_from_hub --tag gemma_2b_curated
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
