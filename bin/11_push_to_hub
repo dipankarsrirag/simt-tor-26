@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Push one experiment tag (SFT checkpoint + config + logs + eval JSONs)
+# to a HuggingFace Hub repo — for cross-check and review.
+#
+# Usage:
+#   bin/11_push_to_hub --config configs/{NN_tag}.yaml [--org OWNER] [--private] [--dry_run]
+#
+# Requires: `huggingface-cli login` first (or `export HF_TOKEN=...`).
+#
+# Uploads:
+#   {org}/simt-{tag}/
+#     ├── SFT checkpoint (safetensors + tokenizer, from results/train/{tag}/final/)
+#     ├── config.yaml       — the experiment YAML
+#     ├── manifest.json      — git sha, hostname, GPUs, timestamps (from bin/run)
+#     ├── logs/              — per-stage stdout+stderr
+#     ├── eval/              — every landed eval JSON
+#     └── README.md          — auto-generated model card
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/11_push_to_hub.py" "$@"

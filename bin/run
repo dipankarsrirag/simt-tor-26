@@ -97,20 +97,57 @@ should_run() {
 run() {
   local n=$1; shift
   local desc=$1; shift
+  local stage_log="${LOG_DIR}/stage_${n}_${desc,,}.log"
   echo ""
-  echo "▶ Stage ${n}: ${desc}  (tag=${TAG}, ngpus=${NGPUS})"
+  echo "▶ Stage ${n}: ${desc}  (tag=${TAG}, ngpus=${NGPUS})  → ${stage_log}"
+  {
+    echo ""
+    echo "══ Stage ${n}: ${desc} — $(date -Is) ══"
+  } >> "$stage_log"
   for cmd in "$@"; do
     echo "  \$ $cmd"
+    {
+      echo ""
+      echo "\$ $cmd"
+    } >> "$stage_log"
     if [ "$DRY" = "0" ]; then
-      eval "$cmd"
+      # tee stdout+stderr into the stage log; time each command.
+      { { time eval "$cmd"; } 2>&1 ; } | tee -a "$stage_log"
     fi
   done
 }
+
+# ─────────── logging + run manifest ───────────
+LOG_DIR="${SIMT_REPO_ROOT}/logs/${TAG}"
+mkdir -p "$LOG_DIR"
+MANIFEST="${LOG_DIR}/manifest.json"
+if [ "$DRY" = "0" ]; then
+  GIT_SHA=$(cd "$SIMT_REPO_ROOT" && git rev-parse HEAD 2>/dev/null || echo unknown)
+  GIT_DIRTY=$(cd "$SIMT_REPO_ROOT" && [ -n "$(git status --porcelain 2>/dev/null)" ] && echo true || echo false)
+  cat > "$MANIFEST" <<JSON
+{
+  "tag": "${TAG}",
+  "config": "${CONFIG}",
+  "ngpus": ${NGPUS},
+  "cuda_visible_devices": "${CUDA_VISIBLE_DEVICES:-}",
+  "stage_filter": "${STAGE}",
+  "skip": "${SKIP}",
+  "git_sha": "${GIT_SHA}",
+  "git_dirty": ${GIT_DIRTY},
+  "hostname": "$(hostname)",
+  "user": "${USER:-unknown}",
+  "started_at": "$(date -Is)",
+  "python": "$(${PYTHON} --version 2>&1)",
+  "venv": "${VIRTUAL_ENV:-none}"
+}
+JSON
+fi
 
 echo "═════════════════════════════════════════════════════════════════"
 echo "  Experiment: ${TAG}   ngpus=${NGPUS}   stage=${STAGE}"
 echo "  Config:     ${CONFIG}"
 echo "  Devices:    CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-<none>}"
+echo "  Logs:       ${LOG_DIR}"
 [ "$DRY" = "1" ] && echo "  DRY-RUN: no commands will execute"
 echo "═════════════════════════════════════════════════════════════════"
 
