@@ -99,7 +99,10 @@ def main():
     tag = cfg["tag"]
 
     org = args.org or os.environ.get("HF_HUB_ORG", "unswnlporg")
-    repo_name = args.repo_name or f"tor-simt-{tag}"
+    # HF repo names use hyphens, not underscores (convention). Convert the
+    # local tag (underscore-separated, e.g. gemma_2b_curated) → hyphenated
+    # repo name (gemma-2b-curated).
+    repo_name = args.repo_name or f"tor-simt-{tag.replace('_', '-')}"
     repo_id = f"{org}/{repo_name}"
     is_private = not args.public   # --private is the default; --public overrides
 
@@ -182,7 +185,7 @@ def main():
         folder_path=str(stage),
         repo_id=repo_id,
         repo_type="model",
-        commit_message=f"tor-simt-{tag} — git@{manifest.get('git_sha', 'unknown')[:8]}",
+        commit_message=f"{repo_name} — git@{manifest.get('git_sha', 'unknown')[:8]}",
     )
     print(f"\nDone: https://huggingface.co/{repo_id}")
 

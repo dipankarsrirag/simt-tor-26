@@ -12,10 +12,10 @@
 #
 # Common uses:
 #   # Quang: pull Dipankar's Gemma-2B annotator matrices for cross-annot experiments
-#   bin/12_pull_from_hub --tag gemma_2b_curated --only annotate
+#   bin/12_pull_from_hub --tag gemma_2b_curated       # → tor-simt-gemma-2b-curated --only annotate
 #
 #   # Full pull (annot matrices + model + logs + evals)
-#   bin/12_pull_from_hub --tag gemma_2b_curated
+#   bin/12_pull_from_hub --tag gemma_2b_curated       # → tor-simt-gemma-2b-curated
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091

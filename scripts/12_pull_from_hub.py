@@ -36,7 +36,7 @@ def main():
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--tag", help="Experiment tag (short-form). Resolves to "
                                     "unswnlporg/tor-simt-{tag}. Use --org to override.")
-    src.add_argument("--repo", help="Full HF repo id, e.g. unswnlporg/tor-simt-gemma_2b_curated.")
+    src.add_argument("--repo", help="Full HF repo id, e.g. unswnlporg/tor-simt-gemma-2b-curated.")
     ap.add_argument("--org", default=None,
                     help="HF organisation for --tag lookups. Default: "
                          "HF_HUB_ORG env var, else 'unswnlporg'.")
@@ -50,9 +50,12 @@ def main():
     import os as _os
     if args.tag:
         org = args.org or _os.environ.get("HF_HUB_ORG", "unswnlporg")
-        repo = f"{org}/tor-simt-{args.tag}"
+        # HF repo names use hyphens; local tags may use underscores. Accept
+        # either form and normalise for the URL.
+        tag_slug = args.tag.replace("_", "-")
+        repo = f"{org}/tor-simt-{tag_slug}"
     else:
-        repo = repo
+        repo = args.repo
 
     from huggingface_hub import snapshot_download
 
