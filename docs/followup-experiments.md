@@ -91,7 +91,18 @@ The `↺` glyph reads "self-trained on"; policy suffix disambiguates.
 
 Rationale: matches EAST §4.2 wait-k grid; single value per bin prevents post-hoc "best-k" hyperparameter search that would unfairly inflate the wait-k line.
 
-**Conv-SiMT baseline (`EAST↺conv`).** Different *k* from wait-k — Wang 2024's `k_cv` is "tokens read per decode step" (a chunk-size, not a warm-up). Fix `k_cv = 4` (Wang 2024 default) for all latency bins. Alignment tool: `awesome-align` (Wang 2024 §2). If Wang 2024 uses a different default, adopt theirs and log the deviation.
+**Conv-SiMT baseline (`EAST↺conv`).** Wang 2024 (arXiv 2402.10552, §2):
+alignment-derived READ/WRITE pairs `(Rⱼ, Wⱼ)` on a monotonic dependency
+graph — NOT a fixed-k word window (`k_cv=4` in earlier drafts of this
+doc was a mis-read of the paper; the algorithm has no k at training
+time). Wang's original alignment tool is `fastalign` (Dyer 2013); we
+substitute `awesome-align` (mBERT-based, pip-installable, higher-
+precision) — deviation logged 2026-08-31 in `LOG.md`. Inference: Wang
+reads `n ∈ {3,5,7,9,11,13}` tokens/step + RALCP for WRITE termination;
+we simplify to greedy-per-chunk (read `n`, generate until `<|end-of-
+write|>`) so all three baselines (OT / wait-k / conv-simt) share the
+same streaming inference policy. Per-latency training data (single-model
+vs 3 latency-labelled variants) still to pick — see LOG.md.
 
 ---
 

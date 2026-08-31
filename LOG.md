@@ -145,6 +145,90 @@ variant, (b) how to slot into the existing pipeline that expects
 
 ---
 
+### [DECISION] 2026-08-31 — Conv-SiMT recipe: adopt awesome-align + simplified inference (deviations from Wang 2024, logged)
+
+**Context.** Fetched Wang, Vu, Shareghi & Haffari 2024 "Conversational
+SimulMT" (arXiv 2402.10552, HTML v4) to resolve the "Wang 2024 §2.1
+chunk-assignment rule" blocker. Findings:
+
+1. **Alignment tool.** Paper: `fastalign` (Dyer 2013). Quote: "we employ
+   fastalign to obtain word alignment between source and target tokens".
+   NOT `awesome-align` as `docs/followup-experiments.md` §Pre-registered
+   hyperparameters currently speculates. `docs/related-work.md` line 39
+   already had it right.
+
+2. **Chunking algorithm.** Alignment-based (NOT fixed-k word window).
+   Quote: "We then segment the monotonic dependency graph and convert
+   these segments into READ / WRITE pairs, representing the meta trajectory
+   of the oracle policy with minimum latency". Formally: "Each subgraph
+   corresponds to a pair (Rⱼ, Wⱼ) where Wⱼ={yⱼ} is a target token and
+   Rⱼ={xᵢ | i ∈ aⱼ ∖ aⱼ₋₁} contains new source tokens" (aⱼ is the
+   alignment set of target token j).
+
+3. **k / chunk-size.** Paper sweeps n ∈ {3, 5, 7, 9, 11, 13} at
+   inference. No single training-time default; training data is
+   alignment-derived (no k parameter at build time).
+
+4. **Format.** `<U> Xₜ <A> Yₜ` per turn with dedicated `<U>` / `<A>`
+   special tokens. No system prompt described.
+
+5. **Inference.** Reads n tokens per round; WRITE stops via **RALCP**
+   (Relaxed Agreement LCP over multiple hypotheses).
+
+6. **Reported BLEU.** WMT15 De→En, LLaMA-2-7B-chat: offline upper bound
+   30.99; simultaneous range ~25–30 depending on latency setting.
+
+**Chose (deviations from Wang, all logged for the paper).**
+
+- **Alignment: awesome-align (mBERT-based) instead of fastalign.**
+  Rationale: fastalign is a C++ tool requiring a copyq build (no internet
+  on gpuhopper for `git clone`); awesome-align is `pip install`-able,
+  uses mBERT for higher-precision alignments, and `docs/followup-
+  experiments.md` §Pre-registered hyperparameters explicitly permits
+  substitution ("If Wang 2024 uses a different default, adopt theirs
+  and log the deviation" — we go the other way for practicality, but the
+  spirit is the same: pre-register the alignment tool, don't post-hoc
+  tune). The install path (`create-venv.sh` + mBERT pull) is already
+  queued as job 177879264.
+
+- **Chunking: adopt Wang's alignment-graph algorithm verbatim** for
+  training-data construction (Rⱼ, Wⱼ per §2 quote above). No fixed-k
+  word window (my initial config-04 sketch was wrong on this).
+
+- **Per-latency training data:** OPEN QUESTION. Wang trains once and
+  sweeps n at inference. Our EAST-format latency training is per-row.
+  Options to decide before implementing:
+  (a) Single training run at Wang's alignment-derived chunks; label all
+      rows `medium`; skip low/high latency variants (matches Wang).
+  (b) Train 3× — one per latency — by merging alignment-derived chunks
+      to target n≈3 (low) / 5 (medium) / 7 (high) source tokens.
+  (c) Train 1× on the union; per-row latency label from chunks/sent as
+      in the OT arm's `latency_from_chunk_stats` rule.
+  Recommend (b) — pre-registered, matches wait-k arm's per-latency shape,
+  keeps the paper's Fig 2/3 line comparable at each latency point.
+
+- **Inference: simplified greedy-per-chunk, NOT RALCP.** Rationale:
+  RALCP requires beam search + multi-hypothesis agreement, which our
+  current `src/eval/extrinsic.py` streaming loop doesn't implement.
+  Greedy-per-chunk (read n, generate until model emits `<|end-of-write|>`
+  or `<|end-of-read|>`) is what we do for OT and wait-k arms; keeping
+  it here means all three lines share the inference policy and the
+  training→inference format is byte-identical. RALCP would be a
+  separate paper-scale contribution.
+
+**Applied so far.**
+- `scripts/07_conv.py` scaffold + docstring already flag the 3 blockers.
+- Install job 177879264 queued (awesome-align + mBERT).
+- `docs/followup-experiments.md` §Fig 2 conv-simt recipe still speculates
+  awesome-align; to be corrected in the same commit as this log entry.
+
+**Not yet applied (needs user OK before implementing).**
+- Per-latency training decision (a/b/c above).
+- Full `scripts/07_conv.py::main()` implementation — writing the
+  alignment→(Rⱼ, Wⱼ) chunker on top of awesome-align's output format.
+
+---
+
 ### [DECISION] 2026-08-31 — Conv-SiMT: scaffold + fail-fast, awesome-align + mBERT install queued
 
 **Context.** `docs/followup-experiments.md` Fig 2/3 also need

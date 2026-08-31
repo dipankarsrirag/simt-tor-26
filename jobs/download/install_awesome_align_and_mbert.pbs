@@ -32,6 +32,10 @@ source jobs/env.sh   # sets HF cache + venv activation. copyq keeps online.
 export UV_CACHE_DIR="$PBS_JOBFS/uv-cache"
 mkdir -p "$UV_CACHE_DIR"
 
+# HF hub xet backend 404s on bert-base-multilingual-cased's model shard
+# (attempt 177879264, 2026-08-31) — force the classic HTTP download path.
+export HF_HUB_DISABLE_XET=1
+
 echo "════════════════════════════════════════════════════════════════"
 echo "  [1/2] awesome-align install via create-venv.sh"
 echo "════════════════════════════════════════════════════════════════"
@@ -46,8 +50,10 @@ echo "════════════════════════�
 echo "  [2/2] bert-base-multilingual-cased pull via get_model.py"
 echo "════════════════════════════════════════════════════════════════"
 MBERT_DIR=$SIMT_MODEL_BASE/mBERT
-if [ -f "$MBERT_DIR/config.json" ]; then
-    echo "  Already present at $MBERT_DIR — skipping."
+# Skip only if the WEIGHTS are present — a prior xet-404 left the metadata
+# files (config.json, tokenizer.*) on disk but not the model shard.
+if [ -f "$MBERT_DIR/model.safetensors" ] || [ -f "$MBERT_DIR/pytorch_model.bin" ]; then
+    echo "  Weights already present at $MBERT_DIR — skipping."
 else
     python3 /g/data/po67/dipankar/models/get_model.py \
         bert-base-multilingual-cased model "$MBERT_DIR"
