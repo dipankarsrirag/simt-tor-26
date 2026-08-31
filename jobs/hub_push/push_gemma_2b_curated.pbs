@@ -1,0 +1,51 @@
+#!/bin/bash
+#PBS -N hub_push_gemma_2b
+#PBS -P po67
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=04:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/hub_push_gemma_2b.log
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+
+# ─── env ───
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+export SIMT_HF_CACHE=/g/data/po67/dipankar/cache
+export SIMT_DATA_ROOT=/g/data/po67/dipankar/data/simt-tor-26
+export HF_HOME=$SIMT_HF_CACHE
+export HF_HUB_CACHE=$SIMT_HF_CACHE/hub
+
+module load python3/3.10.4
+source /scratch/po67/ds9561/.venv-fil/bin/activate
+
+# ─── HF token at RUNTIME (never written to disk/git) ───
+# The token variable HF_TOKEN lives in /g/data/po67/dipankar/models/get_model.py.
+# Extract it via Python (import the file's HF_TOKEN attribute) and export for
+# huggingface_hub to pick up automatically.
+export HF_TOKEN=$(python3 -c "
+import sys
+sys.path.insert(0, '/g/data/po67/dipankar/models')
+from get_model import HF_TOKEN
+print(HF_TOKEN)
+")
+
+# ─── push ───
+# Point at the archived Gemma-2B baseline artifacts (they live under _archive/
+# because 00_gemma_2b_curated is the shipped run, not a fresh one).
+python3 -u "$SIMT_REPO_ROOT/scripts/11_push_to_hub.py" \
+    --config "$SIMT_REPO_ROOT/configs/00_gemma_2b_curated.yaml" \
+    --model_dir  "$SIMT_REPO_ROOT/_archive/results/gemma_2b_curated/sft_multilingual_v6b_v2bal_v3_htgt/final" \
+    --eval_dir   "$SIMT_REPO_ROOT/_archive/results/gemma_2b_curated/extrinsic" \
+    --log_dir    "$SIMT_REPO_ROOT/_archive/logs" \
+    --annotate_dir "$SIMT_REPO_ROOT/results/annotate/gemma-4-E2B-it"
+
+echo ""
+echo "Done. See https://huggingface.co/unswnlporg/tor-simt-gemma-2b-curated"

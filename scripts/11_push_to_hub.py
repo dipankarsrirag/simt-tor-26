@@ -91,6 +91,16 @@ def main():
                     help="Override --private and make the repo public.")
     ap.add_argument("--repo_name", default=None,
                     help="Override the repo name. Default: 'tor-simt-{tag}'.")
+    ap.add_argument("--model_dir", type=Path, default=None,
+                    help="Override checkpoint dir. Default: results/train/{tag}/final/. "
+                         "Useful for pushing archived baselines from _archive/…/final/.")
+    ap.add_argument("--eval_dir", type=Path, default=None,
+                    help="Override eval-JSON dir. Default: results/eval/{tag}/.")
+    ap.add_argument("--log_dir", type=Path, default=None,
+                    help="Override logs dir. Default: logs/{tag}/.")
+    ap.add_argument("--annotate_dir", type=Path, default=None,
+                    help="Override annotator-matrices dir (that gets uploaded as 'annotate/'). "
+                         "Default: results/annotate/{annotator}/. Useful when matrices live in _archive.")
     ap.add_argument("--dry_run", action="store_true",
                     help="Print what would be uploaded without pushing.")
     args = ap.parse_args()
@@ -106,16 +116,18 @@ def main():
     repo_id = f"{org}/{repo_name}"
     is_private = not args.public   # --private is the default; --public overrides
 
-    train_dir = REPO_ROOT / "results" / "train" / tag / "final"
-    log_dir = REPO_ROOT / "logs" / tag
-    eval_dir = REPO_ROOT / "results" / "eval" / tag
+    train_dir = args.model_dir or (REPO_ROOT / "results" / "train" / tag / "final")
+    log_dir   = args.log_dir   or (REPO_ROOT / "logs" / tag)
+    eval_dir  = args.eval_dir  or (REPO_ROOT / "results" / "eval" / tag)
 
     missing = []
-    if not train_dir.exists(): missing.append(str(train_dir))
-    if not log_dir.exists():   missing.append(str(log_dir))
-    if not eval_dir.exists():  missing.append(str(eval_dir))
+    if not train_dir.exists(): missing.append(f"model_dir: {train_dir}")
+    if not log_dir.exists():   missing.append(f"log_dir:   {log_dir}")
+    if not eval_dir.exists():  missing.append(f"eval_dir:  {eval_dir}")
     if missing:
-        print(f"MISSING (run bin/run configs/{args.config.name} first):", file=sys.stderr)
+        print(f"MISSING (run bin/run configs/{args.config.name} first, "
+              f"or pass --model_dir / --log_dir / --eval_dir to override):",
+              file=sys.stderr)
         for m in missing: print(f"  {m}", file=sys.stderr)
         sys.exit(1)
 
@@ -157,10 +169,10 @@ def main():
     annotator = cfg["annotate"].get("annotator", "same_as_backbone")
     if annotator == "same_as_backbone":
         annotator_name = Path(cfg["backbone"].get("local_path") or cfg["backbone"]["hf_id"]).name
-        matrices_root = REPO_ROOT / "results" / "annotate" / annotator_name
+        matrices_root = args.annotate_dir or (REPO_ROOT / "results" / "annotate" / annotator_name)
         if matrices_root.exists():
             (stage / "annotate").symlink_to(matrices_root.resolve())
-            print(f"  including annotator matrices: results/annotate/{annotator_name}/")
+            print(f"  including annotator matrices: {matrices_root}")
 
     print(f"\nTarget repo: {repo_id}  (private={is_private})")
     print(f"Contents to upload:")
