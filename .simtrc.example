@@ -34,6 +34,11 @@
 # export SIMT_PBS_PROJECT="po67"
 # export SIMT_PBS_STORAGE="gdata/ba39+gdata/po67"
 
+# ─── HuggingFace Hub organisation for bin/11_push_to_hub / bin/12_pull_from_hub ───
+# Default is "unswnlporg" — the project's target org (private repos, prefix
+# "tor-simt-"). Override only if you need to push somewhere else.
+# export HF_HUB_ORG="unswnlporg"
+
 # ────────────────────────────────────────────────────────────────────────
 # Example — Gadi H200 setup at NCI (project ba39):
 #

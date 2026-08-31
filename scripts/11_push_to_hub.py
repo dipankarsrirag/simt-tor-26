@@ -81,12 +81,16 @@ def main():
     ap.add_argument("--config", required=True, type=Path,
                     help="Path to configs/{tag}.yaml.")
     ap.add_argument("--org", default=None,
-                    help="HF organisation / user for the target repo. "
-                         "Default: HF_HUB_ORG env var, else your HF username.")
-    ap.add_argument("--private", action="store_true",
-                    help="Create a private HF repo (default: public).")
+                    help="HF organisation for the target repo. Default: "
+                         "HF_HUB_ORG env var, else 'unswnlporg'. "
+                         "Write access to unswnlporg is required — join at "
+                         "https://huggingface.co/unswnlporg.")
+    ap.add_argument("--private", action="store_true", default=True,
+                    help="Create a private HF repo (default: TRUE).")
+    ap.add_argument("--public", action="store_true",
+                    help="Override --private and make the repo public.")
     ap.add_argument("--repo_name", default=None,
-                    help="Override the repo name. Default: 'simt-{tag}'.")
+                    help="Override the repo name. Default: 'tor-simt-{tag}'.")
     ap.add_argument("--dry_run", action="store_true",
                     help="Print what would be uploaded without pushing.")
     args = ap.parse_args()
@@ -94,16 +98,10 @@ def main():
     cfg = load_config(args.config)
     tag = cfg["tag"]
 
-    org = args.org or os.environ.get("HF_HUB_ORG")
-    if not org:
-        try:
-            from huggingface_hub import whoami
-            org = whoami()["name"]
-        except Exception:
-            sys.exit("--org not given, HF_HUB_ORG not set, and whoami() failed. "
-                     "Run `huggingface-cli login` first.")
-    repo_name = args.repo_name or f"simt-{tag}"
+    org = args.org or os.environ.get("HF_HUB_ORG", "unswnlporg")
+    repo_name = args.repo_name or f"tor-simt-{tag}"
     repo_id = f"{org}/{repo_name}"
+    is_private = not args.public   # --private is the default; --public overrides
 
     train_dir = REPO_ROOT / "results" / "train" / tag / "final"
     log_dir = REPO_ROOT / "logs" / tag
@@ -161,7 +159,7 @@ def main():
             (stage / "annotate").symlink_to(matrices_root.resolve())
             print(f"  including annotator matrices: results/annotate/{annotator_name}/")
 
-    print(f"\nTarget repo: {repo_id}  (private={args.private})")
+    print(f"\nTarget repo: {repo_id}  (private={is_private})")
     print(f"Contents to upload:")
     for p in sorted(stage.iterdir()):
         size = p.stat().st_size if p.is_file() else "<dir>"
@@ -173,13 +171,18 @@ def main():
 
     from huggingface_hub import HfApi, create_repo
     api = HfApi()
-    create_repo(repo_id, private=args.private, exist_ok=True)
+    try:
+        create_repo(repo_id, private=is_private, exist_ok=True)
+    except Exception as e:
+        sys.exit(f"\nERROR creating {repo_id}: {e}\n"
+                 f"You need write access to the '{org}' organisation.\n"
+                 f"Join at https://huggingface.co/{org} and ask an owner for write role.")
     print(f"\nUploading to https://huggingface.co/{repo_id} ...")
     api.upload_folder(
         folder_path=str(stage),
         repo_id=repo_id,
         repo_type="model",
-        commit_message=f"simt-{tag} — git@{manifest.get('git_sha', 'unknown')[:8]}",
+        commit_message=f"tor-simt-{tag} — git@{manifest.get('git_sha', 'unknown')[:8]}",
     )
     print(f"\nDone: https://huggingface.co/{repo_id}")
 

@@ -33,8 +33,13 @@ from src.config import REPO_ROOT, load_config
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", required=True,
-                    help="HF repo id, e.g. dipankarsrirag/simt-gemma_2b_curated")
+    src = ap.add_mutually_exclusive_group(required=True)
+    src.add_argument("--tag", help="Experiment tag (short-form). Resolves to "
+                                    "unswnlporg/tor-simt-{tag}. Use --org to override.")
+    src.add_argument("--repo", help="Full HF repo id, e.g. unswnlporg/tor-simt-gemma_2b_curated.")
+    ap.add_argument("--org", default=None,
+                    help="HF organisation for --tag lookups. Default: "
+                         "HF_HUB_ORG env var, else 'unswnlporg'.")
     ap.add_argument("--only", choices=["annotate", "model", "logs", "eval", "all"],
                     default="all",
                     help="Restrict what to pull (default: all).")
@@ -42,9 +47,16 @@ def main():
                     help="Overwrite local files if present. Default: skip existing.")
     args = ap.parse_args()
 
+    import os as _os
+    if args.tag:
+        org = args.org or _os.environ.get("HF_HUB_ORG", "unswnlporg")
+        repo = f"{org}/tor-simt-{args.tag}"
+    else:
+        repo = repo
+
     from huggingface_hub import snapshot_download
 
-    print(f"Pulling {args.repo} (--only {args.only})")
+    print(f"Pulling {repo} (--only {args.only})")
 
     # Download snapshot into a scratch dir first, then move pieces into place.
     if args.only == "all":
@@ -58,11 +70,17 @@ def main():
             "eval":     ["eval/*", "eval/**/*"],
         }[args.only]
 
-    snap = Path(snapshot_download(
-        repo_id=args.repo,
-        repo_type="model",
-        allow_patterns=allow_patterns,
-    ))
+    try:
+        snap = Path(snapshot_download(
+            repo_id=repo,
+            repo_type="model",
+            allow_patterns=allow_patterns,
+        ))
+    except Exception as e:
+        sys.exit(f"\nERROR pulling {repo}: {e}\n"
+                 f"You need read access. If this is a private unswnlporg repo, "
+                 f"join at https://huggingface.co/unswnlporg and run "
+                 f"`huggingface-cli login`.")
     print(f"  snapshot: {snap}")
 
     # Read the config to learn the tag + annotator
@@ -70,7 +88,7 @@ def main():
     if not cfg_path.exists():
         print(f"  WARNING: no config.yaml in snapshot; can't derive tag / annotator", file=sys.stderr)
         cfg = None
-        tag = args.repo.split("/")[-1].replace("simt-", "")
+        tag = repo.split("/")[-1].replace("tor-simt-", "").replace("simt-", "")
         annotator_name = None
     else:
         cfg = load_config(cfg_path)
@@ -143,7 +161,7 @@ def main():
         print(f"  model files → results/train/{tag}/final/  ({n} files)")
         total += n
 
-    print(f"\nDone: {total} files pulled from {args.repo}")
+    print(f"\nDone: {total} files pulled from {repo}")
 
 
 if __name__ == "__main__":

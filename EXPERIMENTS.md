@@ -2,7 +2,9 @@
 
 Who runs what. Configs live in `configs/`; plan and figure specs in `docs/followup-experiments.md`. Run each with `bin/run configs/{NN}.yaml --ngpus N`.
 
-Model checkpoints are **never committed to git** (`.gitignore` covers `*.safetensors`, `results/train/**/final/`, etc.). Cross-check happens via **HuggingFace Hub** — every completed experiment gets pushed with its config + logs + eval JSONs + (where relevant) annotator matrices.
+Model checkpoints are **never committed to git** (`.gitignore` covers `*.safetensors`, `results/train/**/final/`, etc.). Cross-check happens via **HuggingFace Hub** — every completed experiment gets pushed to the **`unswnlporg`** organisation as **`unswnlporg/tor-simt-{tag}`**, private by default.
+
+**Access:** you need write access to `unswnlporg` before your first `bin/11_push_to_hub`. Join at <https://huggingface.co/unswnlporg> and ask an owner (Dipankar) for the write role. Then `huggingface-cli login` with your token.
 
 ---
 
@@ -21,10 +23,11 @@ Model checkpoints are **never committed to git** (`.gitignore` covers `*.safeten
 **First priority: push the existing Gemma-2B baseline to HF Hub** so Quang can pull its annotator matrices for 06/07:
 
 ```bash
-bin/11_push_to_hub --config configs/00_gemma_2b_curated.yaml --org dipankarsrirag --private
+bin/11_push_to_hub --config configs/00_gemma_2b_curated.yaml
+# Uploads to unswnlporg/tor-simt-gemma_2b_curated (private by default).
 ```
 
-That uploads the SFT checkpoint + tokenizer + `results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl` (the 8 matrices files) + config + logs + eval JSONs to `dipankarsrirag/simt-gemma_2b_curated`. Quang then pulls the annotator matrices via `bin/12_pull_from_hub` (below) before starting 06/07.
+That uploads the SFT checkpoint + tokenizer + `results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl` (the 8 matrices files) + config + logs + eval JSONs. Quang then pulls the annotator matrices via `bin/12_pull_from_hub` (below) before starting 06/07.
 
 ---
 
@@ -41,7 +44,8 @@ That uploads the SFT checkpoint + tokenizer + `results/annotate/gemma-4-E2B-it/{
 **Pull Dipankar's Gemma-2B matrices before starting 06/07:**
 
 ```bash
-bin/12_pull_from_hub --repo dipankarsrirag/simt-gemma_2b_curated
+bin/12_pull_from_hub --tag gemma_2b_curated --only annotate
+# → looks up unswnlporg/tor-simt-gemma_2b_curated
 # → drops annotator matrices into results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl
 # so 06/07's Stage 2 can be skipped.
 ```
@@ -50,7 +54,7 @@ bin/12_pull_from_hub --repo dipankarsrirag/simt-gemma_2b_curated
 1. Populated `results/train/{tag}/final/` (SFT checkpoint — never committed to git).
 2. Populated `results/eval/{tag}/*.json` (a JSON per test-set × direction × latency cell).
 3. Populated `logs/{tag}/` — auto-written by `bin/run`. Contains `manifest.json` (git sha + hostname + GPUs + timestamps) and `stage_N_<name>.log` per stage.
-4. **Push to HuggingFace Hub for verification:** `bin/11_push_to_hub --config configs/{tag}.yaml --org {your-hf-org} --private`. Uploads checkpoint + tokenizer + config + manifest + logs + eval JSONs + annotator matrices (when tag owns them) to `{your-org}/simt-{tag}`.
+4. **Push to HuggingFace Hub for verification:** `bin/11_push_to_hub --config configs/{tag}.yaml`. Uploads checkpoint + tokenizer + config + manifest + logs + eval JSONs + annotator matrices (when tag owns them) to `unswnlporg/tor-simt-{tag}` (private by default; add `--public` to override).
 5. A `LOG.md` entry: config, command, headline numbers, any surprises.
 6. Regenerate figures via `bin/run configs/{tag}.yaml --stage 6`.
 
@@ -85,6 +89,7 @@ bin/03_download_iwslt_vi_test_set         # IWSLT15 vi-en test
 bin/04_prepare_tokenizer --backbone {hf_id} --output results/train/{tag}/tokenizer
 bin/05_probe_backbone --model_dir ${SIMT_MODEL_BASE}/{backbone}
 huggingface-cli login                      # for bin/11_push_to_hub + bin/12_pull_from_hub
+                                            # (write access to unswnlporg required — see top of this file)
 ```
 
 Then for each experiment:
@@ -93,13 +98,13 @@ Then for each experiment:
 bin/run configs/NN_{tag}.yaml --dry_run    # inspect commands
 bin/run configs/NN_{tag}.yaml --ngpus 1     # go
 # ...watch, log to LOG.md, iterate
-bin/11_push_to_hub --config configs/NN_{tag}.yaml --org {your-hf-org} --private
+bin/11_push_to_hub --config configs/NN_{tag}.yaml   # → unswnlporg/tor-simt-{tag}
 ```
 
 Cross-annotation experiments (06, 07) — pull Dipankar's matrices first, then `--skip 2`:
 
 ```bash
-bin/12_pull_from_hub --repo dipankarsrirag/simt-gemma_2b_curated
+bin/12_pull_from_hub --tag gemma_2b_curated --only annotate
 bin/run configs/06_gemma_4b_from_2b_annot.yaml --ngpus 1 --skip 2
 ```
 

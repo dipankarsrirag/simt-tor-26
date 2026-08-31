@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Push one experiment tag (SFT checkpoint + config + logs + eval JSONs)
-# to a HuggingFace Hub repo — for cross-check and review.
+# Push one experiment tag (SFT checkpoint + tokenizer + config + logs +
+# eval JSONs + owned annotator matrices) to HuggingFace Hub.
+#
+# Target: unswnlporg/tor-simt-{tag}  (private by default).
+# Requires write access to the unswnlporg organisation
+# (join at https://huggingface.co/unswnlporg).
 #
 # Usage:
-#   bin/11_push_to_hub --config configs/{NN_tag}.yaml [--org OWNER] [--private] [--dry_run]
+#   bin/11_push_to_hub --config configs/{NN_tag}.yaml [--public] [--dry_run]
+#     [--org OTHER_ORG] [--repo_name OVERRIDE]
 #
-# Requires: `huggingface-cli login` first (or `export HF_TOKEN=...`).
-#
-# Uploads:
-#   {org}/simt-{tag}/
-#     ├── SFT checkpoint (safetensors + tokenizer, from results/train/{tag}/final/)
-#     ├── config.yaml       — the experiment YAML
-#     ├── manifest.json      — git sha, hostname, GPUs, timestamps (from bin/run)
-#     ├── logs/              — per-stage stdout+stderr
-#     ├── eval/              — every landed eval JSON
-#     └── README.md          — auto-generated model card
+# Steps before first push:
+#   1. Join unswnlporg on HuggingFace and request write role from Dipankar.
+#   2. huggingface-cli login   (personal token with write scope)
+#   3. bin/11_push_to_hub --config configs/{NN_tag}.yaml --dry_run   (verify)
+#   4. bin/11_push_to_hub --config configs/{NN_tag}.yaml             (push)
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
