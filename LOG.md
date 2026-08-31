@@ -30,6 +30,31 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [DECISION] 2026-09-01 — Revert configs 01-05 to 10K/dir (match shipped baseline, not 30K)
+
+**Context.** Configs 01, 02, 03, 04, 05 shipped with `en-de: 30000` etc.
+per direction (240K total per experiment). User flagged this on 2026-09-01
+— all experiments (user's + Quang's) are 10K/dir to match the shipped
+Gemma-2B baseline (`00_gemma_2b_curated.yaml`, 80K total).
+
+**Chose.** Bulk `sed`-style replace `: 30000` → `: 10000` in configs
+01–05 (8 directions each). Config 02 fixed for consistency though the
+config is deferred.
+
+**Downstream fallout.**
+- Annotation cost per experiment now within the 40 GPU-h line in
+  `docs/followup-experiments.md` §Runs required. EAST-8B: 80K × 1.46
+  s/sent = ~32 GPU-h. Gemma-4B: 80K × 1.86 s/sent = ~41 GPU-h.
+- 2026-08-31 pilot-results LOG entry's "options (i)/(ii)/(iii)"
+  discussion around 30K row counts is moot — 10K was always the plan.
+- Configs 06, 07 already at 10K/dir (they reuse existing 2B annotator
+  matrices which were built at 10K/dir); no change needed.
+
+**Revisit if.** Paper reviewers ask for a data-scale ablation at 20K
+or 40K rows. Not planned for the initial submission.
+
+---
+
 ### [DECISION] 2026-09-01 — Baselines start from base Llama-3-8B-Instruct, not from EAST-8B checkpoint
 
 **Context.** User caught a methodological confound in the `EAST↺{waitk, conv}`

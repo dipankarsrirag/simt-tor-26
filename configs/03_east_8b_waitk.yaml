@@ -24,14 +24,14 @@ backbone:
 source_pool:
   corpus: curated
   directions:
-    en-de: 30000
-    de-en: 30000
-    en-ru: 30000
-    ru-en: 30000
-    en-ar: 30000
-    ar-en: 30000
-    en-vi: 30000
-    vi-en: 30000
+    en-de: 10000
+    de-en: 10000
+    en-ru: 10000
+    ru-en: 10000
+    en-ar: 10000
+    ar-en: 10000
+    en-vi: 10000
+    vi-en: 10000
   human_target_only: true
 
 annotate:
