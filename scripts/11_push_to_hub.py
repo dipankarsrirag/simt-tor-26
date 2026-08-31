@@ -150,6 +150,17 @@ def main():
     (stage / "logs").symlink_to(log_dir.resolve())
     (stage / "eval").symlink_to(eval_dir.resolve())
 
+    # Include the annotator matrices this tag OWNS (i.e. produced with its
+    # own backbone). Cross-annotation experiments don't upload matrices —
+    # they pulled them from another tag's HF repo.
+    annotator = cfg["annotate"].get("annotator", "same_as_backbone")
+    if annotator == "same_as_backbone":
+        annotator_name = Path(cfg["backbone"].get("local_path") or cfg["backbone"]["hf_id"]).name
+        matrices_root = REPO_ROOT / "results" / "annotate" / annotator_name
+        if matrices_root.exists():
+            (stage / "annotate").symlink_to(matrices_root.resolve())
+            print(f"  including annotator matrices: results/annotate/{annotator_name}/")
+
     print(f"\nTarget repo: {repo_id}  (private={args.private})")
     print(f"Contents to upload:")
     for p in sorted(stage.iterdir()):

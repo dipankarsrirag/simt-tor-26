@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Pull an experiment tag's artifacts from HuggingFace Hub.
+# Companion to bin/11_push_to_hub — reverses the upload into the local tree.
+#
+# Usage:
+#   bin/12_pull_from_hub --repo {org}/simt-{tag} [--only annotate|model|logs|eval|all] [--force]
+#
+# Common uses:
+#   # Quang: pull Dipankar's Gemma-2B annotator matrices for cross-annot experiments
+#   bin/12_pull_from_hub --repo dipankarsrirag/simt-gemma_2b_curated --only annotate
+#
+#   # Full pull (annot matrices + model + logs + evals)
+#   bin/12_pull_from_hub --repo dipankarsrirag/simt-gemma_2b_curated
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/12_pull_from_hub.py" "$@"
