@@ -26,6 +26,12 @@ export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
 export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
 source jobs/env.sh   # sets HF cache + venv activation. copyq keeps online.
 
+# uv cache: bounce OFF the po67 gdata cache (over quota as of 2026-08-31)
+# and onto per-job jobfs. Ephemeral is fine — this is a one-shot install,
+# and pip artefacts don't need to persist between jobs anyway.
+export UV_CACHE_DIR="$PBS_JOBFS/uv-cache"
+mkdir -p "$UV_CACHE_DIR"
+
 echo "════════════════════════════════════════════════════════════════"
 echo "  [1/2] awesome-align install via create-venv.sh"
 echo "════════════════════════════════════════════════════════════════"
