@@ -1,16 +1,24 @@
-# east_8b_curated — EAST-8B backbone, curated corpus, self-annotated.
+# east_8b_curated — Llama-3-8B-Instruct backbone, curated corpus, self-annotated.
 # The "full recipe" line in Fig 1, 2, 3, 4 of docs/followup-experiments.md.
 # Same annotator as backbone → self-annotation. OT criterion, tau=0.30.
 #
-# Run: bin/run configs/east_8b_curated.yaml --ngpus 1
+# 2026-09-01 backbone switch: was biaofu-xmu/EAST-8B (already-EAST-trained),
+# now meta-llama/Meta-Llama-3-8B-Instruct (base, exact same starting point
+# EAST used). See LOG.md 2026-09-01. Tag `east_8b_curated` retained for
+# plot-label continuity (`EAST↺ours`); the biaofu-xmu/EAST-8B released
+# checkpoint is now the published-competitor reference line only.
+#
+# Run: bin/run configs/01_east_8b_curated.yaml --ngpus 1
 
 tag: east_8b_curated
 
 backbone:
-  hf_id: biaofu-xmu/EAST-8B
-  local_path: ${SIMT_MODEL_BASE}/EAST-8B
-  is_instruct: true                                          # Llama-3-Instruct + chat template
-  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B                  # EAST-8B already ships EOR/EOW
+  hf_id: meta-llama/Meta-Llama-3-8B-Instruct
+  local_path: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct
+  is_instruct: true                                          # Llama-3 chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct-extended-v6
+                                                             # ← built by bin/04_prepare_tokenizer
+                                                             # (base Llama doesn't ship EOR/EOW)
 
 source_pool:
   corpus: curated
@@ -26,7 +34,7 @@ source_pool:
   human_target_only: true
 
 annotate:
-  annotator: same_as_backbone                                # self-annotation with EAST-8B
+  annotator: same_as_backbone                                # self-annotation with Llama-3-8B-Instruct
   criterion: ot
   tau: 0.30
   top_k: 128

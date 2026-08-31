@@ -291,7 +291,7 @@ with `--ngpus`; 4B backbones fit on `ngpus=1`):
 #PBS -l mem=240GB                    # 240 GB per GPU
 #PBS -l jobfs=120GB                  # 120 GB per GPU
 #PBS -l walltime=HH:MM:SS
-#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
 #PBS -l wd
 #PBS -j oe
 #PBS -k oed                          # write .o/.e directly, no staging
@@ -302,8 +302,11 @@ with `--ngpus`; 4B backbones fit on `ngpus=1`):
 Non-negotiables:
 
 - `-P ba39` (compute charged here, 2026-08-31 switch from po67 — see `LOG.md`)
-  and `-l storage=gdata/ba39+gdata/po67`
-  (drop `ba39` and repo reads fail; drop `po67` and model reads fail).
+  and `-l storage=gdata/ba39+gdata/po67+scratch/po67`
+  (drop `ba39` and repo reads fail; drop `po67` and model reads fail;
+  drop `scratch/po67` and the venv activate at `/scratch/po67/…/.venv-fil`
+  fails on some copyq data-mover nodes — see LOG.md 2026-09-01 for
+  the debug session that caught this).
 - `-o` is an **absolute path** to `logs/`. Relative `-o` silently drops
   to `$HOME`.
 - Never override `ncpus`/`mem`/`jobfs` — gpuhopper enforces

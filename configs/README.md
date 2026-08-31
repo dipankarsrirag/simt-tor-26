@@ -17,13 +17,23 @@ Numeric prefix = run order (00 = baseline reproduction, then figure-by-figure th
 | # | Config | Backbone | Corpus | Annotator | Policy | Figures | Status |
 |---|---|---|---|---|---|---|---|
 | 00 | `00_gemma_2b_curated.yaml` | Gemma-4-E2B-it (2B) | curated | self | OT | baseline (already run) | ✓ |
-| 01 | `01_east_8b_curated.yaml` | EAST-8B (Llama-3-8B) | curated | self | OT | Fig 1, 2, 3, 4 | ready |
-| 02 | `02_east_8b_east_matched.yaml` | EAST-8B | east (proportion-matched) | self | OT | Fig 1, 2 line 3 (Q1b) | ready |
-| 03 | `03_east_8b_waitk.yaml` | EAST-8B | curated | — | wait-k | Fig 2, 3 line 4 | ready (`scripts/07_waitk.py`; smoke-passed 2026-08-31) |
-| 04 | `04_east_8b_conv.yaml` | EAST-8B | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | scaffold only (`scripts/07_conv.py`); awesome-align + mBERT install queued as `177879177`; Wang 2024 §2.1 chunk-assignment rule still to pick |
+| 01 | `01_east_8b_curated.yaml` | Llama-3-8B-Instruct | curated | self | OT | Fig 1, 2, 3, 4 | ready; awaits Llama-3 pull (`177899998`) + extended tokenizer build |
+| 02 | `02_east_8b_machine_targets.yaml` | — | — | — | — | (was Fig 1/2 target-quality line) | **DEFERRED** 2026-09-01 — see LOG.md; successor is `EAST↺east(ot)` planned as `09_east_east_ot.yaml` |
+| 03 | `03_east_8b_waitk.yaml` | Llama-3-8B-Instruct | curated | — | wait-k | Fig 2, 3 line 4 | ready (`scripts/07_waitk.py`; smoke-passed 2026-08-31); awaits Llama-3 pull |
+| 04 | `04_east_8b_conv.yaml` | Llama-3-8B-Instruct | curated | awesome-align | conv-simt | Fig 2, 3 line 5 | scaffold (`scripts/07_conv.py`); awesome-align + mBERT installed (`177879495`); per-latency training strategy (a/b/c in LOG.md) still to pick |
 | 05 | `05_gemma_4b_curated.yaml` | Gemma-4-E4B-it (4B) | curated | self | OT | Fig 4 middle | ready |
 | 06 | `06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it | curated | Gemma-2B | OT | Fig 5 middle | ready (skip Stage 2) |
-| 07 | `07_east_8b_from_2b_annot.yaml` | EAST-8B | curated | Gemma-2B | OT | Fig 5 right | ready (skip Stage 2) |
+| 07 | `07_east_8b_from_2b_annot.yaml` | Llama-3-8B-Instruct | curated | Gemma-2B | OT | Fig 5 right | ready (skip Stage 2); awaits Llama-3 pull |
+| 09 | `09_east_east_ot.yaml` (unallocated) | Llama-3-8B-Instruct | east (N-matched, 4 dirs) | self | OT | (planned) | not written; ablation for chunker quality (OT vs GPT-4 semantic chunks) on identical source+target as released EAST-8B |
+
+**2026-09-01 backbone switch.** Configs 01, 03, 04, 07 were rewritten
+to use `meta-llama/Meta-Llama-3-8B-Instruct` (base) instead of
+`biaofu-xmu/EAST-8B` (already-EAST-trained). Rationale: fair chunk-
+quality baseline — the wait-k / conv-simt arms cannot inherit EAST's
+prior streaming exposure. All 4 arms now share the same starting
+checkpoint (`EAST↺X` reads "same-family Llama-3-8B-Instruct trained
+with X"). The released `biaofu-xmu/EAST-8B` remains the published-
+competitor reference line only. See `LOG.md`.
 
 Cross-annotation configs (`06_*`, `07_*`) reuse the existing
 `results/annotate/gemma-4-E2B-it/{pair}/matrices.jsonl` files — no re-annotation needed. Run with `--skip 2`.

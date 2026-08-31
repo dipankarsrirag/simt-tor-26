@@ -6,7 +6,7 @@
 #PBS -l mem=16GB
 #PBS -l jobfs=100GB
 #PBS -l walltime=04:00:00
-#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
 #PBS -l wd
 #PBS -j oe
 #PBS -k oed

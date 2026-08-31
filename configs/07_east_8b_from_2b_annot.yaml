@@ -1,18 +1,25 @@
-# east_8b_from_2b_annot — EAST-8B trained on annotations produced by
-# Gemma-4-E2B-it. Fig 5 right line in docs/followup-experiments.md.
-# Small-annotator, big-backbone: the strongest test of annotation portability.
+# east_8b_from_2b_annot — Llama-3-8B-Instruct trained on annotations
+# produced by Gemma-4-E2B-it. Fig 5 right line in docs/followup-
+# experiments.md. Small-annotator, big-backbone: the strongest test of
+# annotation portability.
+#
+# 2026-09-01 backbone switch: was biaofu-xmu/EAST-8B. Now base
+# Meta-Llama-3-8B-Instruct so Fig 5 compares two base checkpoints
+# (Gemma-4-E4B-it middle, Llama-3-8B-Instruct right) — apples to apples
+# with the leftmost Gemma-4-E2B-it (self) line. See LOG.md.
 #
 # Skips Stage 2 (reuses results/annotate/gemma-4-E2B-it/* from gemma_2b_curated).
 #
-# Run: bin/run configs/east_8b_from_2b_annot.yaml --ngpus 1 --skip 2
+# Run: bin/run configs/07_east_8b_from_2b_annot.yaml --ngpus 1 --skip 2
 
 tag: east_8b_from_2b_annot
 
 backbone:
-  hf_id: biaofu-xmu/EAST-8B
-  local_path: ${SIMT_MODEL_BASE}/EAST-8B
-  is_instruct: true
-  tokenizer_dir: ${SIMT_MODEL_BASE}/EAST-8B
+  hf_id: meta-llama/Meta-Llama-3-8B-Instruct
+  local_path: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct
+  is_instruct: true                                          # Llama-3 chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct-extended-v6
+                                                             # ← built by bin/04_prepare_tokenizer
 
 source_pool:
   corpus: curated                              # same source pool as gemma_2b_curated
@@ -67,4 +74,4 @@ eval:
 plot:
   color: "#c0392b"
   marker: s
-  label: EAST-8B ← 2B annot
+  label: Llama-3-8B ← 2B annot
