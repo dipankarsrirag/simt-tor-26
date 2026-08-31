@@ -30,6 +30,81 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-08-31 — Pilot annotation results: EAST-8B 1.46 s/sent, Gemma-4B 1.86 s/sent (both ~2.5× over budget)
+
+**Config.** See prior [RUN] 2026-08-31 entry for setup (100 de-en sents,
+OT τ=0.30, chat prompt, 1 H200 each). Both jobs completed after the
+`-P po67 → -P ba39` qalter freed them from Held state.
+
+**Results.**
+
+| Backbone | Kept | Wall (incl. load) | s/sent (post-warmup) | Full 240K est. |
+|---|---|---|---|---|
+| EAST-8B (Llama-3-8B) | 91 / 100 | 377s | **1.46** | **~97 GPU-h** |
+| Gemma-4-E4B-it | 95 / 100 | 417s | **1.86** | **~124 GPU-h** |
+
+Post-warmup rates from the "Annotated N/N in Ts (T/N s/sentence)" line
+of each log. The 4.14 / 4.39 sec/sent numbers printed by the extrapolation
+block include the model-load fixed cost divided by only ~90 sents; the
+real per-row rate at steady state is the post-warmup number above.
+
+**Tau=0.30 quality signals.**
+
+| Backbone | fire% | committed% | mean chunks (ours) | Pearson median | Pearson min |
+|---|---|---|---|---|---|
+| EAST-8B | 100% | 98.7% | 9.89 | 0.952 | 0.489 |
+| Gemma-4-E4B-it | 100% | 99.0% | 6.42 | 0.906 | 0.293 |
+
+Both fire on 100% of the pilot, high commit fractions (99% of target
+tokens commit early), Pearson medians > 0.9 — the OT criterion is
+happy at τ=0.30 on both new backbones. Gemma-4B produces coarser
+chunks on average (6.4 vs 9.9 per sent) — mirrors what we saw for
+Gemma-2B, likely a tokenizer effect (Gemma's sentencepiece is coarser
+than Llama's).
+
+**Read.** Post-warmup extrapolation is ~2.5× the 40 GPU-h line in
+`docs/followup-experiments.md` §Runs required. Options:
+
+  (i) **Ship the full 30K/dir × 8 dirs** for both. Total for `01` and
+      `05` combined: ~220 GPU-h. Fits in ~5 wall-clock days on 2
+      parallel H200s. Paper story unchanged.
+  (ii) **Halve per-direction rows to 15K.** ~110 GPU-h combined. Still
+       delivers 8-way multilingual + 3-latency training; sub-linear
+       BLEU cost at half-corpus per prior scale sweep. Recommended if
+       H200 queue is contended.
+  (iii) **Enable sentence-batched annotator** (2026-08-22 decision,
+        15× speedup at ~3-4% chunk-boundary divergence). Would bring
+        the full 30K run to ~7 GPU-h each. Requires a code path
+        already flagged as reject-byte-identical.
+
+Awaiting user decision before submitting the full-run PBS scripts for
+configs 01 (`east_8b_curated`) and 05 (`gemma_4b_curated`).
+
+---
+
+### [RUN] 2026-08-31 — awesome-align + mBERT install DONE (job 177879495)
+
+**Config.** copyq re-submission with `HF_HUB_DISABLE_XET=1` and a
+weights-file check instead of config.json check (the previous attempt
+177879264 left metadata on disk without weights, so the skip tricked
+the retry).
+
+**Result.**
+- `awesome-align==0.1.7` installed via `create-venv.sh` + boto3/botocore
+  transitive deps (idempotent skip on this attempt).
+- `bert-base-multilingual-cased` fully pulled to `MODEL_BASE/mBERT`:
+  `model.safetensors` (714 MB), `pytorch_model.bin` (714 MB),
+  `flax_model.msgpack` (712 MB), `tf_model.h5` (1.1 GB), tokenizer +
+  config + vocab all present.
+
+**Read.** Conv-SiMT blockers #1 (awesome-align) and #2 (mBERT weights)
+are cleared. Blocker #3 (Wang 2024 §2.1 recipe) was resolved earlier
+this session via arXiv 2402.10552 v4 fetch (see [DECISION] entry).
+Only the per-latency training strategy (a/b/c) remains before
+`scripts/07_conv.py::main()` can be written.
+
+---
+
 ### [DECISION] 2026-08-31 — Switch PBS compute charge from `-P po67` → `-P ba39`
 
 **Context.** `po67` compute allocation exhausted and the project storage on
