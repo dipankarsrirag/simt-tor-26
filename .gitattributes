@@ -1,0 +1,27 @@
+# Git LFS patterns — everything below is stored via Git Large File Storage
+# instead of the main pack. Requires `git lfs install` once per clone.
+#
+# Install locally:
+#   git lfs install
+#
+# If you already committed a large file to the main pack (before it matched
+# an LFS pattern), migrate it with:
+#   git lfs migrate import --include="path/to/file" --everything
+#   git push --force origin main
+#
+# The 98MB _archive/results/phase1/gate1/gpt4_pearson_full.json triggered
+# GitHub's LFS warning — that file is the canonical case.
+
+# Large intermediate JSON caches
+_archive/**/gpt4_pearson_full.json filter=lfs diff=lfs merge=lfs -text
+*.tar.gz                            filter=lfs diff=lfs merge=lfs -text
+
+# Model weights and matrices (if ever accidentally committed instead of gitignored)
+*.safetensors                       filter=lfs diff=lfs merge=lfs -text
+*.bin                               filter=lfs diff=lfs merge=lfs -text
+*.pt                                filter=lfs diff=lfs merge=lfs -text
+*.pth                               filter=lfs diff=lfs merge=lfs -text
+matrices.jsonl                       filter=lfs diff=lfs merge=lfs -text
+
+# Large sacrebleu / eval caches
+sacrebleu-cache-*.json              filter=lfs diff=lfs merge=lfs -text

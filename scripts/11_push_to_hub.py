@@ -157,11 +157,35 @@ def main():
     if (log_dir / "manifest.json").exists():
         (stage / "manifest.json").write_text((log_dir / "manifest.json").read_text())
     (stage / "README.md").write_text(card)
-    # Symlink model files, logs/, eval/
+    # HF's upload_folder walks the on-disk tree with os.walk (not following
+    # symlinks to directories) — top-level dir symlinks get silently ignored.
+    # Solution: mirror each directory as a real dir, and symlink each FILE
+    # into it. That way os.walk enters the dir and sees the file symlinks
+    # (which upload_folder does follow).
+    def mirror_tree(src: Path, dst: Path):
+        n = 0
+        for f in src.rglob("*"):
+            if f.is_file():
+                rel = f.relative_to(src)
+                target = dst / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.symlink_to(f.resolve())
+                n += 1
+        return n
+
+    # Model + tokenizer files: flat top-level (safetensors, tokenizer.json, ...)
+    n_model = 0
     for f in train_dir.iterdir():
-        (stage / f.name).symlink_to(f.resolve())
-    (stage / "logs").symlink_to(log_dir.resolve())
-    (stage / "eval").symlink_to(eval_dir.resolve())
+        if f.is_file():
+            (stage / f.name).symlink_to(f.resolve())
+            n_model += 1
+    print(f"  model files:      {n_model} ({train_dir})")
+
+    n_logs = mirror_tree(log_dir, stage / "logs")
+    print(f"  logs:             {n_logs} ({log_dir})")
+
+    n_eval = mirror_tree(eval_dir, stage / "eval")
+    print(f"  eval JSONs:       {n_eval} ({eval_dir})")
 
     # Include the annotator matrices this tag OWNS (i.e. produced with its
     # own backbone). Cross-annotation experiments don't upload matrices —
@@ -171,8 +195,8 @@ def main():
         annotator_name = Path(cfg["backbone"].get("local_path") or cfg["backbone"]["hf_id"]).name
         matrices_root = args.annotate_dir or (REPO_ROOT / "results" / "annotate" / annotator_name)
         if matrices_root.exists():
-            (stage / "annotate").symlink_to(matrices_root.resolve())
-            print(f"  including annotator matrices: {matrices_root}")
+            n_annot = mirror_tree(matrices_root, stage / "annotate")
+            print(f"  annot matrices:   {n_annot} ({matrices_root})")
 
     print(f"\nTarget repo: {repo_id}  (private={is_private})")
     print(f"Contents to upload:")
