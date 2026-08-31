@@ -47,13 +47,21 @@ fi
 #
 # Eval:
 #   sacrebleu    — BLEU with pinned tokenisers
+#
+# Baselines (docs/followup-experiments.md §Fig 2/3):
+#   awesome-align — word-level source↔target alignments for Wang 2024
+#                   conv-simt baseline (annotator for scripts/07_conv.py).
+#                   Needs `bert-base-multilingual-cased` on disk at
+#                   MODEL_BASE/mBERT (fetch via /g/data/po67/dipankar/
+#                   models/get_model.py).
 "$UV" pip install --python "$VENV/bin/python" \
     pot \
     trl \
     accelerate \
     peft \
     datasets \
-    sacrebleu
+    sacrebleu \
+    awesome-align
 
 echo
 echo ">>> Done. Activate with:  source $VENV/bin/activate"

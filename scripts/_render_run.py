@@ -53,8 +53,10 @@ def render(cfg: dict, ngpus: int) -> list[str]:
     corpus = cfg["source_pool"]["corpus"]
     dirs = list(cfg["source_pool"]["directions"].keys())
     tokenizer_dir = cfg["backbone"]["tokenizer_dir"]
+    criterion = cfg["annotate"]["criterion"]
 
     out: list[str] = []
+    dset_json = f"results/sft_dataset/{tag}/sft_dataset.json"
 
     # ─── Stage 1 ───
     out.append("##STAGE_1_BUILD_SOURCE_POOL")
@@ -62,37 +64,49 @@ def render(cfg: dict, ngpus: int) -> list[str]:
 
     # ─── Stage 2 ───
     out.append("##STAGE_2_ANNOTATE")
-    for pair in dirs:
-        in_json = f"results/sft_dataset/{tag}/per_direction/{pair}.json"
-        out_dir = f"results/annotate/{annotator_name}/{pair}"
-        out.append(_sh(
-            "bin/07_annotate",
-            "--input_json", in_json,
-            "--model_path", annotator_path,
-            "--output_dir", out_dir,
-            "--criterion", cfg["annotate"]["criterion"],
-            "--taus", str(cfg["annotate"]["tau"]),
-            "--lookahead_k", str(cfg["annotate"].get("lookahead_k", 0)),
-            "--resume",
-        ))
+    if criterion == "wait-k":
+        # Procedural chunking — one CPU-only call produces the SFT dataset directly.
+        out.append(_sh("bin/07_waitk", "--config", cfg["__config_path"],
+                                        "--output", dset_json))
+    elif criterion == "conv-simt":
+        # Alignment-based chunking (Wang et al. 2024) — see scripts/07_conv.py.
+        out.append(_sh("bin/07_conv", "--config", cfg["__config_path"],
+                                       "--output", dset_json))
+    else:
+        for pair in dirs:
+            in_json = f"results/sft_dataset/{tag}/per_direction/{pair}.json"
+            out_dir = f"results/annotate/{annotator_name}/{pair}"
+            out.append(_sh(
+                "bin/07_annotate",
+                "--input_json", in_json,
+                "--model_path", annotator_path,
+                "--output_dir", out_dir,
+                "--criterion", criterion,
+                "--taus", str(cfg["annotate"]["tau"]),
+                "--lookahead_k", str(cfg["annotate"].get("lookahead_k", 0)),
+                "--resume",
+            ))
 
     # ─── Stage 3 ───
     out.append("##STAGE_3_BUILD_SFT_DATASET")
-    matrix_glob = f"results/annotate/{annotator_name}/*/matrices.jsonl"
-    dset_json = f"results/sft_dataset/{tag}/sft_dataset.json"
-    src_pool = f"results/sft_dataset/{tag}/source_pool.json"
-    args = [
-        "bin/08_build_sft_dataset",
-        "--matrices", matrix_glob,       # supports glob via shell expansion
-        "--corpus_json", src_pool,
-        "--tokenizer_path", tokenizer_dir,
-        "--tau", str(cfg["annotate"]["tau"]),
-        "--output", dset_json,
-    ]
-    if cfg["sft_dataset"].get("merge_small_chunks", False):
-        args.append("--merge_small_chunks")
-        args += ["--min_src_words", str(cfg["sft_dataset"].get("min_src_words", 2))]
-    out.append(_sh(*args))
+    if criterion in ("wait-k", "conv-simt"):
+        # Stage 2 already wrote the SFT dataset directly; nothing to do here.
+        pass
+    else:
+        matrix_glob = f"results/annotate/{annotator_name}/*/matrices.jsonl"
+        src_pool = f"results/sft_dataset/{tag}/source_pool.json"
+        args = [
+            "bin/08_build_sft_dataset",
+            "--matrices", matrix_glob,       # supports glob via shell expansion
+            "--corpus_json", src_pool,
+            "--tokenizer_path", tokenizer_dir,
+            "--tau", str(cfg["annotate"]["tau"]),
+            "--output", dset_json,
+        ]
+        if cfg["sft_dataset"].get("merge_small_chunks", False):
+            args.append("--merge_small_chunks")
+            args += ["--min_src_words", str(cfg["sft_dataset"].get("min_src_words", 2))]
+        out.append(_sh(*args))
 
     # ─── Stage 4 ───
     out.append("##STAGE_4_TRAIN")

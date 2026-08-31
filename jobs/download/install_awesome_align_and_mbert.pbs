@@ -1,0 +1,57 @@
+#!/bin/bash
+#PBS -N install_awesome_align_and_mbert
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/install_awesome_align_and_mbert.log
+
+# Unblocks scripts/07_conv.py (Wang 2024 conv-simt baseline).
+# Two independent installs bundled into one copyq job:
+#   1. Layer `awesome-align` onto the shared .venv-fil via create-venv.sh
+#   2. Pull bert-base-multilingual-cased to MODEL_BASE/mBERT via the
+#      canonical downloader at /g/data/po67/dipankar/models/get_model.py
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+
+# ─── env ───
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+source jobs/env.sh   # sets HF cache + venv activation. copyq keeps online.
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  [1/2] awesome-align install via create-venv.sh"
+echo "════════════════════════════════════════════════════════════════"
+bash create-venv.sh
+
+echo ""
+echo "  Verifying awesome_align importable..."
+python3 -c "import awesome_align; print('  awesome_align OK:', awesome_align.__file__)"
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "  [2/2] bert-base-multilingual-cased pull via get_model.py"
+echo "════════════════════════════════════════════════════════════════"
+MBERT_DIR=$SIMT_MODEL_BASE/mBERT
+if [ -f "$MBERT_DIR/config.json" ]; then
+    echo "  Already present at $MBERT_DIR — skipping."
+else
+    python3 /g/data/po67/dipankar/models/get_model.py \
+        bert-base-multilingual-cased model "$MBERT_DIR"
+fi
+
+echo ""
+echo "  Verifying mBERT files..."
+ls -la "$MBERT_DIR" | head -20
+
+echo ""
+echo "Done. Conv-SiMT (scripts/07_conv.py) blockers #1 and #2 resolved."
+echo "Blocker #3 remaining: Wang 2024 §2.1 recipe read-through — pick the"
+echo "target-word→chunk assignment rule and log the decision in LOG.md."

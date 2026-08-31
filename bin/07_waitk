@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Stage 2 alternative — procedural wait-k chunking (no LM forward pass).
+# Produces an SFT-ready dataset JSON directly; Stage 3 is a no-op for
+# wait-k configs. See scripts/07_waitk.py for the full docstring.
+#
+# Usage:
+#   bin/07_waitk --config configs/{waitk-tag}.yaml --output <sft_dataset.json>
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/07_waitk.py" "$@"

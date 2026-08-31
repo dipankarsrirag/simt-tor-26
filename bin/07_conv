@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Stage 2 alternative — Conversational SiMT chunking (Wang et al. 2024).
+# NOT YET IMPLEMENTED — see scripts/07_conv.py docstring for the 3 blockers.
+#
+# Usage (once implemented):
+#   bin/07_conv --config configs/04_east_8b_conv.yaml \
+#               --output results/sft_dataset/east_8b_conv/sft_dataset.json
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${DIR}/_env.sh"
+exec "${PYTHON}" -u "${SIMT_REPO_ROOT}/scripts/07_conv.py" "$@"

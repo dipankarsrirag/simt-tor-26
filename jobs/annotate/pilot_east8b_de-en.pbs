@@ -1,0 +1,60 @@
+#!/bin/bash
+#PBS -N pilot_annot_east8b_de-en
+#PBS -P ba39
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/pilot_annot_east8b_de-en.log
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+
+# ─── env (cache paths, offline flags, venv) ───
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+source jobs/env.sh
+
+# ─── pilot ───
+# 100 sentences × EAST-8B on de-en, single tau=0.30 (matches config 01).
+# Purpose: measure sec/sent to size the real 240K-row annotation.
+INPUT=results/pilots/de-en_100.json
+MODEL=/g/data/po67/dipankar/models/EAST-8B
+OUT_DIR=results/annotate/PILOT_EAST-8B/de-en
+
+mkdir -p "$OUT_DIR"
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  EAST-8B annotation PILOT (100 de-en sents, tau=0.30, chat mode)"
+echo "  Input : $INPUT"
+echo "  Model : $MODEL"
+echo "  Output: $OUT_DIR"
+echo "════════════════════════════════════════════════════════════════"
+
+T0=$SECONDS
+python3 -u scripts/07_annotate.py \
+    --input_json  "$INPUT" \
+    --model_path  "$MODEL" \
+    --output_dir  "$OUT_DIR" \
+    --criterion   ot \
+    --taus        0.30 \
+    --lookahead_k 0 \
+    --prompt_mode chat \
+    --resume
+ELAPSED=$((SECONDS - T0))
+
+# Report throughput.
+N=$(wc -l < "$OUT_DIR/matrices.jsonl" 2>/dev/null || echo 0)
+if [ "$N" -gt 0 ]; then
+    SEC_PER_SENT=$(python3 -c "print(f'{$ELAPSED / $N:.2f}')")
+    echo ""
+    echo "PILOT RESULT: $N sentences in ${ELAPSED}s = ${SEC_PER_SENT} sec/sent"
+    # Extrapolate full 240K-row cost.
+    FULL_HOURS=$(python3 -c "print(f'{240000 * $ELAPSED / $N / 3600:.1f}')")
+    echo "  Extrapolated full 240K-row cost: ${FULL_HOURS} GPU-h"
+fi

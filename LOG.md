@@ -30,7 +30,154 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
-### [RUN] 2026-08-28 — Extrinsic eval matrix complete (4 models × 4 clean test sets)
+### [DECISION] 2026-08-31 — Switch PBS compute charge from `-P po67` → `-P ba39`
+
+**Context.** `po67` compute allocation exhausted and the project storage on
+`gdata6` is over quota — jobs submitted with `-P po67` sit in H state with
+"Project po67 is over storage allocation on gdata6". Two co-owned projects
+are available (`ba39`, `po67`); ba39 has both compute and storage headroom.
+
+**Chose.** All simt-tor-26 PBS jobs now use `-P ba39` for the compute charge.
+Storage flag stays `-l storage=gdata/ba39+gdata/po67` (unchanged) so jobs
+keep reading from `/g/data/po67/...` (models, cache, venv) and writing to
+`/g/data/ba39/...` (repo, logs, results).
+
+**Applied.**
+- `docs/setup.md` §1 + §6.2 header + non-negotiables list updated (`-P ba39`).
+- Three PBS files rewritten: `jobs/annotate/pilot_east8b_de-en.pbs`,
+  `jobs/annotate/pilot_gemma4b_de-en.pbs`, `jobs/hub_push/push_gemma_2b_curated_srirag.pbs`.
+- Currently-queued jobs qalter'd in place: 177860816, 177860819, 177860986,
+  177860998, 177860999, 177861015. `qstat -f 177860816` confirms `project = ba39`.
+
+**Revisit if.** `ba39` compute allocation is exhausted (rotate back to `po67`
+if its storage headroom is restored, or route to a third project). Any
+qsub with the old `-P po67` header still submits; not enforcing a hook —
+just fixing new templates and documenting the convention.
+
+---
+
+### [RUN] 2026-08-31 — HF Hub push: `srirag/tor-simt-gemma-2b-curated`
+
+**Config.** Second push of the Gemma-2B shipped baseline (v2bal_v3_htgt =
+"Ours" in the paper) to a personal HF namespace. Same artifacts as the
+prior `unswnlporg/tor-simt-gemma-2b-curated` push (2026-08-30): 10.2 GB
+model.safetensors + tokenizer + config + 495 log files + 798 eval JSONs +
+8 annotator matrices. Private.
+
+**Command.** `qsub jobs/hub_push/push_gemma_2b_curated_srirag.pbs`
+(job `177847306`, copyq, 04:00 walltime, `--org srirag`).
+
+**Result.** `Uploading to https://huggingface.co/srirag/tor-simt-gemma-2b-curated ...
+Done: https://huggingface.co/srirag/tor-simt-gemma-2b-curated`. Full log at
+`logs/hub_push_gemma_2b_srirag.log`.
+
+**Read.** Personal-namespace mirror for solo review / cross-check. No default
+change to `scripts/11_push_to_hub.py` — future pushes still default to
+`unswnlporg`; `--org srirag` when a personal copy is wanted.
+
+---
+
+### [RUN] 2026-08-31 — EAST-8B + Gemma-4B annotation pilots (100 de-en sents each)
+
+**Config.** Per `docs/followup-experiments.md` risk-register — before
+committing ~40 GPU-h to full 240K-row EAST-8B self-annotation, measure
+sec/sent on 100 sentences.
+- Input: `results/pilots/de-en_100.json` (first 100 rows of the archived
+  10K de-en source pool at `_archive/results/gemma_2b_curated/
+  multilingual_source_pool_htgt_per_direction/de-en.json`).
+- Criterion: OT, τ=0.30, `--prompt_mode chat`, `--lookahead_k 0`.
+- One PBS per model on gpuhopper × 1 H200 (matches production config).
+
+**Commands.**
+- `qsub jobs/annotate/pilot_east8b_de-en.pbs` → `177860816` (2h walltime,
+  EAST-8B).
+- `qsub jobs/annotate/pilot_gemma4b_de-en.pbs` → `177860819` (1.5h walltime,
+  Gemma-4-E4B-it).
+
+**Result.** Held (H state) initially due to po67 storage overrun; qalter'd
+to `-P ba39` per the concurrent decision above. Pilots each print sec/sent
++ extrapolated 240K-row GPU-h at the end. Results feed the go/no-go on
+configs 01 (`east_8b_curated`) and 05 (`gemma_4b_curated`).
+
+**Read.** If EAST-8B sec/sent extrapolates to > ~50 GPU-h for 240K rows,
+consider sentence-batched annotator (2026-08-22 decision, 15× speedup at
+~3-4% divergence) or dropping to a 3-latency × subset for the paper.
+
+---
+
+### [DECISION] 2026-08-31 — Wait-k baseline: procedural chunker, byte-identical to OT arm
+
+**Context.** `docs/followup-experiments.md` Fig 2/3 need a wait-k baseline
+(`EAST↺waitk`) trained on the same curated corpus + same backbone + same
+tokenizer as the OT arm. Two design choices needed: (a) which wait-k
+variant, (b) how to slot into the existing pipeline that expects
+`matrices.jsonl` from Stage 2.
+
+**Chose.**
+- **Variant:** "commit every k source words" — matches the existing
+  streaming policy at `src/eval/extrinsic.py::stream_translate` (line 358:
+  `commit = (src_words_read % wait_k == 0)`) exactly, so training and
+  inference agree by construction.
+- **k per latency:** `low=3, medium=5, high=7` (pre-registered in
+  `docs/followup-experiments.md` §Pre-registered hyperparameters).
+- **Pipeline shape:** new script `scripts/07_waitk.py` bypasses matrices
+  entirely — reads Stage 1 per-direction JSONs, produces Stage 3-shaped
+  SFT rows directly. Stage 3 becomes a no-op for wait-k configs.
+- **Tokenization:** per-word BPE via the same `tokenize_by_words` split
+  used in `src/eval/extrinsic.py`, so concatenated per-word ids equal
+  `tokenizer(full_source)` byte-exactly (matches the annotator's canonical
+  tokenization + avoids the string-round-trip artifact that dropped 40-47%
+  AR/VI rows in v6).
+
+**Applied.**
+- `scripts/07_waitk.py` (new, CPU-only, single-pass over all 8 directions).
+- `bin/07_waitk` wrapper.
+- `scripts/_render_run.py` extended with a `criterion == "wait-k"` branch
+  for stages 2 (single `bin/07_waitk` call) and 3 (skipped).
+- Smoke on 100 de-en rows: 91 kept × 3 latencies = 273 SFT rows in 0.5s;
+  chunk counts track k (7 chunks at k=3, 4 at k=5, 3 at k=7);
+  `concat(source_chunks) == source` byte-exact for all 273 rows.
+
+**Revisit if.** Paper reviewers ask for classical Ma 2019 wait-k semantics
+(read k, alternate 1r/1w) instead of our "commit every k" chunked variant
+— would require updating both `07_waitk.py` and `src/eval/extrinsic.py`'s
+`wait_k` policy for consistency.
+
+---
+
+### [DECISION] 2026-08-31 — Conv-SiMT: scaffold + fail-fast, awesome-align + mBERT install queued
+
+**Context.** `docs/followup-experiments.md` Fig 2/3 also need
+`EAST↺conv` (Wang et al. 2024 Conversational SiMT baseline). Wang's
+recipe uses `awesome-align` (mBERT-based aligner) for source↔target word
+alignment, then formats each aligned chunk as a multi-turn dialogue turn.
+Neither `awesome_align` nor `bert-base-multilingual-cased` was on disk /
+in the venv.
+
+**Chose.** Split conv-simt into two workstreams:
+1. **Env setup** (unblocking): single copyq job that layers
+   `awesome-align` onto `.venv-fil` via `create-venv.sh` AND pulls
+   `bert-base-multilingual-cased` to `MODEL_BASE/mBERT` via the canonical
+   downloader at `/g/data/po67/dipankar/models/get_model.py` (per user
+   direction 2026-08-31 that all HF pulls go through that script).
+2. **Recipe scaffold**: `scripts/07_conv.py` validates config, raises
+   `NotImplementedError` listing the 3 blockers (awesome-align install,
+   mBERT pull, Wang 2024 §2.1 chunk-assignment rule). Renderer routes
+   `criterion == "conv-simt"` to it so plumbing is testable end-to-end.
+
+**Applied.**
+- `scripts/07_conv.py`, `bin/07_conv` (both scaffold-only).
+- `scripts/_render_run.py` conv-simt branch mirrors wait-k.
+- `create-venv.sh` now installs `awesome-align`.
+- `jobs/download/install_awesome_align_and_mbert.pbs` — combined copyq
+  job (`177879177` submitted). Runs `create-venv.sh` then
+  `get_model.py bert-base-multilingual-cased model MODEL_BASE/mBERT`.
+
+**Revisit when.** Job `177879177` completes. Then: read Wang 2024 §2.1,
+decide the target-word→source-chunk assignment rule for ambiguous
+alignments, log the decision, implement `scripts/07_conv.py::main()`.
+
+
 
 **Config.** Streaming check_argmax on Gemma-4-E2B-it checkpoints
 (v6bcondA, v6bv2balv3, v6bv2balv3htgt) + EAST-8B (Llama-3-8B). 5-latency

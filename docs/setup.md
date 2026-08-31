@@ -14,7 +14,7 @@ Paths assumed throughout:
 | Purpose | Path |
 |---|---|
 | Working dir | `/g/data/ba39/dipankar/simt-tor-26/` |
-| PBS project | `po67` (compute) — `ba39` is storage only |
+| PBS project | `ba39` (compute charge) — jobs also read/write `po67` via storage flag; see §6.2 |
 | Storage flags | `-l storage=gdata/ba39+gdata/po67` on every job |
 | venv (compute) | `/scratch/po67/ds9561/.venv-fil/` — **shared with `first-impressions-last` and `simul-mt`**; layer extras via `bash create-venv.sh` (see §4) |
 | venv (scoring) | `/g/data/po67/dipankar/venvs/comet/` — shared COMET env; call its `bin/python` directly, do not activate on top of `.venv-fil` |
@@ -31,7 +31,9 @@ Paths assumed throughout:
 
 - **NCI Gadi.** You will use my `ba39` / `po67` allocation — you do not
   need a personal NCI project. Log in with your own NCI username, then
-  charge jobs to `-P po67` and add storage flags for `ba39` and `po67`.
+  charge jobs to `-P ba39` and add storage flags for `ba39` and `po67`
+  (see §6.2). Note: this changed from `-P po67` on 2026-08-31 — see
+  `LOG.md`.
 - **HuggingFace token.** Read-only token in `~/.netrc` on the login node.
   Never inline it in code, never commit `.env` files, never reproduce
   the plaintext token found in `/g/data/po67/dipankar/models/get_model.py`.
@@ -282,7 +284,7 @@ with `--ngpus`; 4B backbones fit on `ngpus=1`):
 ```bash
 #!/bin/bash
 #PBS -N <job_name>
-#PBS -P po67
+#PBS -P ba39
 #PBS -q gpuhopper
 #PBS -l ncpus=12                     # 12 per GPU on gpuhopper — do not override
 #PBS -l ngpus=1
@@ -299,7 +301,8 @@ with `--ngpus`; 4B backbones fit on `ngpus=1`):
 
 Non-negotiables:
 
-- `-P po67` (compute charged here) and `-l storage=gdata/ba39+gdata/po67`
+- `-P ba39` (compute charged here, 2026-08-31 switch from po67 — see `LOG.md`)
+  and `-l storage=gdata/ba39+gdata/po67`
   (drop `ba39` and repo reads fail; drop `po67` and model reads fail).
 - `-o` is an **absolute path** to `logs/`. Relative `-o` silently drops
   to `$HOME`.
