@@ -30,6 +30,103 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [DECISION] 2026-09-01 — Baselines start from base Llama-3-8B-Instruct, not from EAST-8B checkpoint
+
+**Context.** User caught a methodological confound in the `EAST↺{waitk, conv}`
+configs (03, 04): they were set up to fine-tune `biaofu-xmu/EAST-8B` (Fu et
+al.'s already-EAST-trained checkpoint with GPT-4 chunks + EOR/EOW baked in).
+That gives the wait-k / conv-simt baselines a free head start — they inherit
+EAST's OT-like streaming behaviour before their own procedural chunking is
+applied. Reviewer would rightly call this a contaminated baseline.
+
+**Chose.** All 4 arms (`EAST↺ours`, `EAST↺east`, `EAST↺waitk`, `EAST↺conv`)
+now start from **`meta-llama/Meta-Llama-3-8B-Instruct`** (v3.0 — the exact
+same base EAST used). The `↺` glyph re-reads as "same-family Llama-3-8B-
+Instruct trained with X". The already-EAST-trained `biaofu-xmu/EAST-8B`
+remains our published-competitor reference line (`EAST` on the figures), not
+a starting checkpoint for anything we train.
+
+**Why v3.0 and not the on-disk `Llama-3.1-8B-Instruct`.** Same reasoning: v3.1
+has additional post-training that would confound comparisons to the EAST
+paper's numbers. Downloading v3.0 explicitly.
+
+**Applied.**
+- `jobs/download/pull_llama3_8b_instruct.pbs` — copyq job (`177899916`)
+  pulls `meta-llama/Meta-Llama-3-8B-Instruct` via `get_model.py` with
+  `HF_HUB_DISABLE_XET=1`. Gated model — depends on the HF_TOKEN account
+  having accepted the Llama-3 license.
+- Configs 01, 02, 03, 04 still point at `EAST-8B` at commit time of this
+  entry — to be swapped in a follow-up commit once the download lands and
+  the base checkpoint is verified on disk.
+
+**Revisit if.** Gated pull 403s (HF_TOKEN account doesn't have Llama-3
+license accepted). Fallback: use the on-disk `Llama-3.1-8B-Instruct` and
+document the minor-version deviation in the paper.
+
+---
+
+### [DECISION] 2026-09-01 — `EAST↺east` redefined + deferred; new `EAST↺east(ot)` variant planned
+
+**Context.** Original `docs/followup-experiments.md` sketch of `EAST↺east`:
+sub-sample Multi-90K + SiMT-660K to match curated per-direction row counts,
+apply OT chunking on the EAST corpus. User pivoted 2026-09-01: instead
+of "N-matched Multi-90K + OT chunks", keep source+target identical to
+`↺ours` and only swap the target text to EAST's — testing if human-target
+`↺ours` beats machine-target `↺east` under everything else equal.
+
+**Feasibility check for the pivot — RESULT: NOT FEASIBLE (0% overlap).**
+
+Ran 3-tier fuzzy match (alnum-exact → 8-tok prefix jaccard≥0.75 → 5-tok
+prefix jaccard≥0.85) on curated ∩ Multi-90K sources for the 4 shared
+directions:
+
+| dir | curated | M90K | tier1 | +tier2 | +tier3 | total | hit% |
+|---|---|---|---|---|---|---|---|
+| de-en | 10,000 | 11,058 | 0 | 0 | 0 | 0 | **0.00%** |
+| en-de | 10,000 | 12,185 | 0 | 0 | 0 | 0 | 0.00% |
+| ru-en | 10,000 | 11,615 | 0 | 0 | 0 | 0 | 0.00% |
+| en-ru | 10,000 | 17,097 | 0 | 0 | 0 | 0 | 0.00% |
+
+Expected: curated is europarl + news-comm + TED2020 (human-translated
+parallel-text corpora); Multi-90K is WMT news-test-derived + FLORES-
+leaked. No natural intersection at the source-string level.
+
+**Chose.**
+- **`EAST↺east` (as currently spec'd): DEFERRED.** Neither the "same
+  sources, swap targets only" pivot nor the original "N-matched sub-sample"
+  is high-signal enough to prioritise. The 4-direction limitation
+  (Multi-90K has no ar/vi) further weakens the paper contribution.
+- **NEW variant `EAST↺east(ot)`: PLANNED for future.** Same shape as the
+  deferred baseline, but recipe becomes: sub-sample Multi-90K to
+  N-matched-per-direction (4 dirs: en↔{de, ru}), then **rechunk with OT
+  by our backbone** instead of using Multi-90K's shipped GPT-4 chunks.
+  Compare `EAST↺east(ot)` vs the shipped `EAST` released checkpoint
+  (which uses GPT-4 chunks on the same underlying source-target pairs) —
+  this isolates *chunking-algorithm quality* on identical source+target
+  material. Directly tests: "does our OT chunker beat GPT-4's semantic
+  chunking?" — the core paper claim.
+
+**Rationale for the (ot) variant.** The current paper story compares
+`↺ours` (curated corpus + OT chunks + human targets) against `EAST` (east
+corpus + GPT-4 chunks + machine targets). Two axes vary at once
+(corpus/target-quality AND chunker). The `↺east(ot)` variant holds corpus
++ target quality fixed and varies only the chunker — cleaner ablation
+than either the deferred `↺east` or the current head-to-head. Worth
+building for the paper's discussion section.
+
+**Not yet applied.** `EAST↺east(ot)` config, dataset builder, and figure
+placement to be scoped in a follow-up planning pass. Placeholder:
+`configs/09_east_east_ot.yaml` (unallocated). Depends on Llama-3-8B-
+Instruct pull landing first (same backbone as other baselines per the
+concurrent decision above).
+
+**Revisit if.** Paper reviewers ask for the target-quality-only ablation
+(the deferred `↺east`). At that point we'd retranslate curated sources
+via GPT-4 API — see previous conversation option (a) — which is a real
+$$ cost but yields a truly matched target-swap.
+
+---
+
 ### [RUN] 2026-08-31 — Pilot annotation results: EAST-8B 1.46 s/sent, Gemma-4B 1.86 s/sent (both ~2.5× over budget)
 
 **Config.** See prior [RUN] 2026-08-31 entry for setup (100 de-en sents,

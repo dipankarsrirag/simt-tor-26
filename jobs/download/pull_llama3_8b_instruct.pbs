@@ -1,0 +1,59 @@
+#!/bin/bash
+#PBS -N pull_llama3_8b_instruct
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=03:00:00
+#PBS -l storage=gdata/ba39+gdata/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/pull_llama3_8b_instruct.log
+
+# Pull `meta-llama/Meta-Llama-3-8B-Instruct` (v3.0 — the exact base used by
+# EAST-8B) to MODEL_BASE/Meta-Llama-3-8B-Instruct.
+#
+# Why v3.0 and not v3.1 (already on disk): the paper's "start from base
+# instruct, no prior streaming exposure" story is cleanest with the exact
+# same starting checkpoint as EAST used. Llama-3.1-8B-Instruct on disk is
+# close but has additional post-training that could confound comparisons.
+#
+# Uses the canonical /g/data/po67/dipankar/models/get_model.py downloader
+# (per project convention 2026-08-31). HF_HUB_DISABLE_XET=1 in case the
+# xet backend 404s on shards (same fix as bert-base-multilingual-cased).
+#
+# NOTE: meta-llama/* repos are gated on HF — the token in get_model.py must
+# already have Llama-3 license accepted at
+# https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct. If the pull
+# 403s, accept the license under the account owning HF_TOKEN and resubmit.
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+export SIMT_MODEL_BASE=/g/data/po67/dipankar/models
+source jobs/env.sh
+export HF_HUB_DISABLE_XET=1
+
+LLAMA_DIR=$SIMT_MODEL_BASE/Meta-Llama-3-8B-Instruct
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  meta-llama/Meta-Llama-3-8B-Instruct → $LLAMA_DIR"
+echo "════════════════════════════════════════════════════════════════"
+
+if [ -f "$LLAMA_DIR/model.safetensors.index.json" ] || [ -f "$LLAMA_DIR/model.safetensors" ]; then
+    echo "  Weights already present at $LLAMA_DIR — skipping."
+else
+    python3 /g/data/po67/dipankar/models/get_model.py \
+        meta-llama/Meta-Llama-3-8B-Instruct model "$LLAMA_DIR"
+fi
+
+echo ""
+echo "  Contents:"
+ls -la "$LLAMA_DIR" | head -20
+
+echo ""
+echo "Done. Meta-Llama-3-8B-Instruct on disk. Baseline configs 03/04 (and"
+echo "reworked 01/02) can now target this checkpoint as backbone.local_path."
