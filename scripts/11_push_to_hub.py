@@ -108,9 +108,8 @@ def main():
                          "Default: results/annotate/{annotator}/. Useful when matrices live in _archive.")
     ap.add_argument("--source_pool", type=Path, default=None,
                     help="Override the source-pool JSON path. Uploaded as 'source_pool.json' "
-                         "at the repo root; the matrices records index into it. Default: search "
-                         "results/sft_dataset/{tag}/source_pool.json then _archive/results/"
-                         "gemma_2b_curated/multilingual_source_pool_htgt.json (shipped baseline).")
+                         "at the repo root; the matrices records index into it. Default: "
+                         "results/sft_dataset/{tag}/source_pool.json.")
     ap.add_argument("--dry_run", action="store_true",
                     help="Print what would be uploaded without pushing.")
     args = ap.parse_args()
@@ -210,18 +209,10 @@ def main():
 
     # Include the source pool the matrices index into. Without this, matrices.jsonl
     # is unjoinable — records only carry `index`, `matrix`, `n_src_tok`, `n_tgt_tok`
-    # (no source/target strings). Added 2026-09-01 after Quang flagged the gap on
-    # the shipped gemma_2b_curated push.
-    source_pool_candidates = []
-    if args.source_pool is not None:
-        source_pool_candidates.append(args.source_pool)
-    source_pool_candidates += [
-        REPO_ROOT / "results" / "sft_dataset" / tag / "source_pool.json",
-        REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "multilingual_source_pool_htgt.json",
-    ]
-    source_pool_src = next((p for p in source_pool_candidates if p.exists()), None)
-    if source_pool_src is None:
-        print(f"  source pool:      NOT FOUND — searched {[str(p) for p in source_pool_candidates]}")
+    # (no source/target strings).
+    source_pool_src = args.source_pool or (REPO_ROOT / "results" / "sft_dataset" / tag / "source_pool.json")
+    if not source_pool_src.exists():
+        print(f"  source pool:      NOT FOUND at {source_pool_src}")
         print("                    Downstream consumers (e.g. cross-annotation SFT) will need it.")
     else:
         (stage / "source_pool.json").symlink_to(source_pool_src.resolve())

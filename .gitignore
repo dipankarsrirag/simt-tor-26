@@ -83,9 +83,11 @@ results/gate1/gpt4_pearson_full.json
 results/gate1/*_dryrun.json
 
 # Extended tokenizer.json files are 20-30MB each; regeneratable via
-# scripts/phase2_prepare_tokenizer.py in seconds. Keep the manifest +
-# tokenizer_config, not the vocab blob.
+# bin/04_prepare_tokenizer in seconds. Keep the manifest + tokenizer_config,
+# not the vocab blob. Covers both legacy `tokenizer-*` and canonical
+# `results/train/{tag}/tokenizer/` layouts.
 results/**/tokenizer-*/tokenizer.json
+results/train/**/tokenizer/tokenizer.json
 
 # Extrinsic eval outputs — hypothesis arrays are large; regeneratable via
 # src/eval/extrinsic.py. Score/config JSONs may be added back explicitly

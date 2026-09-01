@@ -10,7 +10,7 @@ Checks:
   5. Can we run a 2-sentence streaming smoke? (offline generation to sanity
      the tag emission shape.)
 
-Output: prints report; also writes _archive/results/gemma_2b_curated/east_8b_compat.json.
+Output: prints report; also writes results/probes/east_8b_compat.json.
 
 Usage:  python -u scripts/05_probe_backbone.py [--model_dir PATH]
 Default model_dir: ${SIMT_MODEL_BASE}/EAST-8B

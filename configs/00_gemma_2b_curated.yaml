@@ -1,8 +1,8 @@
 # gemma_2b_curated — the shipped baseline. Gemma-4-E2B-it self-annotates the
 # curated corpus with OT, then SFTs on it. The 171 landed eval cells in
-# _archive/results/gemma_2b_curated/extrinsic/ came from this recipe.
+# results/eval/gemma_2b_curated/ came from this recipe.
 #
-# Rerun with: bin/run configs/gemma_2b_curated.yaml --ngpus 1
+# Rerun with: bin/run configs/00_gemma_2b_curated.yaml --ngpus 1
 
 tag: gemma_2b_curated
 
@@ -10,7 +10,7 @@ backbone:
   hf_id: google/gemma-4-E2B-it
   local_path: ${SIMT_MODEL_BASE}/gemma-4-E2B-it
   is_instruct: true
-  tokenizer_dir: ${SIMT_REPO_ROOT}/_archive/results/gemma_2b_curated/tokenizer-extended-v6
+  tokenizer_dir: ${SIMT_REPO_ROOT}/results/train/gemma_2b_curated/tokenizer
 
 source_pool:
   corpus: curated

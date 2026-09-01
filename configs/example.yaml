@@ -15,7 +15,7 @@ backbone:
   hf_id: google/gemma-4-E2B-it              # HF model id (used if local_path missing)
   local_path: ${SIMT_MODEL_BASE}/gemma-4-E2B-it
   is_instruct: true                          # true → chat template, NL latency
-  tokenizer_dir: ${SIMT_REPO_ROOT}/_archive/results/gemma_2b_curated/tokenizer-extended-v6
+  tokenizer_dir: ${SIMT_REPO_ROOT}/results/train/gemma_2b_curated/tokenizer
 
 # ─────────── source pool ───────────
 # (Stage 1 — scripts/06_build_source_pool.py)
@@ -23,14 +23,14 @@ source_pool:
   # Which corpus to pull raw parallel data from.
   corpus: curated         # one of: curated (europarl+news-comm+TED2020), east (SiMT-660K+Multi-90K)
   directions:          # per-direction row targets
-    en-de: 30000
-    de-en: 30000
-    en-ru: 30000
-    ru-en: 30000
-    en-ar: 30000
-    ar-en: 30000
-    en-vi: 30000
-    vi-en: 30000
+    en-de: 10000
+    de-en: 10000
+    en-ru: 10000
+    ru-en: 10000
+    en-ar: 10000
+    ar-en: 10000
+    en-vi: 10000
+    vi-en: 10000
   # Human-target requirement: drop pairs where target text was machine-generated.
   # Only meaningful for corpus=curated.
   human_target_only: true

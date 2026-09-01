@@ -1,11 +1,12 @@
 """
-Build the cond-B SFT training corpus from our OT annotator's matrices.
+Build the OT-SFT training corpus from the annotator's matrices.
 
-Reads:
-  _archive/results/gemma_2b_curated/annot_ot_n2k/matrices.jsonl
+Reads (from a run's canonical paths under `results/`):
+  results/annotate/{annotator}/{pair}/matrices.jsonl   (glob one per direction)
+  results/sft_dataset/{tag}/source_pool.json           (index → source/target)
+
 Writes:
-  _archive/results/gemma_2b_curated/sft_dataset_n2k.json  — same schema as SiMT-660K.json
-                                            but with our-annotator chunks
+  results/sft_dataset/{tag}/sft_dataset.json   — EAST-format training rows.
 
 The output can be fed to `src/train/sft.py --corpus_file <path>`.
 
@@ -768,11 +769,10 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--matrices", type=Path, nargs="+",
-                    default=[REPO_ROOT / "results" / "phase2" / "annot_ot_n2k" / "matrices.jsonl"],
-                    help="One or more matrices.jsonl files. For multilingual v5, pass "
-                         "all 10 direction files (or use shell-glob: --matrices "
-                         "_archive/results/gemma_2b_curated/annot_ot_multi_*/matrices.jsonl).")
+    ap.add_argument("--matrices", type=Path, nargs="+", required=True,
+                    help="One or more matrices.jsonl files, e.g. shell-glob "
+                         "`results/annotate/{annotator}/*/matrices.jsonl` for the "
+                         "8-direction multilingual case.")
     ap.add_argument("--corpus_json", type=Path, default=None,
                     help="Override the default SiMT-De-En-660K source lookup with a "
                          "custom pool JSON (e.g. multilingual_source_pool_v5.json). "

@@ -32,7 +32,7 @@ from get_model import HF_TOKEN
 print(HF_TOKEN)
 ")
 
-SRC=/g/data/ba39/dipankar/simt-tor-26/_archive/results/gemma_2b_curated/multilingual_source_pool_htgt.json
+SRC=/g/data/ba39/dipankar/simt-tor-26/results/sft_dataset/gemma_2b_curated/source_pool.json
 
 if [ ! -f "$SRC" ]; then
     echo "ERROR: source pool not at $SRC"
@@ -50,6 +50,8 @@ from huggingface_hub import HfApi
 
 SRC = "$SRC"
 TARGETS = [
+    # unswnlporg landed 2026-09-01 (job 177923505). Re-uploading is a HF
+    # no-op if the SHA matches, so listing both is idempotent.
     "unswnlporg/tor-simt-gemma-2b-curated",
     "srirag/tor-simt-gemma-2b-curated",
 ]
