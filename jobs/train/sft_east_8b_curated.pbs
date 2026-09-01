@@ -1,0 +1,39 @@
+#!/bin/bash
+#PBS -N sft_east_8b_curated
+#PBS -P ba39
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=24:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/sft_east_8b_curated.log
+
+# Config 01 (EAST↺ours) — SFT Llama-3-8B-Instruct on Llama-annotated OT chunks.
+# Corpus: 78,109 rows from curated (europarl+news-comm+TED2020), 8 dirs.
+# Latency dist: 10.6% low / 28.4% medium / 61.0% high.
+# 2 epochs, effective batch 16 (per_device=2 × grad_accum=8), LR 1e-5, bf16.
+# ~9,750 optimizer steps × ~5-8s/step on 1×H200 → ~13-22h wall.
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+source jobs/env.sh
+
+python3 -u src/train/sft.py \
+    --corpus_file    results/sft_dataset/east_8b_curated/sft_dataset.json \
+    --model_name     /g/data/po67/dipankar/models/Meta-Llama-3-8B-Instruct \
+    --tokenizer_dir  /g/data/po67/dipankar/models/Meta-Llama-3-8B-Instruct-extended-v6 \
+    --output_dir     results/train/east_8b_curated \
+    --num_train_epochs               2 \
+    --per_device_train_batch_size    2 \
+    --gradient_accumulation_steps    8 \
+    --learning_rate                  1e-5 \
+    --warmup_steps                   200 \
+    --eval_steps                     500 \
+    --save_steps                     500 \
+    --bf16

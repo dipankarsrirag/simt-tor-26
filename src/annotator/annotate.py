@@ -171,6 +171,12 @@ def _is_cjk_lang(src_lang: str) -> bool:
     return src_lang in CJK_LANGS
 
 
+_WORD_BOUNDARY_PREFIXES = ("▁", "Ġ")   # U+2581 SentencePiece (Gemma, Qwen,
+                                             # Llama-2); U+0120 GPT-2/BPE "Ġ"
+                                             # (Llama-3, GPT-family). Both mark
+                                             # "this token starts a new word".
+
+
 def _is_word_boundary_before(src_token_ids: List[int], pos: int, tokenizer,
                               src_lang: str = "en") -> bool:
     """A commit at token position `pos` reads src_token_ids[..pos-1] and stops
@@ -178,21 +184,23 @@ def _is_word_boundary_before(src_token_ids: List[int], pos: int, tokenizer,
     start of a whitespace-word — i.e., either pos == 0, pos == len (past end),
     or the token AT pos begins a new word.
 
-    SentencePiece convention: a token begins a new word iff its piece starts
-    with `▁` (U+2581). Punctuation-only tokens (no `▁` prefix) are treated as
-    word-internal — but a "commit right after a period" position is really at
-    (pos of period) + 1, i.e., between the period and the next token; if the
-    next token starts with `▁` that IS a natural boundary.
+    Word-start convention differs by tokenizer family:
+      - SentencePiece (Gemma, Qwen, Llama-2): the piece starts with `▁` (U+2581).
+      - BPE / GPT-2 style (Llama-3, GPT-family): the piece starts with `Ġ` (U+0120).
+    Punctuation-only tokens are treated as word-internal — but a "commit
+    right after a period" position is really at (pos of period) + 1, i.e.,
+    between the period and the next token; if the next token starts with a
+    word-boundary marker that IS a natural boundary.
 
     For CJK-family languages (zh/ja/ko/th/km) there is no whitespace and no
-    `▁` marker, so **every token position is a valid streaming boundary**.
+    boundary marker, so **every token position is a valid streaming boundary**.
     """
     if pos <= 0 or pos >= len(src_token_ids):
         return True
     if _is_cjk_lang(src_lang):
         return True
     piece = tokenizer.convert_ids_to_tokens(src_token_ids[pos])
-    return piece.startswith("▁")
+    return piece.startswith(_WORD_BOUNDARY_PREFIXES)
 
 
 def _snap_to_word_boundary(commit_i: int, src_token_ids: List[int], tokenizer,
