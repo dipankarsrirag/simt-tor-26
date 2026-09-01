@@ -61,6 +61,11 @@ Machine Translation* project.
 - `manifest.json` — git sha, hostname, GPUs, timestamps.
 - `logs/` — per-stage stdout+stderr from `bin/run`.
 - `eval/` — every landed eval-JSON cell (hypothesis, reference, AL, BLEU).
+- `annotate/` — per-direction `matrices.jsonl` (divergence matrices) produced
+  by this backbone as annotator.
+- `source_pool.json` — the corpus rows the matrices index into (`{index, source,
+  target, src_lang, tgt_lang, latency, source_chunks, target_chunks, _corpus}`).
+  Matrices are unjoinable without this file — records only carry `index`.
 - SFT checkpoint (`*.safetensors` + tokenizer).
 
 ## Reproduce
@@ -101,6 +106,11 @@ def main():
     ap.add_argument("--annotate_dir", type=Path, default=None,
                     help="Override annotator-matrices dir (that gets uploaded as 'annotate/'). "
                          "Default: results/annotate/{annotator}/. Useful when matrices live in _archive.")
+    ap.add_argument("--source_pool", type=Path, default=None,
+                    help="Override the source-pool JSON path. Uploaded as 'source_pool.json' "
+                         "at the repo root; the matrices records index into it. Default: search "
+                         "results/sft_dataset/{tag}/source_pool.json then _archive/results/"
+                         "gemma_2b_curated/multilingual_source_pool_htgt.json (shipped baseline).")
     ap.add_argument("--dry_run", action="store_true",
                     help="Print what would be uploaded without pushing.")
     args = ap.parse_args()
@@ -197,6 +207,25 @@ def main():
         if matrices_root.exists():
             n_annot = mirror_tree(matrices_root, stage / "annotate")
             print(f"  annot matrices:   {n_annot} ({matrices_root})")
+
+    # Include the source pool the matrices index into. Without this, matrices.jsonl
+    # is unjoinable — records only carry `index`, `matrix`, `n_src_tok`, `n_tgt_tok`
+    # (no source/target strings). Added 2026-09-01 after Quang flagged the gap on
+    # the shipped gemma_2b_curated push.
+    source_pool_candidates = []
+    if args.source_pool is not None:
+        source_pool_candidates.append(args.source_pool)
+    source_pool_candidates += [
+        REPO_ROOT / "results" / "sft_dataset" / tag / "source_pool.json",
+        REPO_ROOT / "_archive" / "results" / "gemma_2b_curated" / "multilingual_source_pool_htgt.json",
+    ]
+    source_pool_src = next((p for p in source_pool_candidates if p.exists()), None)
+    if source_pool_src is None:
+        print(f"  source pool:      NOT FOUND — searched {[str(p) for p in source_pool_candidates]}")
+        print("                    Downstream consumers (e.g. cross-annotation SFT) will need it.")
+    else:
+        (stage / "source_pool.json").symlink_to(source_pool_src.resolve())
+        print(f"  source pool:      1 file ({source_pool_src})")
 
     print(f"\nTarget repo: {repo_id}  (private={is_private})")
     print(f"Contents to upload:")

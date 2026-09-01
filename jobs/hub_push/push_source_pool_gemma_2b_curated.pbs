@@ -1,0 +1,74 @@
+#!/bin/bash
+#PBS -N hub_push_source_pool
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=01:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/hub_push_source_pool.log
+
+# One-off: upload the source-pool JSON to both HF repos so Quang (and any
+# other consumer) can join matrices records against source/target strings.
+# The push script now includes source_pool.json automatically (fix landed
+# 2026-09-01 in scripts/11_push_to_hub.py); this job patches the ALREADY-
+# PUSHED gemma_2b_curated repos which shipped without it.
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+source jobs/env.sh
+
+# HF token at runtime (same pattern as other hub_push jobs)
+export HF_TOKEN=$(python3 -c "
+import sys
+sys.path.insert(0, '/g/data/po67/dipankar/models')
+from get_model import HF_TOKEN
+print(HF_TOKEN)
+")
+
+SRC=/g/data/ba39/dipankar/simt-tor-26/_archive/results/gemma_2b_curated/multilingual_source_pool_htgt.json
+
+if [ ! -f "$SRC" ]; then
+    echo "ERROR: source pool not at $SRC"
+    exit 1
+fi
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  Uploading source_pool.json ($(du -h $SRC | cut -f1)) to both repos"
+echo "  From: $SRC"
+echo "════════════════════════════════════════════════════════════════"
+
+python3 - <<PYEOF
+import os, sys
+from huggingface_hub import HfApi
+
+SRC = "$SRC"
+TARGETS = [
+    "unswnlporg/tor-simt-gemma-2b-curated",
+    "srirag/tor-simt-gemma-2b-curated",
+]
+
+api = HfApi()
+for repo_id in TARGETS:
+    print(f"\nUploading source_pool.json → {repo_id}")
+    try:
+        api.upload_file(
+            path_or_fileobj=SRC,
+            path_in_repo="source_pool.json",
+            repo_id=repo_id,
+            repo_type="model",
+            commit_message="Add source_pool.json (matrices records index into this)",
+        )
+        print(f"  OK → https://huggingface.co/{repo_id}/blob/main/source_pool.json")
+    except Exception as e:
+        print(f"  FAIL: {type(e).__name__}: {e}")
+        sys.exit(1)
+
+print("\nDone.")
+PYEOF
