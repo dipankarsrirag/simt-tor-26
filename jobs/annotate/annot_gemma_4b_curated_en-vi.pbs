@@ -1,0 +1,35 @@
+#!/bin/bash
+#PBS -N annot_gemma_4b_curated_en-vi
+#PBS -P ba39
+#PBS -q gpuhopper
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=240GB
+#PBS -l jobfs=120GB
+#PBS -l walltime=07:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/annot_gemma_4b_curated_en-vi.log
+
+# OT annotation for config gemma_4b_curated on direction en-vi. Self-annotation
+# with gemma-4-E4B-it. Reuses the 80K shipped curated source pool via symlink
+# at results/sft_dataset/gemma_4b_curated/per_direction/en-vi.json.
+# Output: results/annotate/gemma-4-E4B-it/en-vi/matrices.jsonl (~10K rows).
+# --resume: safe to re-queue on walltime; picks up where left off.
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+source jobs/env.sh
+
+python3 -u scripts/07_annotate.py \
+    --input_json  results/sft_dataset/gemma_4b_curated/per_direction/en-vi.json \
+    --model_path  /g/data/po67/dipankar/models/gemma-4-E4B-it \
+    --output_dir  results/annotate/gemma-4-E4B-it/en-vi \
+    --criterion   ot \
+    --taus        0.30 \
+    --lookahead_k 0 \
+    --prompt_mode chat \
+    --resume
