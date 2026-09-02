@@ -30,6 +30,43 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [DECISION] 2026-09-02 — Open a theory session (why the method works, mathematically)
+
+**Context.** All the empirical machinery is running (16 annotations DONE
+across two backbones, 2 SFTs queued, matrices push queued to HF). The
+next logical block of work is not empirical — it's theoretical: why
+should this method actually work? What is "weak self-supervision from
+the model itself" really doing, formally?
+
+**Chose.** Start a new chat session focused entirely on making the
+method mathematically sound. Deliverables the theory session should
+produce are enumerated in `docs/theory.md` §5:
+  1. Explicit assumption list (A1–A5 in the doc are a starting point).
+  2. Empirical checks for each assumption — small offline scripts that
+     run on the existing matrices files (no GPU needed).
+  3. Positioning within a theoretical frame (sequential hypothesis
+     testing / self-training / imitation learning / information
+     bottleneck — see §4).
+  4. Minimum-viable-theorem — the ONE thing we can state formally.
+  5. Rewrite of `_archive/docs/method-formal.md` to include theoretical
+     grounding, not just the algorithm.
+
+**Applied.**
+- New `docs/theory.md` written as a self-contained brief. Reads:
+  claim (§1) → central question (§2) → 5 implicit assumptions (§3) →
+  4 theoretical frames to place ourselves in (§4) → deliverables
+  (§5) → handoff pointers (§6).
+- `docs/README.md` staleness banner added.
+- `CLAUDE.md` "Where to start reading" list updated (local-only file;
+  not tracked in git).
+
+**Revisit when.** After the theory session produces (4) — a
+minimum-viable-theorem — decide whether it justifies rewriting the
+paper §Method as a theoretical contribution, or stays as a defensive
+paragraph in a mostly-empirical paper.
+
+---
+
 ### [DECISION] 2026-09-02 — Rename `east_8b_*` tags → `llama_3_8b_*` (backbone-truth naming)
 
 **Context.** After the 2026-09-01 backbone switch (all 4 arms now start
