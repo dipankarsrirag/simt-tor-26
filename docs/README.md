@@ -1,5 +1,11 @@
 # docs/ — reading order
 
+**⚠ 2026-09-02 — this index is stale.** File names on disk have diverged from the
+numbered `NN-*` scheme below (files are called `method.md`, `hypotheses.md`, etc.,
+not `01-method_overview.md` etc.). Trust the actual filenames when navigating,
+not the table. The theoretical-grounding session starting next reads:
+`method.md` → `hypotheses.md` → `theory.md` (new).
+
 Numbered. Read in order — later files assume earlier ones. Written so whoever picks up the project (Dipankar, next student, me next week) can see what was built, what was measured, and what's still to do.
 
 | # | File | What it is | When to read |
