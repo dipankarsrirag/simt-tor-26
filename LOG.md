@@ -30,6 +30,28 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-09-02 — Config 07 (east_8b_from_2b_annot) trained + 55-cell eval: 8B UNDER-PERFORMS 4B by -2.28 BLEU (Quang)
+
+**Config.** Meta-Llama-3-8B-Instruct SFT'd on Gemma-2B's OT chunks via the new cross-tokenizer
+remap (`08_build_sft_dataset.py --annotator_tokenizer_path`, branch quang/cross-annot-runs).
+Dataset: same 78,349 rows as config 06 (identical selection, remapped token spaces). Train:
+lr 1e-5, warmup 200, bs 2x8, eval/save 250, model-only checkpoints, 2h chained shards.
+Eval: 55 cells, check_argmax streaming, full test sets, same harness as 06.
+
+**Result (BLEU, vs config 06 = Gemma-4B on the same chunks):** mean **-2.28** over 55 cells.
+- de<->en roughly ties (wmt15 +0.4 avg, iwslt17 de-en +0.1).
+- X->en small losses (ar-en -2.8, ru-en -2.7 avg).
+- **en->X is where it collapses**: en-ar -5.5 to -6.6 (absolute BLEU ~10.5), en-ru -3 to -6,
+  en-de -1.7 to -5.3, en-vi -3.5 to -4.3.
+
+**Read.** The damage concentrates where the model must GENERATE non-English; directions into
+English nearly tie. This is more consistent with Llama-3's English-centric pretraining than with
+a chunk-transfer failure (argument, not a measurement). The separating experiment is config 01
+(Llama-3 self-annotated): if 01 also lands ~10 BLEU on en-ar, the backbone is the cause and Fig 5's
+cross-family cell should be interpreted accordingly.
+
+**Artifacts.** unswnlporg/tor-simt-east-8b-from-2b-annot (final/ + sft_dataset.json + eval/).
+
 ### [RUN] 2026-09-02 — Config 06 (gemma_4b_from_2b_annot) trained + full 55-cell eval on Katana (Quang)
 
 **Config.** Gemma-4-E4B-it SFT'd on Gemma-2B's OT chunks (cross-annotation, Fig 5 middle).
