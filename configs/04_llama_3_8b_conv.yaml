@@ -1,0 +1,82 @@
+# llama_3_8b_conv — Llama-3-8B-Instruct backbone, curated corpus, Conversational
+# SiMT recipe (Wang et al., 2024). Fig 2 & Fig 3 line 5 in docs/followup-
+# experiments.md.
+#
+# Wang 2024 uses fastalign; we substitute awesome-align (pip-installable,
+# mBERT-based). Chunking = alignment-graph segments (Rⱼ, Wⱼ). Inference =
+# greedy-per-chunk (simplification from Wang's RALCP). See LOG.md
+# 2026-08-31 for the recipe extraction + deviation list.
+#
+# STATUS: awesome-align + mBERT installed (job 177879495 DONE); Wang §2
+# recipe documented in scripts/07_conv.py docstring. Blocker: per-latency
+# training strategy (a/b/c in LOG.md) still awaits user decision before
+# scripts/07_conv.py::main() can be written.
+#
+# 2026-09-01 backbone switch: was biaofu-xmu/EAST-8B (contaminated
+# baseline). Now base Meta-Llama-3-8B-Instruct. See LOG.md.
+#
+# Run: bin/run configs/04_llama_3_8b_conv.yaml --ngpus 1
+
+tag: llama_3_8b_conv
+
+backbone:
+  hf_id: meta-llama/Meta-Llama-3-8B-Instruct
+  local_path: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct
+  is_instruct: true                                          # Llama-3 chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct-extended-v6
+                                                             # ← built by bin/04_prepare_tokenizer
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 10000
+    de-en: 10000
+    en-ru: 10000
+    ru-en: 10000
+    en-ar: 10000
+    ar-en: 10000
+    en-vi: 10000
+    vi-en: 10000
+  human_target_only: true
+
+annotate:
+  annotator: awesome-align                     # external aligner
+  criterion: conv-simt                         # NEW criterion — needs impl
+  k_cv: 4                                      # Wang 2024 default: tokens per decode step
+  tau: 0
+  top_k: 0
+  lookahead_k: 0
+  latency_bins: [low, medium, high]
+
+sft_dataset:
+  merge_small_chunks: false
+  keep_collapsed_rows: false
+  format: multi_turn_dialogue                  # Wang 2024 §2
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2
+  grad_accum_steps: 8
+  learning_rate: 1.0e-5
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt22: [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
+  latencies: [low, medium, high]
+  n_sentences: -1                   # -1 = full test set; override per-run with CLI
+  policy: conv_simt_kcv
+  mode: streaming
+
+
+plot:
+  color: "#8e44ad"
+  marker: P
+  label: EAST↺conv

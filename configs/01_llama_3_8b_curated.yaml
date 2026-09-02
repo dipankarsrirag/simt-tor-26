@@ -1,0 +1,79 @@
+# llama_3_8b_curated — Llama-3-8B-Instruct backbone, curated corpus, self-annotated.
+# The "full recipe" line in Fig 1, 2, 3, 4 of docs/followup-experiments.md.
+# Same annotator as backbone → self-annotation. OT criterion, tau=0.30.
+#
+# 2026-09-01 backbone switch: was biaofu-xmu/EAST-8B (already-EAST-trained),
+# now meta-llama/Meta-Llama-3-8B-Instruct (base, exact same starting point
+# EAST used). See LOG.md 2026-09-01. 2026-09-02: tag renamed east_8b_curated
+# → llama_3_8b_curated to match the backbone (HF repo path would've said
+# "east-8b" but contained a Llama-3 checkpoint). Plot label `EAST↺ours`
+# retained in the plot: section for figure-legend continuity.
+# biaofu-xmu/EAST-8B released checkpoint is the published-competitor
+# reference line only, never a starting point.
+#
+# Run: bin/run configs/01_llama_3_8b_curated.yaml --ngpus 1
+
+tag: llama_3_8b_curated
+
+backbone:
+  hf_id: meta-llama/Meta-Llama-3-8B-Instruct
+  local_path: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct
+  is_instruct: true                                          # Llama-3 chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct-extended-v6
+                                                             # ← built by bin/04_prepare_tokenizer
+                                                             # (base Llama doesn't ship EOR/EOW)
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 10000
+    de-en: 10000
+    en-ru: 10000
+    ru-en: 10000
+    en-ar: 10000
+    ar-en: 10000
+    en-vi: 10000
+    vi-en: 10000
+  human_target_only: true
+
+annotate:
+  annotator: same_as_backbone                                # self-annotation with Llama-3-8B-Instruct
+  criterion: ot
+  tau: 0.30
+  top_k: 128
+  lookahead_k: 0
+  latency_bins: [low, medium, high]                          # 3-bin (matches EAST paper)
+
+sft_dataset:
+  merge_small_chunks: true
+  min_src_words: 4
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2                                   # 8B needs smaller batch
+  grad_accum_steps: 8                                        # effective batch = 16
+  learning_rate: 1.0e-5                                      # lower LR for 8B
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt15: [de-en]
+    wmt22: [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
+  latencies: [low, medium, high]
+  n_sentences: -1                   # -1 = full test set; override per-run with CLI
+  policy: check_argmax
+  mode: streaming
+
+
+plot:
+  color: "#c0392b"
+  marker: o
+  label: EAST↺ours

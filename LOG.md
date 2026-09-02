@@ -30,6 +30,50 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [DECISION] 2026-09-02 — Rename `east_8b_*` tags → `llama_3_8b_*` (backbone-truth naming)
+
+**Context.** After the 2026-09-01 backbone switch (all 4 arms now start
+from `meta-llama/Meta-Llama-3-8B-Instruct`, not `biaofu-xmu/EAST-8B`),
+the tag `east_8b_curated` (and siblings) became misleading. Concretely,
+the HF push path would have been `unswnlporg/tor-simt-east-8b-curated`
+— a repo named "east-8b" containing a Llama-3-8B checkpoint. User
+caught this before any HF upload landed (matrices-push job 178021714
+was 8s into execution).
+
+**Chose.** Full tag rename `east_8b_* → llama_3_8b_*` across:
+  - Configs: `01_east_8b_curated → 01_llama_3_8b_curated`, `02 → 02_llama_3_8b_machine_targets`, `03 → 03_llama_3_8b_waitk`, `04 → 04_llama_3_8b_conv`, `07 → 07_llama_3_8b_from_2b_annot`.
+  - `tag:` field inside each config + all internal path refs.
+  - PBS scripts: `sft_east_8b_*.pbs → sft_llama_3_8b_*.pbs`, all 8
+    `annot_east_8b_curated_*.pbs → annot_llama_3_8b_curated_*.pbs`.
+  - Filesystem: `results/sft_dataset/east_8b_* → llama_3_8b_*`,
+    `results/annotate/PILOT_EAST-8B → PILOT_LLAMA-3-8B`.
+  - `configs/README.md`, `EXPERIMENTS.md` status tables.
+  - Matrices push script `push_matrices_llama8b_gemma4b.pbs` CONFIGS list
+    and repo-URL comments (`tor-simt-east-8b-curated → tor-simt-llama-3-8b-curated`).
+  - Placeholder future config `09_east_east_ot.yaml → 09_llama_3_east_ot.yaml`.
+
+**Retained (deliberately).** Plot legend labels (`EAST↺ours`, `EAST↺waitk`,
+etc.) in each config's `plot:` section. These describe the paper's
+figure-legend semantics ("competitor-family arm trained with X") and are
+independent of the on-disk backbone identity. Renaming plot labels would
+require redrawing every figure in the paper draft.
+
+**Not renamed.** Historical `logs/annot_east_8b_curated_*.log` files
+(annotation is DONE, log filenames are artifacts of the original
+submission — leave as-is). `docs/refactor.md` archival planning notes.
+
+**Applied.** Jobs 178009806 (Config 01 SFT), 178009807 (Config 03 SFT),
+178021714 (matrices push) qdel'd BEFORE any HF upload landed. User will
+delete any auto-created `tor-simt-east-8b-curated` shells from HF side.
+Resubmitted matrices push + both SFTs under new tags.
+
+**Revisit if.** Paper reviewers ask why the file paths say "llama_3_8b"
+but the figure legends say "EAST↺" — flag this in the caption: "arm
+name follows EAST-family convention; backbone is base Llama-3-8B-Instruct
+as documented in the config path."
+
+---
+
 ### [DECISION] 2026-09-01 — Revert configs 01-05 to 10K/dir (match shipped baseline, not 30K)
 
 **Context.** Configs 01, 02, 03, 04, 05 shipped with `en-de: 30000` etc.
@@ -200,7 +244,7 @@ than Llama's).
         already flagged as reject-byte-identical.
 
 Awaiting user decision before submitting the full-run PBS scripts for
-configs 01 (`east_8b_curated`) and 05 (`gemma_4b_curated`).
+configs 01 (`llama_3_8b_curated`) and 05 (`gemma_4b_curated`).
 
 ---
 
@@ -294,7 +338,7 @@ sec/sent on 100 sentences.
 **Result.** Held (H state) initially due to po67 storage overrun; qalter'd
 to `-P ba39` per the concurrent decision above. Pilots each print sec/sent
 + extrapolated 240K-row GPU-h at the end. Results feed the go/no-go on
-configs 01 (`east_8b_curated`) and 05 (`gemma_4b_curated`).
+configs 01 (`llama_3_8b_curated`) and 05 (`gemma_4b_curated`).
 
 **Read.** If EAST-8B sec/sent extrapolates to > ~50 GPU-h for 240K rows,
 consider sentence-batched annotator (2026-08-22 decision, 15× speedup at

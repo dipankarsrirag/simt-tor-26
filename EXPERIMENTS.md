@@ -15,10 +15,10 @@ Model checkpoints are **never committed to git** (`.gitignore` covers `*.safeten
 | # | Config | What it is | Eval sets |
 |---|---|---|---|
 | 00 | `configs/00_gemma_2b_curated.yaml` | Gemma-2B + curated + self-annotate. **Already run** — artifacts in `_archive/results/gemma_2b_curated/`. Doubles as Fig 4 left. | WMT15 · WMT22 · IWSLT17 · IWSLT15 |
-| 01 | `configs/01_east_8b_curated.yaml` | EAST-8B + curated + self-annotation. Fig 1, 2, 3, 4 right. | WMT15 · WMT22 · IWSLT17 · IWSLT15 |
-| 02 | `configs/02_east_8b_machine_targets.yaml` | EAST-8B + curated sources + EAST-8B-machine-translated targets. Fig 1, 2 line 3 (Q1b — target-quality ablation). **Needs the retranslation preprocessing step first** (see config header). | WMT15 · WMT22 · IWSLT17 · IWSLT15 |
-| 03 | `configs/03_east_8b_waitk.yaml` | EAST-8B + curated + **wait-k policy**. Fig 2, 3 line 4. **Needs `wait-k` criterion added to `scripts/07_annotate.py`.** | WMT22 · IWSLT17 · IWSLT15 |
-| 04 | `configs/04_east_8b_conv.yaml` | EAST-8B + curated + **Conversational SiMT** (Wang 2024). Fig 2, 3 line 5. **Needs the conv-simt criterion + policy modules.** | WMT22 · IWSLT17 · IWSLT15 |
+| 01 | `configs/01_llama_3_8b_curated.yaml` | **Llama-3-8B-Instruct** (base) + curated + self-annotation. Fig 1, 2, 3, 4 right. `EAST↺ours` on figure legends. | WMT15 · WMT22 · IWSLT17 · IWSLT15 |
+| 02 | `configs/02_llama_3_8b_machine_targets.yaml` | **DEFERRED 2026-09-01** — successor is `Llama-3↺east(ot)` planned as `09_llama_3_east_ot.yaml`. See LOG.md. | — |
+| 03 | `configs/03_llama_3_8b_waitk.yaml` | **Llama-3-8B-Instruct** (base) + curated + **wait-k policy** (procedural CPU chunker, `scripts/07_waitk.py`). Fig 2, 3 line 4. | WMT22 · IWSLT17 · IWSLT15 |
+| 04 | `configs/04_llama_3_8b_conv.yaml` | **Llama-3-8B-Instruct** (base) + curated + **Conversational SiMT** (Wang 2024, awesome-align). Fig 2, 3 line 5. **scripts/07_conv.py is a scaffold** — per-latency training strategy still to pick. | WMT22 · IWSLT17 · IWSLT15 |
 
 **First priority: push the existing Gemma-2B baseline to HF Hub** so Quang can pull its annotator matrices for 06/07:
 
@@ -39,7 +39,7 @@ That uploads the SFT checkpoint + tokenizer + `results/annotate/gemma-4-E2B-it/{
 |---|---|---|---|
 | 05 | `configs/05_gemma_4b_curated.yaml` | Gemma-4-E4B-it + curated + self-annotation. Fig 4 middle. | — |
 | 06 | `configs/06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it trained on **Gemma-2B's** annotations. Fig 5 middle. `--skip 2` (matrices come from Dipankar's HF push). | Dipankar's 00 must be pushed first. Pull matrices with `bin/12_pull_from_hub`. |
-| 07 | `configs/07_east_8b_from_2b_annot.yaml` | EAST-8B trained on Gemma-2B's annotations. Fig 5 right. `--skip 2`. | Same as 06. |
+| 07 | `configs/07_llama_3_8b_from_2b_annot.yaml` | **Llama-3-8B-Instruct** (base) trained on Gemma-2B's annotations. Fig 5 right. `--skip 2`. | Same as 06. |
 
 **Pull Dipankar's Gemma-2B matrices before starting 06/07:**
 

@@ -1,0 +1,79 @@
+# llama_3_8b_waitk — Llama-3-8B-Instruct backbone, curated corpus, wait-k policy.
+# Fig 2 & Fig 3 line 4 in docs/followup-experiments.md.
+#
+# Wait-k: commit an EOR every k source words (matches src/eval/extrinsic.py
+# streaming policy). k per latency in `wait_k_per_latency`. Chunker:
+# scripts/07_waitk.py (procedural, CPU-only, byte-identical BPE alignment).
+#
+# 2026-09-01 backbone switch: was biaofu-xmu/EAST-8B (contaminated
+# baseline — inherits EAST's OT-like streaming exposure). Now base
+# Meta-Llama-3-8B-Instruct so the wait-k arm is a fair chunk-quality
+# baseline. See LOG.md.
+#
+# Run: bin/run configs/03_llama_3_8b_waitk.yaml --ngpus 1
+
+tag: llama_3_8b_waitk
+
+backbone:
+  hf_id: meta-llama/Meta-Llama-3-8B-Instruct
+  local_path: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct
+  is_instruct: true                                          # Llama-3 chat template
+  tokenizer_dir: ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct-extended-v6
+                                                             # ← built by bin/04_prepare_tokenizer
+
+source_pool:
+  corpus: curated
+  directions:
+    en-de: 10000
+    de-en: 10000
+    en-ru: 10000
+    ru-en: 10000
+    en-ar: 10000
+    ar-en: 10000
+    en-vi: 10000
+    vi-en: 10000
+  human_target_only: true
+
+annotate:
+  annotator: none                              # policy is procedural, no LM forward pass
+  criterion: wait-k                            # NEW criterion — needs impl in 02_annotate.py
+  tau: 0                                       # unused for wait-k
+  wait_k_per_latency:                          # pre-registered per docs/followup-experiments.md
+    low:    3
+    medium: 5
+    high:   7
+  top_k: 0
+  lookahead_k: 0
+  latency_bins: [low, medium, high]
+
+sft_dataset:
+  merge_small_chunks: false                    # wait-k already gives regular chunk sizes
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2
+  grad_accum_steps: 8
+  learning_rate: 1.0e-5
+  warmup_steps: 200
+  eval_steps: 500
+  save_steps: 500
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt22: [de-en, en-de, ru-en, en-ru]
+    iwslt17: [de-en, en-de, ar-en, en-ar]
+    iwslt15: [vi-en, en-vi]
+  latencies: [low, medium, high]
+  n_sentences: -1                   # -1 = full test set; override per-run with CLI
+  policy: check_argmax
+  mode: streaming
+
+
+plot:
+  color: "#16a085"
+  marker: X
+  label: EAST↺waitk

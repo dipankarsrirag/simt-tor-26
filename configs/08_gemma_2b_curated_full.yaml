@@ -2,7 +2,7 @@
 # corpus (30K/dir × 8 = 240K rows), then SFTs. This is the Fig 4 LEFT line
 # in docs/followup-experiments.md — the 2B point in the 2B → 4B → 8B
 # scaling test, matched at 30K/dir to configs/05_gemma_4b_curated.yaml
-# and configs/01_east_8b_curated.yaml.
+# and configs/01_llama_3_8b_curated.yaml.
 #
 # Distinct from configs/00_gemma_2b_curated.yaml, which reproduces the
 # SHIPPED baseline at 10K/dir (~80K rows). Use `00` to reproduce v1

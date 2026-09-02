@@ -1,6 +1,6 @@
 # gemma_4b_curated — Gemma-4-E4B-it backbone, curated corpus, self-annotated.
 # Fig 4 middle line in docs/followup-experiments.md — the "does the recipe
-# scale?" story: 2B (gemma_2b_curated) → 4B (this) → 8B (east_8b_curated).
+# scale?" story: 2B (gemma_2b_curated) → 4B (this) → 8B (llama_3_8b_curated).
 #
 # Run: bin/run configs/gemma_4b_curated.yaml --ngpus 1
 

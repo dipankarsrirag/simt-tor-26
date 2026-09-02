@@ -1,0 +1,40 @@
+{
+  "config": {
+    "n_sentences_requested": 50,
+    "n_sentences_kept": 9118,
+    "n_sentences_annotated": 9118,
+    "criterion": "ot",
+    "seed": 42,
+    "model_path": "/g/data/po67/dipankar/models/Meta-Llama-3-8B-Instruct",
+    "max_src_tokens": 80,
+    "taus": [
+      0.3
+    ],
+    "prompt_mode": "chat",
+    "record_entropy": false,
+    "indices_file": null,
+    "lookahead_k": 0
+  },
+  "sweep": [
+    {
+      "tau": 0.3,
+      "fire_fraction": 0.9964904584338671,
+      "mean_committed_fraction": 0.9775457410513922,
+      "chunks_per_sentence_mean_ours": 5.34218030269796,
+      "chunks_per_sentence_mean_gpt4": 0.0,
+      "pearson_i_over_n_vs_j_over_m": {
+        "n_defined": 8902,
+        "n_nan": 216,
+        "min": -5.255955881681541e-16,
+        "median": 0.8871386018907612,
+        "max": 0.9919156224708092
+      }
+    }
+  ],
+  "env": {
+    "device": "cuda",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "git_commit": "22c5889a5f88f1c8cd48728301457d04b01009d6"
+  }
+}

@@ -15,7 +15,7 @@
 # Surgical checkpoint push of the two new-backbone annotator matrices,
 # BEFORE their SFT finishes. Mirror pattern of push_source_pool_gemma_2b_
 # curated.pbs. Uploads:
-#   results/annotate/Meta-Llama-3-8B-Instruct/{pair}/matrices.jsonl → tor-simt-east-8b-curated
+#   results/annotate/Meta-Llama-3-8B-Instruct/{pair}/matrices.jsonl → tor-simt-llama-3-8b-curated
 #   results/annotate/gemma-4-E4B-it/{pair}/matrices.jsonl           → tor-simt-gemma-4b-curated
 # to BOTH unswnlporg/ and srirag/ orgs, so 2 configs × 2 orgs = 4 repos.
 # Also uploads source_pool.json to each (matrices are unjoinable without it).
@@ -47,7 +47,7 @@ SRC_POOL = REPO_ROOT / "results" / "sft_dataset" / "gemma_2b_curated" / "source_
 
 # (tag, annotator_dir_name) — tag becomes HF repo name after hyphenation.
 CONFIGS = [
-    ("east_8b_curated", "Meta-Llama-3-8B-Instruct"),
+    ("llama_3_8b_curated", "Meta-Llama-3-8B-Instruct"),
     ("gemma_4b_curated", "gemma-4-E4B-it"),
 ]
 ORGS = ["unswnlporg", "srirag"]
