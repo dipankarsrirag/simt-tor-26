@@ -30,6 +30,46 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-09-02 — Config 06 (gemma_4b_from_2b_annot) trained + full 55-cell eval on Katana (Quang)
+
+**Config.** Gemma-4-E4B-it SFT'd on Gemma-2B's OT chunks (cross-annotation, Fig 5 middle).
+Inputs: `source_pool.json` (80,000 rows, pulled from unswnlporg/tor-simt-gemma-2b-curated) +
+the 8 pushed 2B matrices. Dataset built by `scripts/08_build_sft_dataset.py` (tau 0.30 ladder,
+merge_small_chunks min_src_words=4): 78,349 rows kept, 982 still-collapsed dropped,
+collapse-at-primary 23,033 — identical count to the Gadi htgt build log, so the join is faithful.
+Train: `src/train/sft.py`, bs 2 x accum 8, lr 1.5e-5, 2 epochs (9,304 steps), eval/save every 250.
+
+**Deviations (Katana disk/queue constraints).**
+- Checkpoints saved model-only (`SIMT_SAVE_ONLY_MODEL=1`, new env flag): 16G vs 41G with optimizer.
+  Consequence: `load_best_model_at_end` off — final/ is the LAST checkpoint, at most
+  patience(3) x 250 steps past the best. eval_loss at end: 2.002 (from 2.354 at step 250).
+- Trained as chained 2h PBS shards resuming from the newest complete checkpoint
+  (`jobs/train_06_shard.pbs`); one Adam-state reset at the 250-step resume point.
+- vi test set = IWSLT15 tst2013 via HF `thainq107/iwslt2015-en-vi` parquet (1,268 rows,
+  Stanford tokenization); other sets via sacrebleu (wmt15 n=2169, wmt22 4 dirs, iwslt17 4 dirs).
+
+**Eval.** 55 cells (11 direction-sets x 5 latencies), check_argmax streaming, full test sets,
+`src/eval/extrinsic.py`. All artifacts on HF: unswnlporg/tor-simt-gemma-4b-from-2b-annot
+(final/ + sft_dataset.json + eval/).
+
+**Result vs 2B self-annotated (v6bv2balv3htgt, same 55 cells, BLEU):** mean **+1.24**.
+Low latency is where the 4B wins big: wmt22 low +3.0 to +5.5, wmt15 low +5.27, iwslt17 low
++3.8 to +4.3 (de-en/ar-en). High latency roughly ties (+0.5 avg). Only consistent loss:
+vi-en at medium-high/high (-1.2, -2.4). The 4B also reaches the same BLEU at visibly lower AL
+on the high-latency prompts (e.g. iwslt17 en-de high: AL 8.9 vs 10.1).
+
+**Read.** Cross-annotation transfers UP in scale: a 4B trained on the 2B's chunks beats the 2B
+itself everywhere except vi-en, most at low latency. Fig 5 middle line is done; the RQ3 verdict
+(does 4B need self-annotation?) waits on Config 05 (Dipankar's Gadi run) for the matched
+4B-self comparison.
+
+**Ops notes for the repo:** `bin/run` Stage 1 passes `--config` that `06_build_source_pool.py`
+does not accept, and Stage 4 flag names do not match `sft.py`'s argparse — both would crash as
+rendered; ran the underlying scripts directly. `scripts/01_download_training_data.sh` ru-en URLs
+404 (statmt/OPUS name the pair en-ru). `_is_word_boundary_before` still checks SentencePiece
+`▁` only — Llama-3 tokenizers (`Ġ`) collapse every chunk at Stage 3; needs fixing before any
+EAST-8B dataset build.
+
 ### [DECISION] 2026-09-01 — Revert configs 01-05 to 10K/dir (match shipped baseline, not 30K)
 
 **Context.** Configs 01, 02, 03, 04, 05 shipped with `en-de: 30000` etc.

@@ -559,8 +559,45 @@ def augment_row_at_lower_chunk_counts(row: dict):
     return out
 
 
+def _prefix_char_lens(ids, tok):
+    # Decoded character length at every prefix cut 0..len(ids).
+    lens = [0]
+    for k in range(1, len(ids) + 1):
+        lens.append(len(tok.decode(ids[:k])))
+    return lens
+
+
+def remap_commit_to_backbone(commit, ann_src_ids, ann_tgt_ids, ann_tok,
+                             bb_src_ids, bb_tgt_ids, bb_tok):
+    """Map a per-target-token commit vector from the annotator's token space
+    to the backbone's token space, matching positions by decoded character
+    offsets. Needed when annotator and backbone use different tokenizers
+    (e.g. Gemma-2B chunks -> Llama-3 backbone)."""
+    a_src = _prefix_char_lens(ann_src_ids, ann_tok)
+    a_tgt = _prefix_char_lens(ann_tgt_ids, ann_tok)
+    b_src = _prefix_char_lens(bb_src_ids, bb_tok)
+    b_tgt = _prefix_char_lens(bb_tgt_ids, bb_tok)
+
+    def src_to_bb(i):
+        want = a_src[i]
+        for j in range(len(b_src)):
+            if b_src[j] >= want:
+                return j
+        return len(bb_src_ids)
+
+    out = []
+    for bj in range(len(bb_tgt_ids)):
+        # annotator target token that contains this backbone token's start char
+        start = b_tgt[bj]
+        aj = 0
+        while aj < len(ann_tgt_ids) - 1 and a_tgt[aj + 1] <= start:
+            aj += 1
+        out.append(src_to_bb(commit[aj]))
+    return _enforce_monotone(out)
+
+
 def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
-                  corpus_by_idx: dict, reassign_latency: bool = True,
+                  corpus_by_idx: dict, ann_tokenizer=None, reassign_latency: bool = True,
                   merge_small: bool = False, min_src_words: int = 2,
                   min_src_chars_cjk: int = 4, merge_stranded: bool = False,
                   refine_bounds: bool = False, refine_window: int = 3,
@@ -639,7 +676,20 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
             # tokenization by concatenation. Both are now the case.
             src_ids_orig = tokenizer(src_clean, add_special_tokens=False)["input_ids"]
             tgt_ids_orig = tokenizer(tgt_clean, add_special_tokens=False)["input_ids"]
-            if len(src_ids_orig) != n or len(tgt_ids_orig) != m:
+            if ann_tokenizer is not None:
+                # Cross-tokenizer mode: matrix dims live in the ANNOTATOR's
+                # token space. Validate there, then remap the commit vector
+                # into the backbone's token space by character offsets.
+                ann_src = ann_tokenizer(src_clean, add_special_tokens=False)["input_ids"]
+                ann_tgt = ann_tokenizer(tgt_clean, add_special_tokens=False)["input_ids"]
+                if len(ann_src) != n or len(ann_tgt) != m:
+                    skipped += 1
+                    continue
+                commit = remap_commit_to_backbone(
+                    commit, ann_src, ann_tgt, ann_tokenizer,
+                    src_ids_orig, tgt_ids_orig, tokenizer)
+                n = len(src_ids_orig)
+            elif len(src_ids_orig) != n or len(tgt_ids_orig) != m:
                 skipped += 1
                 continue
 
@@ -649,6 +699,10 @@ def build_dataset(matrices_path: Path, tau_ladder: list[float], tokenizer,
             # `rec["matrix"]` — must run BEFORE _chunks_from_commit while
             # the matrix + commit are still aligned. Preserves monotonicity.
             # Disabled by default; removable by omitting the CLI flag.
+            if refine_bounds and ann_tokenizer is not None:
+                raise ValueError("--refine_boundaries needs the matrix aligned "
+                                 "to the commit vector; not valid in "
+                                 "cross-tokenizer (--annotator_tokenizer_path) mode")
             if refine_bounds:
                 from src.annotator.boundary_refine import refine_boundaries
                 commit = refine_boundaries(
@@ -778,6 +832,11 @@ def main():
                          "custom pool JSON (e.g. multilingual_source_pool_v5.json). "
                          "Indices in matrices.jsonl must resolve within this pool.")
     ap.add_argument("--tokenizer_path", type=str, default=str(PRIMARY_BACKBONE))
+    ap.add_argument("--annotator_tokenizer_path", type=str, default=None,
+                    help="Tokenizer the ANNOTATOR used, when it differs from "
+                         "--tokenizer_path (cross-family transfer, e.g. Gemma "
+                         "matrices -> Llama backbone). Commit points are then "
+                         "remapped between token spaces by character offsets.")
     ap.add_argument("--tau", type=float, default=0.30,
                     help="Primary OT divergence threshold. Default 0.30 (Gate-1 Config F primary).")
     ap.add_argument("--tau_fallbacks", type=str, default="0.50,0.70,1.00",
@@ -858,6 +917,10 @@ def main():
     from transformers import AutoTokenizer
     print(f"Loading tokenizer from {args.tokenizer_path}", flush=True)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    ann_tokenizer = None
+    if args.annotator_tokenizer_path:
+        print(f"Loading annotator tokenizer from {args.annotator_tokenizer_path}", flush=True)
+        ann_tokenizer = AutoTokenizer.from_pretrained(args.annotator_tokenizer_path)
 
     corpus_path = args.corpus_json if args.corpus_json is not None else CORPUS
     print(f"Loading source-lookup corpus from {corpus_path}", flush=True)
@@ -888,6 +951,7 @@ def main():
     }
     for mp in matrices_paths:
         kept_i, stats_i = build_dataset(mp, tau_ladder, tokenizer, corpus_by_idx,
+                                        ann_tokenizer=ann_tokenizer,
                                         reassign_latency=reassign_latency,
                                         merge_small=args.merge_small_chunks,
                                         min_src_words=args.min_src_words,

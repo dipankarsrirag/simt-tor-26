@@ -312,7 +312,23 @@ def main():
     # cleanup (last is discarded once best is loaded). Intermediate checkpoint-*
     # dirs are then removed post-train.
     from transformers import Trainer
-    if eval_ds is not None:
+    # Model-only checkpoints for small-disk clusters: drops optimizer/scheduler
+    # from saves (41G -> 16G per checkpoint). Incompatible with
+    # load_best_model_at_end, so early stopping then keeps the LAST checkpoint
+    # (at most patience*eval_steps past the best).
+    save_only_model = os.environ.get("SIMT_SAVE_ONLY_MODEL", "0") == "1"
+    if eval_ds is not None and save_only_model:
+        eval_and_save_steps = args.eval_steps
+        strategy_kwargs = dict(
+            eval_strategy="steps",
+            save_strategy="steps",
+            eval_steps=eval_and_save_steps,
+            save_steps=eval_and_save_steps,
+            save_only_model=True,
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
+        )
+    elif eval_ds is not None:
         # Align eval + save cadence for load_best_model_at_end
         eval_and_save_steps = args.eval_steps
         strategy_kwargs = dict(
@@ -409,7 +425,15 @@ def main():
 
     print("\nStarting training ...", flush=True)
     t0 = time.time()
-    train_result = trainer.train()
+    # Resume from the newest checkpoint-N dir if one exists, so a walltime
+    # kill on a short-queue cluster continues instead of restarting.
+    ckpts = sorted((p for p in args.output_dir.glob("checkpoint-*")
+                    if (p / "trainer_state.json").exists()),
+                   key=lambda p: int(p.name.split("-")[-1]))
+    resume = str(ckpts[-1]) if ckpts else None
+    if resume:
+        print(f"  resuming from {resume}", flush=True)
+    train_result = trainer.train(resume_from_checkpoint=resume)
     wall = time.time() - t0
 
     print(f"\nTraining complete in {wall:.1f}s")
