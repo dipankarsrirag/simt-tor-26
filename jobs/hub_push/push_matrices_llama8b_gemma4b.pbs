@@ -1,0 +1,117 @@
+#!/bin/bash
+#PBS -N hub_push_matrices
+#PBS -P ba39
+#PBS -q copyq
+#PBS -l ncpus=1
+#PBS -l mem=8GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
+#PBS -l wd
+#PBS -j oe
+#PBS -k oed
+#PBS -o /g/data/ba39/dipankar/simt-tor-26/logs/hub_push_matrices.log
+
+# Surgical checkpoint push of the two new-backbone annotator matrices,
+# BEFORE their SFT finishes. Mirror pattern of push_source_pool_gemma_2b_
+# curated.pbs. Uploads:
+#   results/annotate/Meta-Llama-3-8B-Instruct/{pair}/matrices.jsonl → tor-simt-east-8b-curated
+#   results/annotate/gemma-4-E4B-it/{pair}/matrices.jsonl           → tor-simt-gemma-4b-curated
+# to BOTH unswnlporg/ and srirag/ orgs, so 2 configs × 2 orgs = 4 repos.
+# Also uploads source_pool.json to each (matrices are unjoinable without it).
+#
+# Rationale: preserve annotation output early as insurance against SFT crash.
+# The full config-level push at end-of-pipeline will overwrite with identical
+# content (HF dedup on SHA — only first push transfers bytes).
+
+set -eo pipefail
+cd /g/data/ba39/dipankar/simt-tor-26
+export SIMT_REPO_ROOT=/g/data/ba39/dipankar/simt-tor-26
+source jobs/env.sh
+export HF_HUB_DISABLE_XET=1   # xet backend has flaked on new repo shards
+
+export HF_TOKEN=$(python3 -c "
+import sys
+sys.path.insert(0, '/g/data/po67/dipankar/models')
+from get_model import HF_TOKEN
+print(HF_TOKEN)
+")
+
+python3 - <<'PYEOF'
+import os, sys
+from pathlib import Path
+from huggingface_hub import HfApi, create_repo
+
+REPO_ROOT = Path("/g/data/ba39/dipankar/simt-tor-26")
+SRC_POOL = REPO_ROOT / "results" / "sft_dataset" / "gemma_2b_curated" / "source_pool.json"
+
+# (tag, annotator_dir_name) — tag becomes HF repo name after hyphenation.
+CONFIGS = [
+    ("east_8b_curated", "Meta-Llama-3-8B-Instruct"),
+    ("gemma_4b_curated", "gemma-4-E4B-it"),
+]
+ORGS = ["unswnlporg", "srirag"]
+DIRS = ["de-en", "en-de", "ru-en", "en-ru", "ar-en", "en-ar", "vi-en", "en-vi"]
+
+api = HfApi()
+
+for tag, annot_name in CONFIGS:
+    repo_name = f"tor-simt-{tag.replace('_', '-')}"
+    matrices_root = REPO_ROOT / "results" / "annotate" / annot_name
+    if not matrices_root.exists():
+        print(f"SKIP {tag}: {matrices_root} missing")
+        continue
+
+    for org in ORGS:
+        repo_id = f"{org}/{repo_name}"
+        print(f"\n{'='*72}")
+        print(f"Preparing {repo_id}")
+        print(f"  matrices from: {matrices_root}")
+        print(f"  source pool  : {SRC_POOL}")
+
+        try:
+            create_repo(repo_id, private=True, exist_ok=True, repo_type="model")
+        except Exception as e:
+            print(f"  create_repo FAIL: {type(e).__name__}: {e}")
+            sys.exit(1)
+
+        # Upload source_pool.json (matrices index into it)
+        print(f"  Uploading source_pool.json ({SRC_POOL.stat().st_size / 1e6:.1f} MB) ...")
+        try:
+            api.upload_file(
+                path_or_fileobj=str(SRC_POOL),
+                path_in_repo="source_pool.json",
+                repo_id=repo_id,
+                repo_type="model",
+                commit_message="Add source_pool.json (matrices records index into this)",
+            )
+            print(f"    OK")
+        except Exception as e:
+            print(f"    FAIL: {type(e).__name__}: {e}")
+            sys.exit(1)
+
+        # Upload matrices per direction under annotate/{pair}/matrices.jsonl
+        for pair in DIRS:
+            m = matrices_root / pair / "matrices.jsonl"
+            if not m.exists():
+                print(f"  SKIP {pair}: {m} missing")
+                continue
+            size_mb = m.stat().st_size / 1e6
+            print(f"  Uploading annotate/{pair}/matrices.jsonl ({size_mb:.1f} MB) ...")
+            try:
+                api.upload_file(
+                    path_or_fileobj=str(m),
+                    path_in_repo=f"annotate/{pair}/matrices.jsonl",
+                    repo_id=repo_id,
+                    repo_type="model",
+                    commit_message=f"Add annotate/{pair}/matrices.jsonl (checkpoint before SFT)",
+                )
+                print(f"    OK")
+            except Exception as e:
+                print(f"    FAIL: {type(e).__name__}: {e}")
+                sys.exit(1)
+
+        print(f"  Done: https://huggingface.co/{repo_id}")
+
+print("\nAll pushes complete.")
+PYEOF
