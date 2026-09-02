@@ -52,6 +52,15 @@ cross-family cell should be interpreted accordingly.
 
 **Artifacts.** unswnlporg/tor-simt-east-8b-from-2b-annot (final/ + sft_dataset.json + eval/).
 
+**Backbone sanity check (2026-09-02, measured).** Untouched Meta-Llama-3-8B-Instruct, plain
+chat-prompt greedy generation on the first 200 IWSLT17 en-ar sentences (script
+`base_enar.py`, sacrebleu): **BLEU 1.99**, hyp/ref length ratio 3.49 (pads output with
+English notes, mixed-script tokens). Our SFT checkpoint scores 10.6 on the same pairs
+(streaming, high latency). So the low en->X numbers are the backbone's multilingual
+ceiling, and SFT on the transferred chunks improved it ~5x; the cross-tokenizer remap is
+not the cause. Note: `extrinsic.py --mode offline` still uses the pre-v6 prompt format
+and cannot evaluate v6-style checkpoints (emits `<|high-latency|>`-prefixed echoes).
+
 ### [RUN] 2026-09-02 — Config 06 (gemma_4b_from_2b_annot) trained + full 55-cell eval on Katana (Quang)
 
 **Config.** Gemma-4-E4B-it SFT'd on Gemma-2B's OT chunks (cross-annotation, Fig 5 middle).
