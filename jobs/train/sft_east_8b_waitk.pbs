@@ -1,12 +1,12 @@
 #!/bin/bash
 #PBS -N sft_east_8b_waitk
-#PBS -P po67
+#PBS -P ba39
 #PBS -q gpuhopper
 #PBS -l ncpus=12
 #PBS -l ngpus=1
 #PBS -l mem=240GB
 #PBS -l jobfs=120GB
-#PBS -l walltime=24:00:00
+#PBS -l walltime=10:00:00
 #PBS -l storage=gdata/ba39+gdata/po67+scratch/po67
 #PBS -l wd
 #PBS -j oe
