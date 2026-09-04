@@ -9,7 +9,8 @@
 # line as well: Katana picks the queue tier from it.
 # One eval cell. Pass TS (wmt15|wmt22|iwslt17|iwslt15), PAIR (de-en) and
 # LAT (low|low-medium|medium|medium-high|high) with qsub -v. Skips cells that
-# already have output, so the sweep can be resubmitted.
+# already have output, so the sweep can be resubmitted. The test sets come
+# from scripts/fetch_eval_testsets.sh.
 
 set -eo pipefail
 cd ${SIMT_REPO_ROOT:-$PBS_O_WORKDIR}
