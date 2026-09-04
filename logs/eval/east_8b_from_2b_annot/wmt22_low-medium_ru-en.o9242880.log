@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 2016 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/2016] src='С моей точки зрения, программа по литературе формировалась дамами баль'
+           hyp="In my view, the literature program was being constructed by women of Balthazar's age on the basis of their interests."
+           corpus AL so far: mean=3.88  n=1
+  [2/2016] src='Из русской литературы 19 века мы предпочитали Данилевского и Волконско'
+           hyp='From 19th-century Russian literature, we preferred Danilevsky and Volokonsky.'
+           corpus AL so far: mean=3.44  n=2
+  [3/2016] src='Они писали беллетристику, конечно, с точки зрения тех самых дам бальза'
+           hyp='They wrote fiction, of course, from the point of view of those same middle-aged women.'
+           corpus AL so far: mean=2.97  n=3
+[extrinsic] generation wall: 1119.8s (0.56s/sent)
+[extrinsic] BLEU = 28.66 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.28  median=3.05  n_defined=2016/2016
+[extrinsic] LAAL mean=2.93  median=2.82  n_defined=2016/2016
+[extrinsic] chunks/sent mean=3.06  median=3.0
+[extrinsic] source-exhausted-without-eor: 74/2016
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/wmt22_stream_east_8b_from_2b_annot_check_argmax_low-medium_ru-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 14:59:53
+
+Job Id: 9242880
+Queue: CSE
+Walltime: 00:19:24  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    3    |     1       0.92       92%    | 97887 MiB  15.82G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.92      92.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.97      12.0%   |  100.0gb   16.37gb    16.4%   |
+--------------------------------------------------------------------------------

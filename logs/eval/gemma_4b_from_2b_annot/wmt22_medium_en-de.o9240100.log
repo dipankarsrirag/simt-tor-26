@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='You can come back any time as our chat service window is open 24/7'
+           hyp='Sie können jederzeit wiederkommen, wenn Sie möchten, und unser Chat-Service-Fenster ist 24/7 geöffnet.'
+           corpus AL so far: mean=4.80  n=1
+  [2/2037] src='I sincerely hope you get to find a resolution'
+           hyp='Ich hoffe aufrichtig, dass Sie eine Lösung finden,'
+           corpus AL so far: mean=3.83  n=2
+  [3/2037] src='Thank you for contacting #PRS_ORG#, it was my pleasure to assist you t'
+           hyp='Vielen Dank für Ihre Kontaktaufnahme mit der Organisation #PRS_ORG#, es war mir eine Freude, Ihnen heute behilflich zu sein.'
+           corpus AL so far: mean=3.33  n=3
+[extrinsic] generation wall: 5899.3s (2.90s/sent)
+[extrinsic] BLEU = 27.17 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.93  median=3.56  n_defined=2037/2037
+[extrinsic] LAAL mean=3.63  median=3.33  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.19  median=3.0
+[extrinsic] source-exhausted-without-eor: 84/2037
+[extrinsic] write-cap hits: 5
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/wmt22_stream_gemma_4b_from_2b_annot_check_argmax_medium_en-de.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 08:03:00
+
+Job Id: 9240100
+Queue: CSE
+Walltime: 01:39:11  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k110    2    |     1       0.84       84%    | 40960 MiB   7.36G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.84      84.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k110         |     8       0.99      12.0%   |  100.0gb   15.77gb    15.8%   |
+--------------------------------------------------------------------------------

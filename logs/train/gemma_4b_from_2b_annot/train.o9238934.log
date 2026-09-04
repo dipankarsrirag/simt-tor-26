@@ -1,0 +1,356 @@
+9239338.kman.restech.unsw.edu.au
+Output dir: results/train/gemma_4b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/gemma-4-E4B-it
+Tokenizer: results/train/gemma_4b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 262,146
+Loading model from /srv/scratch/z5531827/simt-models/gemma-4-E4B-it ...
+
+  loaded; original embed rows: 262,144
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+  Row 0 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with high latency.<turn|>\n<|turn>model\nوهذا الشاب ، كان<|end-of-read|>And this guy, he was<|end-of-write|> يفعل الكثير من الأشياء السيئة .<|end-of-read|> up to a lot of no good.<|'
+    n_ids=67, labels_masked=32
+  Row 1 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with medium latency.<turn|>\n<|turn>model\nوأعتقد أن بعضا من هذه التقنيات ستمكننا من التواصل أكثر مع مرضانا،<|end-of-read|>And I think some of these technologies will enable us to b'
+    n_ids=134, labels_masked=32
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  23%|██▎       | 18000/78349 [00:00<00:00, 176084.52 examples/s]
+Filter:  47%|████▋     | 37000/78349 [00:00<00:00, 179647.33 examples/s]
+Filter:  71%|███████▏  | 56000/78349 [00:00<00:00, 181482.52 examples/s]
+Filter:  97%|█████████▋| 76000/78349 [00:00<00:00, 185084.99 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 183059.54 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  24%|██▍       | 19000/78349 [00:00<00:00, 183123.71 examples/s]
+Filter:  49%|████▊     | 38000/78349 [00:00<00:00, 179354.34 examples/s]
+Filter:  73%|███████▎  | 57000/78349 [00:00<00:00, 180927.32 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 59744.59 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 78351.32 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+  resuming from results/train/gemma_4b_from_2b_annot/checkpoint-5750
+[transformers] There were missing keys in the checkpoint model loaded: ['lm_head.weight'].
+
+{'loss': '1.895', 'grad_norm': '9.062', 'learning_rate': '4.9e-06', 'epoch': '1.247'}
+
+{'loss': '1.876', 'grad_norm': '9.312', 'learning_rate': '9.9e-06', 'epoch': '1.258'}
+
+{'loss': '1.878', 'grad_norm': '27.5', 'learning_rate': '1.49e-05', 'epoch': '1.268'}
+
+{'loss': '1.878', 'grad_norm': '8.188', 'learning_rate': '1.492e-05', 'epoch': '1.279'}
+
+{'loss': '1.914', 'grad_norm': '7.344', 'learning_rate': '1.484e-05', 'epoch': '1.29'}
+
+[A{'eval_loss': '2.022', 'eval_runtime': '67.42', 'eval_samples_per_second': '58.1', 'eval_steps_per_second': '29.06', 'epoch': '1.29'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.18s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.18s/it]
+
+{'loss': '1.911', 'grad_norm': '8.375', 'learning_rate': '1.476e-05', 'epoch': '1.301'}
+
+{'loss': '1.896', 'grad_norm': '8.5', 'learning_rate': '1.467e-05', 'epoch': '1.311'}
+
+{'loss': '1.896', 'grad_norm': '11.81', 'learning_rate': '1.459e-05', 'epoch': '1.322'}
+
+{'loss': '1.876', 'grad_norm': '9', 'learning_rate': '1.451e-05', 'epoch': '1.333'}
+
+{'loss': '1.917', 'grad_norm': '8.5', 'learning_rate': '1.443e-05', 'epoch': '1.344'}
+
+[A{'eval_loss': '2.017', 'eval_runtime': '60.69', 'eval_samples_per_second': '64.54', 'eval_steps_per_second': '32.28', 'epoch': '1.344'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.65s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.65s/it]
+
+{'loss': '1.911', 'grad_norm': '10', 'learning_rate': '1.435e-05', 'epoch': '1.354'}
+
+{'loss': '1.883', 'grad_norm': '7.906', 'learning_rate': '1.426e-05', 'epoch': '1.365'}
+
+{'loss': '1.898', 'grad_norm': '10', 'learning_rate': '1.418e-05', 'epoch': '1.376'}
+
+{'loss': '1.871', 'grad_norm': '9.812', 'learning_rate': '1.41e-05', 'epoch': '1.387'}
+
+{'loss': '1.898', 'grad_norm': '9.062', 'learning_rate': '1.402e-05', 'epoch': '1.397'}
+
+[A{'eval_loss': '2.013', 'eval_runtime': '61.29', 'eval_samples_per_second': '63.91', 'eval_steps_per_second': '31.96', 'epoch': '1.397'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.62s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.62s/it]
+
+{'loss': '1.88', 'grad_norm': '8.125', 'learning_rate': '1.394e-05', 'epoch': '1.408'}
+
+{'loss': '1.902', 'grad_norm': '11.69', 'learning_rate': '1.385e-05', 'epoch': '1.419'}
+
+{'loss': '1.891', 'grad_norm': '8.438', 'learning_rate': '1.377e-05', 'epoch': '1.429'}
+
+{'loss': '1.9', 'grad_norm': '9.438', 'learning_rate': '1.369e-05', 'epoch': '1.44'}
+
+{'loss': '1.889', 'grad_norm': '9.312', 'learning_rate': '1.361e-05', 'epoch': '1.451'}
+
+[A{'eval_loss': '2.01', 'eval_runtime': '60.53', 'eval_samples_per_second': '64.71', 'eval_steps_per_second': '32.37', 'epoch': '1.451'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.77s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.77s/it]
+
+{'loss': '1.906', 'grad_norm': '8.438', 'learning_rate': '1.353e-05', 'epoch': '1.462'}
+
+{'loss': '1.888', 'grad_norm': '7.844', 'learning_rate': '1.344e-05', 'epoch': '1.472'}
+
+{'loss': '1.886', 'grad_norm': '11.75', 'learning_rate': '1.336e-05', 'epoch': '1.483'}
+
+{'loss': '1.858', 'grad_norm': '8.25', 'learning_rate': '1.328e-05', 'epoch': '1.494'}
+
+{'loss': '1.917', 'grad_norm': '7.375', 'learning_rate': '1.32e-05', 'epoch': '1.505'}
+
+[A{'eval_loss': '2.004', 'eval_runtime': '60.57', 'eval_samples_per_second': '64.67', 'eval_steps_per_second': '32.34', 'epoch': '1.505'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.76s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.76s/it]
+
+{'loss': '1.88', 'grad_norm': '9.875', 'learning_rate': '1.312e-05', 'epoch': '1.515'}
+
+{'loss': '1.888', 'grad_norm': '7.875', 'learning_rate': '1.304e-05', 'epoch': '1.526'}
+
+{'loss': '1.867', 'grad_norm': '7.688', 'learning_rate': '1.295e-05', 'epoch': '1.537'}
+
+{'loss': '1.885', 'grad_norm': '8.875', 'learning_rate': '1.287e-05', 'epoch': '1.548'}
+
+{'loss': '1.899', 'grad_norm': '8', 'learning_rate': '1.279e-05', 'epoch': '1.558'}
+
+[A{'eval_loss': '1.998', 'eval_runtime': '60.24', 'eval_samples_per_second': '65.02', 'eval_steps_per_second': '32.52', 'epoch': '1.558'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.71s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.71s/it]
+
+{'loss': '1.886', 'grad_norm': '8.188', 'learning_rate': '1.271e-05', 'epoch': '1.569'}
+
+{'loss': '1.901', 'grad_norm': '9.312', 'learning_rate': '1.263e-05', 'epoch': '1.58'}
+
+{'loss': '1.913', 'grad_norm': '9.688', 'learning_rate': '1.254e-05', 'epoch': '1.591'}
+
+{'loss': '1.874', 'grad_norm': '8.312', 'learning_rate': '1.246e-05', 'epoch': '1.601'}
+
+{'loss': '1.903', 'grad_norm': '10.31', 'learning_rate': '1.238e-05', 'epoch': '1.612'}
+
+[A{'eval_loss': '1.998', 'eval_runtime': '59.42', 'eval_samples_per_second': '65.92', 'eval_steps_per_second': '32.97', 'epoch': '1.612'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.79s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.79s/it]
+
+{'loss': '1.898', 'grad_norm': '8.688', 'learning_rate': '1.23e-05', 'epoch': '1.623'}
+
+{'loss': '1.889', 'grad_norm': '8.312', 'learning_rate': '1.222e-05', 'epoch': '1.634'}
+
+{'loss': '1.894', 'grad_norm': '10', 'learning_rate': '1.213e-05', 'epoch': '1.644'}
+
+{'loss': '1.892', 'grad_norm': '10.06', 'learning_rate': '1.205e-05', 'epoch': '1.655'}
+
+{'loss': '1.878', 'grad_norm': '8.25', 'learning_rate': '1.197e-05', 'epoch': '1.666'}
+
+[A{'eval_loss': '1.993', 'eval_runtime': '60.26', 'eval_samples_per_second': '65', 'eval_steps_per_second': '32.51', 'epoch': '1.666'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:10<00:00, 10.54s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:10<00:00, 10.54s/it]
+
+{'loss': '1.894', 'grad_norm': '8.375', 'learning_rate': '1.189e-05', 'epoch': '1.677'}
+
+{'loss': '1.894', 'grad_norm': '9.875', 'learning_rate': '1.181e-05', 'epoch': '1.687'}
+
+{'loss': '1.868', 'grad_norm': '9.75', 'learning_rate': '1.172e-05', 'epoch': '1.698'}
+
+{'loss': '1.883', 'grad_norm': '7.125', 'learning_rate': '1.164e-05', 'epoch': '1.709'}
+
+{'loss': '1.908', 'grad_norm': '8.375', 'learning_rate': '1.156e-05', 'epoch': '1.72'}
+
+[A{'eval_loss': '1.991', 'eval_runtime': '59.76', 'eval_samples_per_second': '65.55', 'eval_steps_per_second': '32.78', 'epoch': '1.72'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.10s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.10s/it]
+
+{'loss': '1.876', 'grad_norm': '8.812', 'learning_rate': '1.148e-05', 'epoch': '1.73'}
+
+{'loss': '1.873', 'grad_norm': '8.688', 'learning_rate': '1.14e-05', 'epoch': '1.741'}
+
+{'loss': '1.873', 'grad_norm': '8.25', 'learning_rate': '1.131e-05', 'epoch': '1.752'}
+
+{'loss': '1.902', 'grad_norm': '8', 'learning_rate': '1.123e-05', 'epoch': '1.763'}
+
+{'loss': '1.888', 'grad_norm': '8.375', 'learning_rate': '1.115e-05', 'epoch': '1.773'}
+
+[A{'eval_loss': '1.987', 'eval_runtime': '60.52', 'eval_samples_per_second': '64.72', 'eval_steps_per_second': '32.37', 'epoch': '1.773'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.18s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.18s/it]
+
+{'loss': '1.906', 'grad_norm': '7.656', 'learning_rate': '1.107e-05', 'epoch': '1.784'}
+
+{'loss': '1.868', 'grad_norm': '7.594', 'learning_rate': '1.099e-05', 'epoch': '1.795'}
+
+{'loss': '1.886', 'grad_norm': '8.25', 'learning_rate': '1.091e-05', 'epoch': '1.806'}
+
+{'loss': '1.904', 'grad_norm': '8.75', 'learning_rate': '1.082e-05', 'epoch': '1.816'}
+
+{'loss': '1.891', 'grad_norm': '9.875', 'learning_rate': '1.074e-05', 'epoch': '1.827'}
+
+[A{'eval_loss': '1.986', 'eval_runtime': '59.98', 'eval_samples_per_second': '65.3', 'eval_steps_per_second': '32.66', 'epoch': '1.827'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.64s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.64s/it]
+
+{'loss': '1.866', 'grad_norm': '7.719', 'learning_rate': '1.066e-05', 'epoch': '1.838'}
+
+{'loss': '1.84', 'grad_norm': '8.125', 'learning_rate': '1.058e-05', 'epoch': '1.849'}
+
+{'loss': '1.896', 'grad_norm': '7.906', 'learning_rate': '1.05e-05', 'epoch': '1.859'}
+
+{'loss': '1.881', 'grad_norm': '7.469', 'learning_rate': '1.041e-05', 'epoch': '1.87'}
+
+{'loss': '1.871', 'grad_norm': '10.12', 'learning_rate': '1.033e-05', 'epoch': '1.881'}
+
+[A{'eval_loss': '1.984', 'eval_runtime': '59.48', 'eval_samples_per_second': '65.86', 'eval_steps_per_second': '32.94', 'epoch': '1.881'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.44s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.45s/it]
+
+{'loss': '1.882', 'grad_norm': '9.25', 'learning_rate': '1.025e-05', 'epoch': '1.892'}
+
+{'loss': '1.882', 'grad_norm': '7.656', 'learning_rate': '1.017e-05', 'epoch': '1.902'}
+
+{'loss': '1.909', 'grad_norm': '8.812', 'learning_rate': '1.009e-05', 'epoch': '1.913'}
+
+{'loss': '1.856', 'grad_norm': '9.125', 'learning_rate': '1e-05', 'epoch': '1.924'}
+
+{'loss': '1.874', 'grad_norm': '10.12', 'learning_rate': '9.922e-06', 'epoch': '1.935'}
+
+[A{'eval_loss': '1.982', 'eval_runtime': '60.28', 'eval_samples_per_second': '64.98', 'eval_steps_per_second': '32.5', 'epoch': '1.935'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.69s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.69s/it]
+
+{'loss': '1.875', 'grad_norm': '7.438', 'learning_rate': '9.84e-06', 'epoch': '1.945'}
+
+{'loss': '1.871', 'grad_norm': '8.125', 'learning_rate': '9.758e-06', 'epoch': '1.956'}
+
+{'loss': '1.875', 'grad_norm': '9.438', 'learning_rate': '9.676e-06', 'epoch': '1.967'}
+
+{'loss': '1.853', 'grad_norm': '8.25', 'learning_rate': '9.594e-06', 'epoch': '1.978'}
+
+{'loss': '1.879', 'grad_norm': '7.906', 'learning_rate': '9.512e-06', 'epoch': '1.988'}
+
+[A{'eval_loss': '1.98', 'eval_runtime': '60.33', 'eval_samples_per_second': '64.92', 'eval_steps_per_second': '32.47', 'epoch': '1.988'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.77s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.77s/it]
+
+{'loss': '1.897', 'grad_norm': '13.38', 'learning_rate': '9.43e-06', 'epoch': '1.999'}
+
+[A{'eval_loss': '1.979', 'eval_runtime': '59.96', 'eval_samples_per_second': '65.32', 'eval_steps_per_second': '32.67', 'epoch': '2'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.79s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.79s/it]
+
+{'train_runtime': '4304', 'train_samples_per_second': '34.59', 'train_steps_per_second': '2.162', 'train_loss': '0.7208', 'epoch': '2'}
+
+Training complete in 4347.4s
+  final train loss: 0.7208
+  best checkpoint (eval_loss): results/train/gemma_4b_from_2b_annot/checkpoint-9304 @ eval_loss=1.979414701461792
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it]
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it]
+  cleanup: rm -rf results/train/gemma_4b_from_2b_annot/checkpoint-9304
+
+Wrote summary to results/train/gemma_4b_from_2b_annot/sft_v6_summary.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 04:46:06
+
+Job Id: 9238934
+Queue: CSE
+Walltime: 01:16:18  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k099    0    |     1       0.64       64%    |143771 MiB   73.9G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.64      64.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k099         |     8       1.02      13.0%   |  100.0gb   47.69gb    47.7%   |
+--------------------------------------------------------------------------------

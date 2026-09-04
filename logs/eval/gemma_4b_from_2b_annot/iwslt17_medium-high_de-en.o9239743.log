@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1138 sentences
+  [1/1138] src='Das ist James Risen.'
+           hyp='This is James Risen.'
+           corpus AL so far: mean=4.00  n=1
+  [2/1138] src='Sie kennen ihn vielleicht, weil er als New-York-Times-Reporter den Pul'
+           hyp='You may know him, because he won the Pulitzer Prize as a New York Times reporter.'
+           corpus AL so far: mean=4.01  n=2
+  [3/1138] src='Lange bevor je jemand von Edward Snowden gehört hatte, schrieb Risen e'
+           hyp='Long before anyone had heard of Edward Snowden, Risen wrote a book in which he spectacularly revealed that the NSA was illegally tapping Ame'
+           corpus AL so far: mean=4.25  n=3
+[extrinsic] generation wall: 1233.6s (1.08s/sent)
+[extrinsic] BLEU = 30.64 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=4.59  median=3.95  n_defined=1138/1138
+[extrinsic] LAAL mean=3.78  median=3.43  n_defined=1138/1138
+[extrinsic] chunks/sent mean=2.41  median=2.0
+[extrinsic] source-exhausted-without-eor: 60/1138
+[extrinsic] write-cap hits: 11
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt17_stream_gemma_4b_from_2b_annot_check_argmax_medium-high_de-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:30:00
+
+Job Id: 9239743
+Queue: CSE
+Walltime: 00:21:39  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k203    1    |     1        0.5       50%    |143771 MiB  15.71G             |
+--------------------------------------------------------------------------------
+|Total         |     1        0.5      50.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k203         |     8       0.95      12.0%   |  32.0gb    15.76gb    49.2%   |
+--------------------------------------------------------------------------------

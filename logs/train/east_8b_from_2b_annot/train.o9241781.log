@@ -1,0 +1,723 @@
+9241784.kman.restech.unsw.edu.au
+Output dir: results/train/east_8b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/Meta-Llama-3-8B-Instruct
+Tokenizer: results/train/east_8b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 128,258
+Loading model from /srv/scratch/z5531827/simt-models/Meta-Llama-3-8B-Instruct ...
+
+  loaded; original embed rows: 128,256
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+[transformers] The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  Row 0 preview (first 300 chars of decoded):
+    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTranslate the following text from Arabic into English with high latency.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nوهذا الشاب ، كان<|end-of-read|'
+    n_ids=70, labels_masked=33
+  Row 1 preview (first 300 chars of decoded):
+    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTranslate the following text from Arabic into English with medium latency.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nوأعتقد أن بعضا من هذه التقني'
+    n_ids=140, labels_masked=33
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  20%|██        | 16000/78349 [00:00<00:00, 153990.05 examples/s]
+Filter:  43%|████▎     | 34000/78349 [00:00<00:00, 158954.74 examples/s]
+Filter:  65%|██████▌   | 51000/78349 [00:00<00:00, 157299.35 examples/s]
+Filter:  89%|████████▉ | 70000/78349 [00:00<00:00, 162987.74 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 162755.53 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  23%|██▎       | 18000/78349 [00:00<00:00, 167856.09 examples/s]
+Filter:  45%|████▍     | 35000/78349 [00:00<00:00, 167438.53 examples/s]
+Filter:  66%|██████▋   | 52000/78349 [00:00<00:00, 165035.31 examples/s]
+Filter:  89%|████████▉ | 70000/78349 [00:00<00:00, 167853.70 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 168751.90 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+
+{'loss': '37.53', 'grad_norm': '250', 'learning_rate': '2.45e-06', 'epoch': '0.01075'}
+
+{'loss': '26.85', 'grad_norm': '159', 'learning_rate': '4.95e-06', 'epoch': '0.0215'}
+
+{'loss': '24.08', 'grad_norm': '157', 'learning_rate': '7.45e-06', 'epoch': '0.03224'}
+
+{'loss': '20.57', 'grad_norm': '142', 'learning_rate': '9.95e-06', 'epoch': '0.04299'}
+
+{'loss': '17.63', 'grad_norm': '132', 'learning_rate': '9.946e-06', 'epoch': '0.05374'}
+
+[A{'eval_loss': '2.173', 'eval_runtime': '44.31', 'eval_samples_per_second': '88.39', 'eval_steps_per_second': '44.21', 'epoch': '0.05374'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it]
+
+{'loss': '17.01', 'grad_norm': '116', 'learning_rate': '9.891e-06', 'epoch': '0.06449'}
+
+{'loss': '16.61', 'grad_norm': '140', 'learning_rate': '9.836e-06', 'epoch': '0.07524'}
+
+{'loss': '16.62', 'grad_norm': '103.5', 'learning_rate': '9.781e-06', 'epoch': '0.08598'}
+
+{'loss': '16.2', 'grad_norm': '110', 'learning_rate': '9.726e-06', 'epoch': '0.09673'}
+
+{'loss': '15.99', 'grad_norm': '117', 'learning_rate': '9.672e-06', 'epoch': '0.1075'}
+
+[A{'eval_loss': '2.031', 'eval_runtime': '36.73', 'eval_samples_per_second': '106.7', 'eval_steps_per_second': '53.34', 'epoch': '0.1075'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.86s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.86s/it]
+
+{'loss': '16.05', 'grad_norm': '127.5', 'learning_rate': '9.617e-06', 'epoch': '0.1182'}
+
+{'loss': '16.16', 'grad_norm': '111', 'learning_rate': '9.562e-06', 'epoch': '0.129'}
+
+{'loss': '15.95', 'grad_norm': '100', 'learning_rate': '9.507e-06', 'epoch': '0.1397'}
+
+{'loss': '15.93', 'grad_norm': '150', 'learning_rate': '9.452e-06', 'epoch': '0.1505'}
+
+{'loss': '15.87', 'grad_norm': '117.5', 'learning_rate': '9.397e-06', 'epoch': '0.1612'}
+
+[A{'eval_loss': '1.991', 'eval_runtime': '36.72', 'eval_samples_per_second': '106.7', 'eval_steps_per_second': '53.34', 'epoch': '0.1612'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.69s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.69s/it]
+
+{'loss': '15.98', 'grad_norm': '132', 'learning_rate': '9.342e-06', 'epoch': '0.172'}
+
+{'loss': '15.83', 'grad_norm': '104', 'learning_rate': '9.287e-06', 'epoch': '0.1827'}
+
+{'loss': '15.97', 'grad_norm': '137', 'learning_rate': '9.232e-06', 'epoch': '0.1935'}
+
+{'loss': '15.64', 'grad_norm': '106.5', 'learning_rate': '9.177e-06', 'epoch': '0.2042'}
+
+{'loss': '15.56', 'grad_norm': '104.5', 'learning_rate': '9.122e-06', 'epoch': '0.215'}
+
+[A{'eval_loss': '1.972', 'eval_runtime': '36.72', 'eval_samples_per_second': '106.7', 'eval_steps_per_second': '53.35', 'epoch': '0.215'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.68s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.68s/it]
+
+{'loss': '15.46', 'grad_norm': '104.5', 'learning_rate': '9.067e-06', 'epoch': '0.2257'}
+
+{'loss': '15.49', 'grad_norm': '113', 'learning_rate': '9.013e-06', 'epoch': '0.2365'}
+
+{'loss': '15.49', 'grad_norm': '104.5', 'learning_rate': '8.958e-06', 'epoch': '0.2472'}
+
+{'loss': '15.71', 'grad_norm': '119.5', 'learning_rate': '8.903e-06', 'epoch': '0.258'}
+
+{'loss': '15.7', 'grad_norm': '112', 'learning_rate': '8.848e-06', 'epoch': '0.2687'}
+
+[A{'eval_loss': '1.956', 'eval_runtime': '36.87', 'eval_samples_per_second': '106.2', 'eval_steps_per_second': '53.13', 'epoch': '0.2687'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.72s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.72s/it]
+
+{'loss': '15.64', 'grad_norm': '109.5', 'learning_rate': '8.793e-06', 'epoch': '0.2794'}
+
+{'loss': '15.67', 'grad_norm': '95', 'learning_rate': '8.738e-06', 'epoch': '0.2902'}
+
+{'loss': '15.55', 'grad_norm': '97.5', 'learning_rate': '8.683e-06', 'epoch': '0.3009'}
+
+{'loss': '15.63', 'grad_norm': '116.5', 'learning_rate': '8.628e-06', 'epoch': '0.3117'}
+
+{'loss': '15.67', 'grad_norm': '128', 'learning_rate': '8.573e-06', 'epoch': '0.3224'}
+
+[A{'eval_loss': '1.94', 'eval_runtime': '36.85', 'eval_samples_per_second': '106.3', 'eval_steps_per_second': '53.16', 'epoch': '0.3224'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.54s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.54s/it]
+
+{'loss': '15.41', 'grad_norm': '103', 'learning_rate': '8.518e-06', 'epoch': '0.3332'}
+
+{'loss': '15.33', 'grad_norm': '106.5', 'learning_rate': '8.463e-06', 'epoch': '0.3439'}
+
+{'loss': '15.28', 'grad_norm': '101', 'learning_rate': '8.408e-06', 'epoch': '0.3547'}
+
+{'loss': '15.37', 'grad_norm': '106', 'learning_rate': '8.353e-06', 'epoch': '0.3654'}
+
+{'loss': '15.53', 'grad_norm': '112.5', 'learning_rate': '8.299e-06', 'epoch': '0.3762'}
+
+[A{'eval_loss': '1.929', 'eval_runtime': '36.62', 'eval_samples_per_second': '107', 'eval_steps_per_second': '53.5', 'epoch': '0.3762'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.56s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.56s/it]
+
+{'loss': '15.35', 'grad_norm': '104', 'learning_rate': '8.244e-06', 'epoch': '0.3869'}
+
+{'loss': '15.41', 'grad_norm': '98', 'learning_rate': '8.189e-06', 'epoch': '0.3977'}
+
+{'loss': '15.14', 'grad_norm': '121.5', 'learning_rate': '8.134e-06', 'epoch': '0.4084'}
+
+{'loss': '15.23', 'grad_norm': '93.5', 'learning_rate': '8.079e-06', 'epoch': '0.4192'}
+
+{'loss': '15.49', 'grad_norm': '120', 'learning_rate': '8.024e-06', 'epoch': '0.4299'}
+
+[A{'eval_loss': '1.919', 'eval_runtime': '36.86', 'eval_samples_per_second': '106.3', 'eval_steps_per_second': '53.15', 'epoch': '0.4299'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '15.49', 'grad_norm': '121', 'learning_rate': '7.969e-06', 'epoch': '0.4407'}
+
+{'loss': '15.46', 'grad_norm': '148', 'learning_rate': '7.914e-06', 'epoch': '0.4514'}
+
+{'loss': '15.4', 'grad_norm': '110', 'learning_rate': '7.859e-06', 'epoch': '0.4622'}
+
+{'loss': '15.26', 'grad_norm': '118', 'learning_rate': '7.804e-06', 'epoch': '0.4729'}
+
+{'loss': '15.32', 'grad_norm': '104.5', 'learning_rate': '7.749e-06', 'epoch': '0.4837'}
+
+[A{'eval_loss': '1.912', 'eval_runtime': '36.64', 'eval_samples_per_second': '106.9', 'eval_steps_per_second': '53.47', 'epoch': '0.4837'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '15.35', 'grad_norm': '97', 'learning_rate': '7.694e-06', 'epoch': '0.4944'}
+
+{'loss': '15.36', 'grad_norm': '140', 'learning_rate': '7.639e-06', 'epoch': '0.5052'}
+
+{'loss': '15.06', 'grad_norm': '96.5', 'learning_rate': '7.585e-06', 'epoch': '0.5159'}
+
+{'loss': '15.24', 'grad_norm': '135', 'learning_rate': '7.53e-06', 'epoch': '0.5267'}
+
+{'loss': '15.32', 'grad_norm': '97', 'learning_rate': '7.475e-06', 'epoch': '0.5374'}
+
+[A{'eval_loss': '1.907', 'eval_runtime': '36.66', 'eval_samples_per_second': '106.9', 'eval_steps_per_second': '53.44', 'epoch': '0.5374'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.67s/it]
+
+{'loss': '15.24', 'grad_norm': '93.5', 'learning_rate': '7.42e-06', 'epoch': '0.5482'}
+
+{'loss': '15.19', 'grad_norm': '96.5', 'learning_rate': '7.365e-06', 'epoch': '0.5589'}
+
+{'loss': '15.05', 'grad_norm': '100', 'learning_rate': '7.31e-06', 'epoch': '0.5696'}
+
+{'loss': '15.17', 'grad_norm': '115', 'learning_rate': '7.255e-06', 'epoch': '0.5804'}
+
+{'loss': '15', 'grad_norm': '99.5', 'learning_rate': '7.2e-06', 'epoch': '0.5911'}
+
+[A{'eval_loss': '1.9', 'eval_runtime': '36.8', 'eval_samples_per_second': '106.4', 'eval_steps_per_second': '53.23', 'epoch': '0.5911'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.21s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.21s/it]
+
+{'loss': '15.04', 'grad_norm': '94.5', 'learning_rate': '7.145e-06', 'epoch': '0.6019'}
+
+{'loss': '15.13', 'grad_norm': '98.5', 'learning_rate': '7.09e-06', 'epoch': '0.6126'}
+
+{'loss': '15.32', 'grad_norm': '100.5', 'learning_rate': '7.035e-06', 'epoch': '0.6234'}
+
+{'loss': '15.11', 'grad_norm': '101.5', 'learning_rate': '6.98e-06', 'epoch': '0.6341'}
+
+{'loss': '15.11', 'grad_norm': '117.5', 'learning_rate': '6.926e-06', 'epoch': '0.6449'}
+
+[A{'eval_loss': '1.896', 'eval_runtime': '36.81', 'eval_samples_per_second': '106.4', 'eval_steps_per_second': '53.21', 'epoch': '0.6449'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '15', 'grad_norm': '98', 'learning_rate': '6.871e-06', 'epoch': '0.6556'}
+
+{'loss': '15.08', 'grad_norm': '136', 'learning_rate': '6.816e-06', 'epoch': '0.6664'}
+
+{'loss': '15.04', 'grad_norm': '105.5', 'learning_rate': '6.761e-06', 'epoch': '0.6771'}
+
+{'loss': '14.9', 'grad_norm': '94', 'learning_rate': '6.706e-06', 'epoch': '0.6879'}
+
+{'loss': '14.98', 'grad_norm': '115.5', 'learning_rate': '6.651e-06', 'epoch': '0.6986'}
+
+[A{'eval_loss': '1.891', 'eval_runtime': '36.85', 'eval_samples_per_second': '106.3', 'eval_steps_per_second': '53.17', 'epoch': '0.6986'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.63s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.63s/it]
+
+{'loss': '14.87', 'grad_norm': '109', 'learning_rate': '6.596e-06', 'epoch': '0.7094'}
+
+{'loss': '15.03', 'grad_norm': '119', 'learning_rate': '6.541e-06', 'epoch': '0.7201'}
+
+{'loss': '15.17', 'grad_norm': '105.5', 'learning_rate': '6.486e-06', 'epoch': '0.7309'}
+
+{'loss': '15.09', 'grad_norm': '106', 'learning_rate': '6.431e-06', 'epoch': '0.7416'}
+
+{'loss': '15', 'grad_norm': '92', 'learning_rate': '6.376e-06', 'epoch': '0.7524'}
+
+[A{'eval_loss': '1.888', 'eval_runtime': '36.83', 'eval_samples_per_second': '106.3', 'eval_steps_per_second': '53.19', 'epoch': '0.7524'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '15.2', 'grad_norm': '121.5', 'learning_rate': '6.321e-06', 'epoch': '0.7631'}
+
+{'loss': '15.01', 'grad_norm': '94', 'learning_rate': '6.266e-06', 'epoch': '0.7739'}
+
+{'loss': '15.29', 'grad_norm': '116', 'learning_rate': '6.212e-06', 'epoch': '0.7846'}
+
+{'loss': '14.92', 'grad_norm': '101.5', 'learning_rate': '6.157e-06', 'epoch': '0.7954'}
+
+{'loss': '15.1', 'grad_norm': '94', 'learning_rate': '6.102e-06', 'epoch': '0.8061'}
+
+[A{'eval_loss': '1.884', 'eval_runtime': '36.79', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.25', 'epoch': '0.8061'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.59s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.59s/it]
+
+{'loss': '15.12', 'grad_norm': '108', 'learning_rate': '6.047e-06', 'epoch': '0.8169'}
+
+{'loss': '15.08', 'grad_norm': '106', 'learning_rate': '5.992e-06', 'epoch': '0.8276'}
+
+{'loss': '14.94', 'grad_norm': '101', 'learning_rate': '5.937e-06', 'epoch': '0.8383'}
+
+{'loss': '14.93', 'grad_norm': '99', 'learning_rate': '5.882e-06', 'epoch': '0.8491'}
+
+{'loss': '15', 'grad_norm': '97', 'learning_rate': '5.827e-06', 'epoch': '0.8598'}
+
+[A{'eval_loss': '1.881', 'eval_runtime': '36.79', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.24', 'epoch': '0.8598'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.57s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.57s/it]
+
+{'loss': '14.96', 'grad_norm': '98.5', 'learning_rate': '5.772e-06', 'epoch': '0.8706'}
+
+{'loss': '15.15', 'grad_norm': '112', 'learning_rate': '5.717e-06', 'epoch': '0.8813'}
+
+{'loss': '15.15', 'grad_norm': '101', 'learning_rate': '5.662e-06', 'epoch': '0.8921'}
+
+{'loss': '15.05', 'grad_norm': '113.5', 'learning_rate': '5.607e-06', 'epoch': '0.9028'}
+
+{'loss': '15', 'grad_norm': '113.5', 'learning_rate': '5.553e-06', 'epoch': '0.9136'}
+
+[A{'eval_loss': '1.878', 'eval_runtime': '36.78', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.26', 'epoch': '0.9136'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.57s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.57s/it]
+
+{'loss': '14.88', 'grad_norm': '95.5', 'learning_rate': '5.498e-06', 'epoch': '0.9243'}
+
+{'loss': '15.09', 'grad_norm': '99', 'learning_rate': '5.443e-06', 'epoch': '0.9351'}
+
+{'loss': '14.89', 'grad_norm': '116', 'learning_rate': '5.388e-06', 'epoch': '0.9458'}
+
+{'loss': '14.77', 'grad_norm': '100', 'learning_rate': '5.333e-06', 'epoch': '0.9566'}
+
+{'loss': '15', 'grad_norm': '91.5', 'learning_rate': '5.278e-06', 'epoch': '0.9673'}
+
+[A{'eval_loss': '1.876', 'eval_runtime': '36.72', 'eval_samples_per_second': '106.7', 'eval_steps_per_second': '53.34', 'epoch': '0.9673'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.65s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.65s/it]
+
+{'loss': '14.91', 'grad_norm': '94.5', 'learning_rate': '5.223e-06', 'epoch': '0.9781'}
+
+{'loss': '15.1', 'grad_norm': '96', 'learning_rate': '5.168e-06', 'epoch': '0.9888'}
+
+{'loss': '14.91', 'grad_norm': '110.5', 'learning_rate': '5.113e-06', 'epoch': '0.9996'}
+
+{'loss': '13.38', 'grad_norm': '104', 'learning_rate': '5.058e-06', 'epoch': '1.01'}
+
+{'loss': '13.32', 'grad_norm': '92', 'learning_rate': '5.003e-06', 'epoch': '1.021'}
+
+[A{'eval_loss': '1.883', 'eval_runtime': '36.77', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.27', 'epoch': '1.021'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.58s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.58s/it]
+
+{'loss': '13.45', 'grad_norm': '99', 'learning_rate': '4.948e-06', 'epoch': '1.032'}
+
+{'loss': '13.32', 'grad_norm': '92', 'learning_rate': '4.893e-06', 'epoch': '1.043'}
+
+{'loss': '13.46', 'grad_norm': '102', 'learning_rate': '4.839e-06', 'epoch': '1.053'}
+
+{'loss': '13.44', 'grad_norm': '104', 'learning_rate': '4.784e-06', 'epoch': '1.064'}
+
+{'loss': '13.39', 'grad_norm': '95.5', 'learning_rate': '4.729e-06', 'epoch': '1.075'}
+
+[A{'eval_loss': '1.886', 'eval_runtime': '36.78', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.27', 'epoch': '1.075'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.64s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.64s/it]
+
+{'loss': '13.34', 'grad_norm': '109', 'learning_rate': '4.674e-06', 'epoch': '1.086'}
+
+{'loss': '13.29', 'grad_norm': '98', 'learning_rate': '4.619e-06', 'epoch': '1.096'}
+
+{'loss': '13.44', 'grad_norm': '113.5', 'learning_rate': '4.564e-06', 'epoch': '1.107'}
+
+{'loss': '13.37', 'grad_norm': '120', 'learning_rate': '4.509e-06', 'epoch': '1.118'}
+
+{'loss': '13.37', 'grad_norm': '109.5', 'learning_rate': '4.454e-06', 'epoch': '1.129'}
+
+[A{'eval_loss': '1.887', 'eval_runtime': '36.73', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.33', 'epoch': '1.129'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.59s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.59s/it]
+
+{'loss': '13.33', 'grad_norm': '94.5', 'learning_rate': '4.399e-06', 'epoch': '1.139'}
+
+{'loss': '13.41', 'grad_norm': '103.5', 'learning_rate': '4.344e-06', 'epoch': '1.15'}
+
+{'loss': '13.32', 'grad_norm': '89', 'learning_rate': '4.289e-06', 'epoch': '1.161'}
+
+{'loss': '13.16', 'grad_norm': '92', 'learning_rate': '4.234e-06', 'epoch': '1.172'}
+
+{'loss': '13.23', 'grad_norm': '106', 'learning_rate': '4.179e-06', 'epoch': '1.182'}
+
+[A{'eval_loss': '1.886', 'eval_runtime': '36.79', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.25', 'epoch': '1.182'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '13.23', 'grad_norm': '88', 'learning_rate': '4.125e-06', 'epoch': '1.193'}
+
+{'loss': '13.33', 'grad_norm': '106', 'learning_rate': '4.07e-06', 'epoch': '1.204'}
+
+{'loss': '13.45', 'grad_norm': '130', 'learning_rate': '4.015e-06', 'epoch': '1.215'}
+
+{'loss': '13.33', 'grad_norm': '96', 'learning_rate': '3.96e-06', 'epoch': '1.225'}
+
+{'loss': '13.43', 'grad_norm': '88.5', 'learning_rate': '3.905e-06', 'epoch': '1.236'}
+
+[A{'eval_loss': '1.884', 'eval_runtime': '36.77', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.27', 'epoch': '1.236'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.66s/it]
+
+{'loss': '13.42', 'grad_norm': '110', 'learning_rate': '3.85e-06', 'epoch': '1.247'}
+
+{'loss': '13.28', 'grad_norm': '119', 'learning_rate': '3.795e-06', 'epoch': '1.258'}
+
+{'loss': '13.4', 'grad_norm': '112', 'learning_rate': '3.74e-06', 'epoch': '1.268'}
+
+{'loss': '13.17', 'grad_norm': '94', 'learning_rate': '3.685e-06', 'epoch': '1.279'}
+
+{'loss': '13.47', 'grad_norm': '88.5', 'learning_rate': '3.63e-06', 'epoch': '1.29'}
+
+[A{'eval_loss': '1.884', 'eval_runtime': '36.73', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.33', 'epoch': '1.29'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.62s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.62s/it]
+
+{'loss': '13.41', 'grad_norm': '94', 'learning_rate': '3.575e-06', 'epoch': '1.301'}
+
+{'loss': '13.28', 'grad_norm': '97', 'learning_rate': '3.52e-06', 'epoch': '1.311'}
+
+{'loss': '13.33', 'grad_norm': '120.5', 'learning_rate': '3.466e-06', 'epoch': '1.322'}
+
+{'loss': '13.17', 'grad_norm': '113.5', 'learning_rate': '3.411e-06', 'epoch': '1.333'}
+
+{'loss': '13.44', 'grad_norm': '103', 'learning_rate': '3.356e-06', 'epoch': '1.344'}
+
+[A{'eval_loss': '1.884', 'eval_runtime': '36.76', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.29', 'epoch': '1.344'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.64s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.64s/it]
+
+{'loss': '13.43', 'grad_norm': '128', 'learning_rate': '3.301e-06', 'epoch': '1.354'}
+
+{'loss': '13.27', 'grad_norm': '105', 'learning_rate': '3.246e-06', 'epoch': '1.365'}
+
+{'loss': '13.25', 'grad_norm': '107', 'learning_rate': '3.191e-06', 'epoch': '1.376'}
+
+{'loss': '13.12', 'grad_norm': '115.5', 'learning_rate': '3.136e-06', 'epoch': '1.387'}
+
+{'loss': '13.28', 'grad_norm': '125.5', 'learning_rate': '3.081e-06', 'epoch': '1.397'}
+
+[A{'eval_loss': '1.883', 'eval_runtime': '36.74', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.32', 'epoch': '1.397'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.58s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.58s/it]
+
+{'loss': '13.25', 'grad_norm': '100', 'learning_rate': '3.026e-06', 'epoch': '1.408'}
+
+{'loss': '13.36', 'grad_norm': '118', 'learning_rate': '2.971e-06', 'epoch': '1.419'}
+
+{'loss': '13.29', 'grad_norm': '103.5', 'learning_rate': '2.916e-06', 'epoch': '1.429'}
+
+{'loss': '13.27', 'grad_norm': '113', 'learning_rate': '2.861e-06', 'epoch': '1.44'}
+
+{'loss': '13.26', 'grad_norm': '115', 'learning_rate': '2.806e-06', 'epoch': '1.451'}
+
+[A{'eval_loss': '1.883', 'eval_runtime': '36.75', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.31', 'epoch': '1.451'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.54s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.54s/it]
+
+{'loss': '13.32', 'grad_norm': '95.5', 'learning_rate': '2.752e-06', 'epoch': '1.462'}
+
+{'loss': '13.2', 'grad_norm': '107.5', 'learning_rate': '2.697e-06', 'epoch': '1.472'}
+
+{'loss': '13.22', 'grad_norm': '131', 'learning_rate': '2.642e-06', 'epoch': '1.483'}
+
+{'loss': '13.06', 'grad_norm': '104.5', 'learning_rate': '2.587e-06', 'epoch': '1.494'}
+
+{'loss': '13.49', 'grad_norm': '87', 'learning_rate': '2.532e-06', 'epoch': '1.505'}
+
+[A{'eval_loss': '1.883', 'eval_runtime': '36.79', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.26', 'epoch': '1.505'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.69s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.69s/it]
+
+{'loss': '13.27', 'grad_norm': '110.5', 'learning_rate': '2.477e-06', 'epoch': '1.515'}
+
+{'loss': '13.27', 'grad_norm': '113.5', 'learning_rate': '2.422e-06', 'epoch': '1.526'}
+
+{'loss': '13.21', 'grad_norm': '96.5', 'learning_rate': '2.367e-06', 'epoch': '1.537'}
+
+{'loss': '13.34', 'grad_norm': '106', 'learning_rate': '2.312e-06', 'epoch': '1.548'}
+
+{'loss': '13.37', 'grad_norm': '108.5', 'learning_rate': '2.257e-06', 'epoch': '1.558'}
+
+[A{'eval_loss': '1.882', 'eval_runtime': '36.74', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.31', 'epoch': '1.558'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.49s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.49s/it]
+
+{'loss': '13.26', 'grad_norm': '104.5', 'learning_rate': '2.202e-06', 'epoch': '1.569'}
+
+{'loss': '13.41', 'grad_norm': '107.5', 'learning_rate': '2.147e-06', 'epoch': '1.58'}
+
+{'loss': '13.46', 'grad_norm': '103.5', 'learning_rate': '2.092e-06', 'epoch': '1.591'}
+
+{'loss': '13.06', 'grad_norm': '98', 'learning_rate': '2.038e-06', 'epoch': '1.601'}
+
+{'loss': '13.37', 'grad_norm': '111.5', 'learning_rate': '1.983e-06', 'epoch': '1.612'}
+
+[A{'eval_loss': '1.882', 'eval_runtime': '36.77', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.27', 'epoch': '1.612'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.41s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.41s/it]
+
+{'loss': '13.34', 'grad_norm': '116', 'learning_rate': '1.928e-06', 'epoch': '1.623'}
+
+{'loss': '13.23', 'grad_norm': '113', 'learning_rate': '1.873e-06', 'epoch': '1.634'}
+
+{'loss': '13.33', 'grad_norm': '120', 'learning_rate': '1.818e-06', 'epoch': '1.644'}
+
+{'loss': '13.39', 'grad_norm': '114.5', 'learning_rate': '1.763e-06', 'epoch': '1.655'}
+
+{'loss': '13.27', 'grad_norm': '106.5', 'learning_rate': '1.708e-06', 'epoch': '1.666'}
+
+[A{'eval_loss': '1.882', 'eval_runtime': '36.71', 'eval_samples_per_second': '106.7', 'eval_steps_per_second': '53.36', 'epoch': '1.666'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.42s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.42s/it]
+
+{'loss': '13.36', 'grad_norm': '100.5', 'learning_rate': '1.653e-06', 'epoch': '1.677'}
+
+{'loss': '13.44', 'grad_norm': '114', 'learning_rate': '1.598e-06', 'epoch': '1.687'}
+
+{'loss': '13.28', 'grad_norm': '115', 'learning_rate': '1.543e-06', 'epoch': '1.698'}
+
+{'loss': '13.37', 'grad_norm': '92', 'learning_rate': '1.488e-06', 'epoch': '1.709'}
+
+{'loss': '13.47', 'grad_norm': '89.5', 'learning_rate': '1.433e-06', 'epoch': '1.72'}
+
+[A{'eval_loss': '1.881', 'eval_runtime': '36.78', 'eval_samples_per_second': '106.5', 'eval_steps_per_second': '53.26', 'epoch': '1.72'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.28s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.28s/it]
+
+{'loss': '13.28', 'grad_norm': '99', 'learning_rate': '1.379e-06', 'epoch': '1.73'}
+
+{'loss': '13.27', 'grad_norm': '109.5', 'learning_rate': '1.324e-06', 'epoch': '1.741'}
+
+{'loss': '13.29', 'grad_norm': '98', 'learning_rate': '1.269e-06', 'epoch': '1.752'}
+
+{'loss': '13.49', 'grad_norm': '106.5', 'learning_rate': '1.214e-06', 'epoch': '1.763'}
+
+{'loss': '13.26', 'grad_norm': '99.5', 'learning_rate': '1.159e-06', 'epoch': '1.773'}
+
+[A{'eval_loss': '1.881', 'eval_runtime': '36.74', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.32', 'epoch': '1.773'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.45s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.45s/it]
+
+{'loss': '13.47', 'grad_norm': '92.5', 'learning_rate': '1.104e-06', 'epoch': '1.784'}
+
+{'loss': '13.26', 'grad_norm': '108', 'learning_rate': '1.049e-06', 'epoch': '1.795'}
+
+{'loss': '13.35', 'grad_norm': '99.5', 'learning_rate': '9.941e-07', 'epoch': '1.806'}
+
+{'loss': '13.51', 'grad_norm': '103', 'learning_rate': '9.391e-07', 'epoch': '1.816'}
+
+{'loss': '13.39', 'grad_norm': '110', 'learning_rate': '8.842e-07', 'epoch': '1.827'}
+
+[A{'eval_loss': '1.881', 'eval_runtime': '36.74', 'eval_samples_per_second': '106.6', 'eval_steps_per_second': '53.32', 'epoch': '1.827'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.30s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.30s/it]
+
+{'loss': '13.18', 'grad_norm': '95.5', 'learning_rate': '8.293e-07', 'epoch': '1.838'}
+
+{'loss': '13.03', 'grad_norm': '100.5', 'learning_rate': '7.744e-07', 'epoch': '1.849'}
+
+{'loss': '13.35', 'grad_norm': '111', 'learning_rate': '7.195e-07', 'epoch': '1.859'}
+
+{'loss': '13.33', 'grad_norm': '99', 'learning_rate': '6.645e-07', 'epoch': '1.87'}
+
+{'loss': '13.24', 'grad_norm': '108', 'learning_rate': '6.096e-07', 'epoch': '1.881'}
+
+================================================================================
+                     Resource Usage on 02/09/2026 13:17:44
+
+Job Id: 9241781
+Queue: CSE
+Walltime: 02:00:48  (requested 02:00:00)
+The job could not be executed.
+Exit Status -29 - Job run time might have exceeded walltime requested.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k166    0    |     1       0.91       91%    | 95830 MiB  68.19G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.91      91.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k166         |     8       0.98      12.0%   |  100.0gb   33.77gb    33.8%   |
+--------------------------------------------------------------------------------

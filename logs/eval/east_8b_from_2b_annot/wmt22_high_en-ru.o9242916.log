@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/2037] src='I see it all the time in my line of work.'
+           hyp='Я это вижу постоянно в своей работе.'
+           corpus AL so far: mean=11.00  n=1
+  [2/2037] src='And it doesn’t even have to be life or death to be frustrating.'
+           hyp='И не обязательно должно быть жизнь или смерть, чтобы быть раздражающим.'
+           corpus AL so far: mean=12.00  n=2
+  [3/2037] src='Had a recent patient who needed a very specific knee procedure to walk'
+           hyp='У меня недавно был пациент, которому потребовалась очень специфическая операция по замене коленного сустава, чтобы он мог ходить нормально и'
+           corpus AL so far: mean=9.48  n=3
+[extrinsic] generation wall: 1317.3s (0.65s/sent)
+[extrinsic] BLEU = 21.94 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=11.14  median=9.00  n_defined=2037/2037
+[extrinsic] LAAL mean=7.17  median=6.55  n_defined=2037/2037
+[extrinsic] chunks/sent mean=1.46  median=1.0
+[extrinsic] source-exhausted-without-eor: 136/2037
+[extrinsic] write-cap hits: 353
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/wmt22_stream_east_8b_from_2b_annot_check_argmax_high_en-ru.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 16:18:36
+
+Job Id: 9242916
+Queue: CSE
+Walltime: 00:23:06  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    3    |     1       0.91       91%    | 97887 MiB  15.82G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.91      91.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.95      12.0%   |  100.0gb   16.34gb    16.3%   |
+--------------------------------------------------------------------------------

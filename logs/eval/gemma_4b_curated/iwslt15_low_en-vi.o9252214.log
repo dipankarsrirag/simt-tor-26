@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='When I was little , I thought my country was the best on the planet , '
+           hyp='Khi còn nhỏ, tôi nghĩ đất nước tôi là tốt nhất trên thế giới, và tôi lớn lên hát một bài hát tên là "Nothing to Envy"'
+           corpus AL so far: mean=3.15  n=1
+  [2/1268] src='And I was very proud .'
+           hyp='Và tôi rất tự hào.'
+           corpus AL so far: mean=2.92  n=2
+  [3/1268] src='In school , we spent a lot of time studying the history of Kim Il-Sung'
+           hyp='Ở trường, chúng tôi dành rất nhiều thời gian để nghiên cứu lịch sử của Kim Il-Sung, nhưng chúng tôi không bao giờ học được nhiều về thế giới'
+           corpus AL so far: mean=3.05  n=3
+[extrinsic] generation wall: 1534.4s (1.21s/sent)
+[extrinsic] BLEU = 35.19 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=2.91  median=2.85  n_defined=1268/1268
+[extrinsic] LAAL mean=2.80  median=2.71  n_defined=1268/1268
+[extrinsic] chunks/sent mean=4.73  median=4.0
+[extrinsic] source-exhausted-without-eor: 24/1268
+[extrinsic] write-cap hits: 0
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt15_stream_gemma_4b_curated_check_argmax_low_en-vi.json
+
+================================================================================
+                     Resource Usage on 03/09/2026 22:39:36
+
+Job Id: 9252214
+Queue: CSE
+Walltime: 00:27:19  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    5    |     1        0.7       70%    | 97887 MiB  15.55G             |
+--------------------------------------------------------------------------------
+|Total         |     1        0.7      70.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.94      12.0%   |  100.0gb   16.55gb    16.6%   |
+--------------------------------------------------------------------------------

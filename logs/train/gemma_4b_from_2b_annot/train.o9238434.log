@@ -1,0 +1,116 @@
+9238453.kman.restech.unsw.edu.au
+Output dir: results/train/gemma_4b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/gemma-4-E4B-it
+Tokenizer: results/train/gemma_4b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 262,146
+Loading model from /srv/scratch/z5531827/simt-models/gemma-4-E4B-it ...
+
+  loaded; original embed rows: 262,144
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+  Row 0 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with high latency.<turn|>\n<|turn>model\nوهذا الشاب ، كان<|end-of-read|>And this guy, he was<|end-of-write|> يفعل الكثير من الأشياء السيئة .<|end-of-read|> up to a lot of no good.<|'
+    n_ids=67, labels_masked=32
+  Row 1 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with medium latency.<turn|>\n<|turn>model\nوأعتقد أن بعضا من هذه التقنيات ستمكننا من التواصل أكثر مع مرضانا،<|end-of-read|>And I think some of these technologies will enable us to b'
+    n_ids=134, labels_masked=32
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  24%|██▍       | 19000/78349 [00:00<00:00, 177173.94 examples/s]
+Filter:  49%|████▊     | 38000/78349 [00:00<00:00, 179326.14 examples/s]
+Filter:  73%|███████▎  | 57000/78349 [00:00<00:00, 182026.87 examples/s]
+Filter:  98%|█████████▊| 77000/78349 [00:00<00:00, 185376.35 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 183086.78 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  27%|██▋       | 21000/78349 [00:00<00:00, 193216.36 examples/s]
+Filter:  64%|██████▍   | 50000/78349 [00:00<00:00, 189457.20 examples/s]
+Filter:  91%|█████████ | 71000/78349 [00:00<00:00, 192507.67 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 192897.45 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+
+{'loss': '6.083', 'grad_norm': '25.38', 'learning_rate': '4.9e-06', 'epoch': '0.01075'}
+
+{'loss': '3.764', 'grad_norm': '12.31', 'learning_rate': '9.9e-06', 'epoch': '0.0215'}
+
+{'loss': '3.441', 'grad_norm': '13.88', 'learning_rate': '1.49e-05', 'epoch': '0.03224'}
+
+{'loss': '3.163', 'grad_norm': '15.81', 'learning_rate': '1.492e-05', 'epoch': '0.04299'}
+
+{'loss': '2.424', 'grad_norm': '13', 'learning_rate': '1.484e-05', 'epoch': '0.05374'}
+
+[A{'eval_loss': '2.356', 'eval_runtime': '68.91', 'eval_samples_per_second': '56.84', 'eval_steps_per_second': '28.43', 'epoch': '0.05374'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.68s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:08<00:00,  8.68s/it]
+Traceback (most recent call last):
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1004, in save
+    _save(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1313, in _save
+    zip_file.write_record(name, storage, num_bytes)
+RuntimeError: basic_ios::clear: iostream error
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 472, in <module>
+    main()
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 420, in main
+    train_result = trainer.train(resume_from_checkpoint=resume)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1437, in train
+    return inner_training_loop(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1519, in _inner_training_loop
+    self._run_epoch(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1788, in _run_epoch
+    self._maybe_log_save_evaluate(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 2108, in _maybe_log_save_evaluate
+    self._save_checkpoint(model, trial)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3102, in _save_checkpoint
+    self._save_optimizer_and_scheduler(output_dir)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3274, in _save_optimizer_and_scheduler
+    torch.save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1003, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 835, in __exit__
+    self.file_like.write_end_of_file()
+RuntimeError: [enforce fail at inline_container.cc:672] . unexpected pos 24102938176 vs 24102938072
+
+================================================================================
+                     Resource Usage on 01/09/2026 23:33:30
+
+Job Id: 9238434
+Queue: CSE
+Walltime: 00:09:07  (requested 02:00:00)
+Job unsuccessful. Exit Status 1 - Exit status refers to the exit value of the
+top process in the job, typically the shell.
+This may be the exit value of the last command executed in the shell.
+See job output error.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k166    0    |     1       0.43       43%    | 95830 MiB  73.93G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.43      43.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k166         |     8       1.36      17.0%   |  64.0gb    37.72gb    58.9%   |
+--------------------------------------------------------------------------------

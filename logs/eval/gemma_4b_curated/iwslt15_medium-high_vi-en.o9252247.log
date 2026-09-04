@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='Khi tôi còn nhỏ , Tôi nghĩ rằng BắcTriều Tiên là đất nước tốt nhất trê'
+           hyp='When I was a kid, I thought North Korea was the best country in the world and I would sing the song "We have nothing to be jealous of."'
+           corpus AL so far: mean=4.59  n=1
+  [2/1268] src='Tôi đã rất tự hào về đất nước tôi .'
+           hyp='I was very proud of my country.'
+           corpus AL so far: mean=7.30  n=2
+  [3/1268] src='Ở trường , chúng tôi dành rất nhiều thời gian để học về cuộc đời của c'
+           hyp="In school, we spent a lot of time learning about the life of Kim Jong-il, but we didn't learn much about the outside world. Except for the f"
+           corpus AL so far: mean=6.07  n=3
+[extrinsic] generation wall: 1491.3s (1.18s/sent)
+[extrinsic] BLEU = 31.23 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=4.70  median=4.47  n_defined=1268/1268
+[extrinsic] LAAL mean=4.44  median=4.24  n_defined=1268/1268
+[extrinsic] chunks/sent mean=3.98  median=3.0
+[extrinsic] source-exhausted-without-eor: 15/1268
+[extrinsic] write-cap hits: 4
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt15_stream_gemma_4b_curated_check_argmax_medium-high_vi-en.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 00:24:26
+
+Job Id: 9252247
+Queue: CSE
+Walltime: 00:25:44  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    5    |     1       0.72       72%    | 97887 MiB  15.55G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.72      72.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.97      12.0%   |  100.0gb   16.55gb    16.6%   |
+--------------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='I see it all the time in my line of work.'
+           hyp='Я вижу это постоянно в своей работе.'
+           corpus AL so far: mean=11.00  n=1
+  [2/2037] src='And it doesn’t even have to be life or death to be frustrating.'
+           hyp='И даже не обязательно, чтобы это была жизнь или смерть, чтобы было неприятно.'
+           corpus AL so far: mean=7.75  n=2
+  [3/2037] src='Had a recent patient who needed a very specific knee procedure to walk'
+           hyp='Недавно у меня был пациент, которому потребовалась очень специфическая операция на колене, чтобы он мог нормально ходить и улучшить качество'
+           corpus AL so far: mean=6.06  n=3
+[extrinsic] generation wall: 2701.2s (1.33s/sent)
+[extrinsic] BLEU = 26.63 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.60  median=3.41  n_defined=2037/2037
+[extrinsic] LAAL mean=3.39  median=3.17  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.39  median=3.0
+[extrinsic] source-exhausted-without-eor: 85/2037
+[extrinsic] write-cap hits: 2
+[extrinsic] wrote results/eval/gemma_4b_curated/wmt22_stream_gemma_4b_curated_check_argmax_medium_en-ru.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 00:07:20
+
+Job Id: 9252230
+Queue: CSE
+Walltime: 00:46:19  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k097    1    |     1       0.79       79%    | 46068 MiB  15.38G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.79      79.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k097         |     8       0.98      12.0%   |  100.0gb   16.39gb    16.4%   |
+--------------------------------------------------------------------------------

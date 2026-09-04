@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 1138 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/1138] src='Das ist James Risen.'
+           hyp='This is James Risen.'
+           corpus AL so far: mean=4.00  n=1
+  [2/1138] src='Sie kennen ihn vielleicht, weil er als New-York-Times-Reporter den Pul'
+           hyp='You may know him, because he was a New York Times reporter who won the Pulitzer Prize.'
+           corpus AL so far: mean=3.56  n=2
+  [3/1138] src='Lange bevor je jemand von Edward Snowden gehört hatte, schrieb Risen e'
+           hyp='Long before anyone had ever heard of Edward Snowden, Risen wrote a book in which he spectacularly published that the NSA was illegally liste'
+           corpus AL so far: mean=3.60  n=3
+[extrinsic] generation wall: 602.7s (0.53s/sent)
+[extrinsic] BLEU = 28.84 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.25  median=3.02  n_defined=1138/1138
+[extrinsic] LAAL mean=2.88  median=2.78  n_defined=1138/1138
+[extrinsic] chunks/sent mean=3.10  median=3.0
+[extrinsic] source-exhausted-without-eor: 57/1138
+[extrinsic] write-cap hits: 4
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/iwslt17_stream_east_8b_from_2b_annot_check_argmax_low-medium_de-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 14:57:27
+
+Job Id: 9242882
+Queue: CSE
+Walltime: 00:11:38  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    6    |     1       0.82       82%    | 97887 MiB  15.82G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.82      82.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8        0.9      11.0%   |  100.0gb   8.26gb     8.3%    |
+--------------------------------------------------------------------------------

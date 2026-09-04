@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1460 sentences
+  [1/1460] src='حسنا، هذه قصة حول كيف نعرف ما نعرفه.'
+           hyp='Well, this is a story about how we know what we know.'
+           corpus AL so far: mean=2.57  n=1
+  [2/1460] src='إنها قصة حول هذه المرأة، ناتاليا ريبكزينسكي.'
+           hyp="It's a story about this woman, Natalia Rybczynski."
+           corpus AL so far: mean=2.62  n=2
+  [3/1460] src='فهي عالمة في الحفريات القديمة، ما يعني أنها مختصة في نبش الكائنات المي'
+           hyp="She's a paleontologist, which means she's a specialist in digging up very old dead things."
+           corpus AL so far: mean=2.91  n=3
+[extrinsic] generation wall: 1608.9s (1.10s/sent)
+[extrinsic] BLEU = 36.87 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.36  median=3.07  n_defined=1460/1460
+[extrinsic] LAAL mean=2.92  median=2.80  n_defined=1460/1460
+[extrinsic] chunks/sent mean=2.94  median=3.0
+[extrinsic] source-exhausted-without-eor: 101/1460
+[extrinsic] write-cap hits: 0
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt17_stream_gemma_4b_curated_check_argmax_medium_ar-en.json
+
+================================================================================
+                     Resource Usage on 03/09/2026 23:52:27
+
+Job Id: 9252233
+Queue: CSE
+Walltime: 00:27:28  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    1    |     1       0.77       77%    | 46068 MiB   15.4G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.77      77.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.99      12.0%   |  100.0gb   8.08gb     8.1%    |
+--------------------------------------------------------------------------------

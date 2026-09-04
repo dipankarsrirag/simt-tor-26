@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 2016 sentences
+  [1/2016] src='С моей точки зрения, программа по литературе формировалась дамами баль'
+           hyp='From my perspective, the literature program was shaped by women of Balzacian age based on their interests.'
+           corpus AL so far: mean=5.24  n=1
+  [2/2016] src='Из русской литературы 19 века мы предпочитали Данилевского и Волконско'
+           hyp='From 19th-century Russian literature, we preferred Danilevsky and Volkonsky.'
+           corpus AL so far: mean=4.62  n=2
+  [3/2016] src='Они писали беллетристику, конечно, с точки зрения тех самых дам бальза'
+           hyp='They wrote fiction, of course, from the perspective of those same balzacsque women.'
+           corpus AL so far: mean=4.09  n=3
+[extrinsic] generation wall: 2124.9s (1.05s/sent)
+[extrinsic] BLEU = 32.10 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=5.47  median=4.71  n_defined=2016/2016
+[extrinsic] LAAL mean=4.64  median=4.07  n_defined=2016/2016
+[extrinsic] chunks/sent mean=2.05  median=2.0
+[extrinsic] source-exhausted-without-eor: 79/2016
+[extrinsic] write-cap hits: 23
+[extrinsic] wrote results/eval/gemma_4b_curated/wmt22_stream_gemma_4b_curated_check_argmax_high_ru-en.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 00:44:15
+
+Job Id: 9252252
+Queue: CSE
+Walltime: 00:35:55  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k097    1    |     1       0.82       82%    | 46068 MiB   15.4G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.82      82.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k097         |     8       0.99      12.0%   |  100.0gb   15.59gb    15.6%   |
+--------------------------------------------------------------------------------

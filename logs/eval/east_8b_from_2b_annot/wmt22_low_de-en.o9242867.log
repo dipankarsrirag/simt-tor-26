@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 1984 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/1984] src='Die Ware hat unter 20 Euro gekostet.'
+           hyp='The goods are worth less than 20 euros.'
+           corpus AL so far: mean=2.19  n=1
+  [2/1984] src='Die Gebühr entspricht 40% des Warenwertest....'
+           hyp='The fee is 40% of the value of the goods ...'
+           corpus AL so far: mean=2.42  n=2
+  [3/1984] src='Ich bin #PRS_ORG# Großkunde und somit ist es kein Problem für mich.'
+           hyp='I am a large customer of #PRS_ORG# and therefore it is no problem for me.'
+           corpus AL so far: mean=2.61  n=3
+[extrinsic] generation wall: 2045.2s (1.03s/sent)
+[extrinsic] BLEU = 25.30 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.17  median=3.00  n_defined=1984/1984
+[extrinsic] LAAL mean=2.90  median=2.76  n_defined=1984/1984
+[extrinsic] chunks/sent mean=3.33  median=3.0
+[extrinsic] source-exhausted-without-eor: 65/1984
+[extrinsic] write-cap hits: 0
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/wmt22_stream_east_8b_from_2b_annot_check_argmax_low_de-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 14:53:29
+
+Job Id: 9242867
+Queue: CSE
+Walltime: 00:35:19  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    0    |     1       0.94       94%    | 46068 MiB  15.68G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.94      94.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.97      12.0%   |  100.0gb   9.24gb     9.2%    |
+--------------------------------------------------------------------------------

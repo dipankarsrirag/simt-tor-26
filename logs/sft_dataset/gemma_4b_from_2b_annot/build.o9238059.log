@@ -1,0 +1,63 @@
+Loading tokenizer from results/train/gemma_4b_from_2b_annot/tokenizer
+Loading source-lookup corpus from results/sft_dataset/gemma_2b_curated_pool.json
+  80,000 rows indexed
+Building cond-B dataset from 8 matrices file(s):
+  - results/annotate/_pull_gemma2b/annotate/ar-en/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/de-en/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/en-ar/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/en-de/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/en-ru/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/en-vi/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/ru-en/matrices.jsonl
+  - results/annotate/_pull_gemma2b/annotate/vi-en/matrices.jsonl
+  tau ladder: [0.3, 0.5, 0.7, 1.0] (primary=0.3, fallbacks tried in order)
+  reassign_latency: True (EAST-inherited thresholds: <=3 high, 4-5 medium, >=6 low)
+  kept=78349  skipped=982  missing=0
+  collapse-at-primary-tau: 23033  (29.4% of kept rows fell back)
+  still-collapse-after-fallback (dropped): 982
+  latency relabelled: 61452/78349 (78.4%)
+  latency flip table (old -> new: count):
+    medium ->   high: 52356
+    medium ->    low: 9096
+Wrote results/sft_dataset/gemma_4b_from_2b_annot/sft_dataset.json (94176.6 KB)
+
+Chunk-count distribution (top 12):
+    1 chunks: 22439 rows
+    2 chunks: 23005 rows
+    3 chunks: 14914 rows
+    4 chunks: 8740 rows
+    5 chunks: 4587 rows
+    6 chunks: 2425 rows
+    7 chunks: 1139 rows
+    8 chunks: 594 rows
+    9 chunks: 282 rows
+   10 chunks: 139 rows
+   11 chunks: 53 rows
+   12 chunks: 20 rows
+
+Assigned latency distribution:
+     low:  9096  (11.6%)
+  medium: 16897  (21.6%)
+    high: 52356  (66.8%)
+
+Tau-used distribution (base rows only):
+  tau=0.3: 56298 rows  (71.9%)
+  tau=0.5: 19337 rows  (24.7%)
+  tau=0.7:  2714 rows  (3.5%)
+
+Base rows: 78349  Augmented rows: 0
+
+================================================================================
+                     Resource Usage on 01/09/2026 21:57:56
+
+Job Id: 9238059
+Queue: CSE
+Walltime: 00:02:30  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k211         |     8        0.4      5.0%    |  64.0gb    1.58gb     2.5%    |
+--------------------------------------------------------------------------------

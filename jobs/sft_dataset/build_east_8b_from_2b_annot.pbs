@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -N build_east_8b_from_2b_annot
+#PBS -l select=1:ncpus=8:mem=64gb
+#PBS -l walltime=02:00:00
+#PBS -j oe
+
+# Config 07 (Fig 5 right). Llama-3-8B-Instruct trained on Gemma-2B's OT chunks.
+# Runs on UNSW Katana (PBS), not Gadi. Put the walltime on the qsub command
+# line as well: Katana picks the queue tier from it.
+# Annotator matrices come from unswnlporg/tor-simt-gemma-2b-curated.
+# The chunk boundaries are token positions in the annotator's vocabulary, so
+# a Llama backbone needs them remapped. Gemma-4-E2B-it and E4B-it ship the
+# same tokenizer, so E4B's copy stands in for the E2B annotator.
+
+set -eo pipefail
+cd ${SIMT_REPO_ROOT:-$PBS_O_WORKDIR}
+
+bin/08_build_sft_dataset   --matrices results/annotate/gemma-4-E2B-it/*/matrices.jsonl   --corpus_json results/sft_dataset/source_pool.json   --tokenizer_path results/train/east_8b_from_2b_annot/tokenizer   --tau 0.30   --merge_small_chunks --min_src_words 4   --annotator_tokenizer_path ${SIMT_MODEL_BASE}/gemma-4-E4B-it \n  --output results/sft_dataset/east_8b_from_2b_annot/sft_dataset.json

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1460 sentences
+  [1/1460] src='So, this is a story about how we know what we know.'
+           hyp='هذه قصة عن كيفية معرفتنا لما نعرفه.'
+           corpus AL so far: mean=5.62  n=1
+  [2/1460] src="It's a story about this woman, Natalia Rybczynski."
+           hyp='إنها قصة عن هذه المرأة، ناتاليا ريبتشينسكي.'
+           corpus AL so far: mean=4.73  n=2
+  [3/1460] src="She's a paleobiologist, which means she specializes in digging up real"
+           hyp='انها عالمة أحافير، وهذا يعني أنها متخصصة في حفر الأشياء الميتة القديمة جداً.'
+           corpus AL so far: mean=7.82  n=3
+[extrinsic] generation wall: 1878.3s (1.29s/sent)
+[extrinsic] BLEU = 16.89 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=6.80  median=5.42  n_defined=1460/1460
+[extrinsic] LAAL mean=5.24  median=4.69  n_defined=1460/1460
+[extrinsic] chunks/sent mean=2.19  median=2.0
+[extrinsic] source-exhausted-without-eor: 30/1460
+[extrinsic] write-cap hits: 26
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt17_stream_gemma_4b_from_2b_annot_check_argmax_medium-high_en-ar.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 07:01:41
+
+Job Id: 9240117
+Queue: CSE
+Walltime: 00:32:07  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k201    1    |     1        0.5       50%    |143771 MiB  15.64G             |
+--------------------------------------------------------------------------------
+|Total         |     1        0.5      50.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k201         |     8       0.98      12.0%   |  100.0gb    8.7gb     8.7%    |
+--------------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1138 sentences
+  [1/1138] src='Das ist James Risen.'
+           hyp='This is James Risen.'
+           corpus AL so far: mean=4.00  n=1
+  [2/1138] src='Sie kennen ihn vielleicht, weil er als New-York-Times-Reporter den Pul'
+           hyp='You may know him, because he was a New York Times reporter who won the Pulitzer Prize.'
+           corpus AL so far: mean=3.56  n=2
+  [3/1138] src='Lange bevor je jemand von Edward Snowden gehört hatte, schrieb Risen e'
+           hyp='Long before anyone had heard of Edward Snowden, Risen wrote a book in which he spectacularly revealed that the NSA was illegally tapping Ame'
+           corpus AL so far: mean=3.28  n=3
+[extrinsic] generation wall: 2497.3s (2.19s/sent)
+[extrinsic] BLEU = 30.04 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.71  median=3.50  n_defined=1138/1138
+[extrinsic] LAAL mean=3.22  median=3.06  n_defined=1138/1138
+[extrinsic] chunks/sent mean=2.97  median=3.0
+[extrinsic] source-exhausted-without-eor: 65/1138
+[extrinsic] write-cap hits: 0
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt17_stream_gemma_4b_curated_check_argmax_medium_de-en.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 00:04:34
+
+Job Id: 9252231
+Queue: CSE
+Walltime: 00:42:31  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k110    0    |     1        0.0       0%     | 40960 MiB   0.0B              |
+--------------------------------------------------------------------------------
+|Total         |     1        0.0      0.0%    |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k110         |     8       0.98      12.0%   |  100.0gb   16.54gb    16.5%   |
+--------------------------------------------------------------------------------

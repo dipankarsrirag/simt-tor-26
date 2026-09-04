@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='When I was little , I thought my country was the best on the planet , '
+           hyp='Khi còn nhỏ, tôi nghĩ đất nước mình là tốt nhất trên thế giới, và tôi lớn lên hát một bài hát tên là "Không có gì để ghen tị"'
+           corpus AL so far: mean=7.04  n=1
+  [2/1268] src='And I was very proud .'
+           hyp='Và tôi rất tự hào.'
+           corpus AL so far: mean=6.52  n=2
+  [3/1268] src='In school , we spent a lot of time studying the history of Kim Il-Sung'
+           hyp='Ở trường, chúng tôi dành rất nhiều thời gian để nghiên cứu lịch sử của Kim Il-Sung, nhưng chúng tôi không bao giờ được học nhiều về thế giới'
+           corpus AL so far: mean=7.17  n=3
+[extrinsic] generation wall: 1976.0s (1.56s/sent)
+[extrinsic] BLEU = 35.79 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=8.84  median=7.28  n_defined=1268/1268
+[extrinsic] LAAL mean=6.64  median=6.13  n_defined=1268/1268
+[extrinsic] chunks/sent mean=2.20  median=2.0
+[extrinsic] source-exhausted-without-eor: 23/1268
+[extrinsic] write-cap hits: 56
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt15_stream_gemma_4b_from_2b_annot_check_argmax_high_en-vi.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:45:53
+
+Job Id: 9239759
+Queue: CSE
+Walltime: 00:33:42  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k205    4    |     1       0.48       48%    |143771 MiB  15.65G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.48      48.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k205         |     8       0.98      12.0%   |  32.0gb    15.59gb    48.7%   |
+--------------------------------------------------------------------------------

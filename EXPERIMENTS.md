@@ -35,11 +35,23 @@ That uploads the SFT checkpoint + tokenizer + `results/annotate/gemma-4-E2B-it/{
 
 **Focus:** scaling story (Fig 4 middle) + annotator portability story (Fig 5).
 
-| # | Config | What it is | Depends on |
+| # | Config | What it is | Status |
 |---|---|---|---|
-| 05 | `configs/05_gemma_4b_curated.yaml` | Gemma-4-E4B-it + curated + self-annotation. Fig 4 middle. | — |
-| 06 | `configs/06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it trained on **Gemma-2B's** annotations. Fig 5 middle. `--skip 2` (matrices come from Dipankar's HF push). | Dipankar's 00 must be pushed first. Pull matrices with `bin/12_pull_from_hub`. |
-| 07 | `configs/07_east_8b_from_2b_annot.yaml` | EAST-8B trained on Gemma-2B's annotations. Fig 5 right. `--skip 2`. | Same as 06. |
+| 05 | `configs/05_gemma_4b_curated.yaml` | Gemma-4-E4B-it + curated + self-annotation. Fig 4 middle. | ✓ done — `unswnlporg/tor-simt-gemma-4b-curated` |
+| 06 | `configs/06_gemma_4b_from_2b_annot.yaml` | Gemma-4-E4B-it trained on **Gemma-2B's** annotations. Fig 5 middle. `--skip 2`. | ✓ done — `unswnlporg/tor-simt-gemma-4b-from-2b-annot` |
+| 07 | `configs/07_east_8b_from_2b_annot.yaml` | Llama-3-8B-Instruct trained on Gemma-2B's annotations. Fig 5 right. `--skip 2`. | ✓ done — `unswnlporg/tor-simt-east-8b-from-2b-annot` |
+
+All three ran on UNSW Katana; the job scripts are `jobs/{sft_dataset,train,eval}/*_{tag}.pbs`.
+Numbers per cell are in `results/eval/summary_cross_annotation.csv` (55 cells per system:
+11 test-set × direction pairs × 5 latencies), the curves in
+`figures/cross_annotation/bleu_vs_al.png`, and the run entries in `LOG.md` (2026-09-02, 09-04).
+Cleaned PBS logs, loss curves and manifests are under `logs/{train,eval,sft_dataset}/{tag}/`.
+
+**Headline.** Mean BLEU over the 55 matched cells, against the shipped Gemma-2B baseline:
+4B self-annotated **+1.96**, 4B on the 2B's chunks **+1.24**, Llama-3-8B on the 2B's chunks
+**-0.90**. Swapping the annotator from the 4B itself to the 2B costs **0.73** BLEU while the
+2B → 4B backbone step is worth **1.96**, so the annotation transfers to a larger backbone at
+well under the cost of running it again.
 
 **Pull Dipankar's Gemma-2B matrices before starting 06/07:**
 

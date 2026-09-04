@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 2169 sentences
+  [1/2169] src='Die Premierminister Indiens und Japans trafen sich in Tokio.'
+           hyp='The Prime Minister of India and the Prime Minister of Japan met in Tokyo.'
+           corpus AL so far: mean=1.04  n=1
+  [2/2169] src='Indiens neuer Premierminister Narendra Modi trifft bei seinem ersten w'
+           hyp="India's new Prime Minister, Narendra Modi, is meeting on his first major foreign visit since his May election victory with his Japanese coun"
+           corpus AL so far: mean=1.44  n=2
+  [3/2169] src='Herr Modi befindet sich auf einer fünftägigen Reise nach Japan, um die'
+           hyp="Mr Modi is on a five-day trip to Japan to strengthen economic relations with the world's third-largest economy."
+           corpus AL so far: mean=2.25  n=3
+[extrinsic] generation wall: 3036.5s (1.40s/sent)
+[extrinsic] BLEU = 31.58 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.39  median=3.21  n_defined=2169/2169
+[extrinsic] LAAL mean=3.10  median=3.00  n_defined=2169/2169
+[extrinsic] chunks/sent mean=4.13  median=4.0
+[extrinsic] source-exhausted-without-eor: 52/2169
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_curated/wmt15_stream_gemma_4b_curated_check_argmax_low_de-en.json
+
+================================================================================
+                     Resource Usage on 03/09/2026 22:21:03
+
+Job Id: 9252204
+Queue: CSE
+Walltime: 00:52:05  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k166    0    |     1       0.54       54%    | 95830 MiB   15.7G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.54      54.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k166         |     8       0.97      12.0%   |  100.0gb   18.13gb    18.1%   |
+--------------------------------------------------------------------------------

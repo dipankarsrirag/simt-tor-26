@@ -1,0 +1,126 @@
+9238186.kman.restech.unsw.edu.au
+Output dir: results/train/gemma_4b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/gemma-4-E4B-it
+Tokenizer: results/train/gemma_4b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 262,146
+Loading model from /srv/scratch/z5531827/simt-models/gemma-4-E4B-it ...
+
+  loaded; original embed rows: 262,144
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+  Row 0 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with high latency.<turn|>\n<|turn>model\nوهذا الشاب ، كان<|end-of-read|>And this guy, he was<|end-of-write|> يفعل الكثير من الأشياء السيئة .<|end-of-read|> up to a lot of no good.<|'
+    n_ids=67, labels_masked=32
+  Row 1 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with medium latency.<turn|>\n<|turn>model\nوأعتقد أن بعضا من هذه التقنيات ستمكننا من التواصل أكثر مع مرضانا،<|end-of-read|>And I think some of these technologies will enable us to b'
+    n_ids=134, labels_masked=32
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  23%|██▎       | 18000/78349 [00:00<00:00, 173302.83 examples/s]
+Filter:  47%|████▋     | 37000/78349 [00:00<00:00, 176630.45 examples/s]
+Filter:  71%|███████▏  | 56000/78349 [00:00<00:00, 178899.39 examples/s]
+Filter:  97%|█████████▋| 76000/78349 [00:00<00:00, 181990.08 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 179996.16 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  24%|██▍       | 19000/78349 [00:00<00:00, 186934.30 examples/s]
+Filter:  50%|████▉     | 39000/78349 [00:00<00:00, 43992.06 examples/s]
+Filter:  77%|███████▋  | 60000/78349 [00:00<00:00, 69268.04 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 78840.52 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+
+{'loss': '6.083', 'grad_norm': '25.12', 'learning_rate': '4.9e-06', 'epoch': '0.01075'}
+
+{'loss': '3.767', 'grad_norm': '18.5', 'learning_rate': '9.9e-06', 'epoch': '0.0215'}
+
+{'loss': '3.455', 'grad_norm': '15.62', 'learning_rate': '1.49e-05', 'epoch': '0.03224'}
+
+{'loss': '3.17', 'grad_norm': '15.75', 'learning_rate': '1.492e-05', 'epoch': '0.04299'}
+
+{'loss': '2.427', 'grad_norm': '13.31', 'learning_rate': '1.484e-05', 'epoch': '0.05374'}
+
+{'loss': '2.306', 'grad_norm': '10.62', 'learning_rate': '1.476e-05', 'epoch': '0.06449'}
+
+{'loss': '2.249', 'grad_norm': '15', 'learning_rate': '1.467e-05', 'epoch': '0.07524'}
+
+{'loss': '2.251', 'grad_norm': '9.875', 'learning_rate': '1.459e-05', 'epoch': '0.08598'}
+
+{'loss': '2.198', 'grad_norm': '10.94', 'learning_rate': '1.451e-05', 'epoch': '0.09673'}
+
+{'loss': '2.169', 'grad_norm': '21.62', 'learning_rate': '1.443e-05', 'epoch': '0.1075'}
+
+[A{'eval_loss': '2.182', 'eval_runtime': '72.54', 'eval_samples_per_second': '54', 'eval_steps_per_second': '27.01', 'epoch': '0.1075'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.42s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:09<00:00,  9.42s/it]
+Traceback (most recent call last):
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1004, in save
+    _save(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1313, in _save
+    zip_file.write_record(name, storage, num_bytes)
+RuntimeError: basic_ios::clear: iostream error
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 471, in <module>
+    main()
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 419, in main
+    train_result = trainer.train(resume_from_checkpoint=resume)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1437, in train
+    return inner_training_loop(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1519, in _inner_training_loop
+    self._run_epoch(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1788, in _run_epoch
+    self._maybe_log_save_evaluate(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 2108, in _maybe_log_save_evaluate
+    self._save_checkpoint(model, trial)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3102, in _save_checkpoint
+    self._save_optimizer_and_scheduler(output_dir)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3274, in _save_optimizer_and_scheduler
+    torch.save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 1003, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/torch/serialization.py", line 835, in __exit__
+    self.file_like.write_end_of_file()
+RuntimeError: [enforce fail at inline_container.cc:672] . unexpected pos 24102938176 vs 24102938072
+
+================================================================================
+                     Resource Usage on 01/09/2026 22:37:47
+
+Job Id: 9238158
+Queue: CSE
+Walltime: 00:14:41  (requested 02:00:00)
+Job unsuccessful. Exit Status 1 - Exit status refers to the exit value of the
+top process in the job, typically the shell.
+This may be the exit value of the last command executed in the shell.
+See job output error.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k201    5    |     1       0.43       43%    |143771 MiB  73.93G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.43      43.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k201         |     8       1.11      14.0%   |  64.0gb    37.72gb    58.9%   |
+--------------------------------------------------------------------------------

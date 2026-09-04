@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 1460 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/1460] src='حسنا، هذه قصة حول كيف نعرف ما نعرفه.'
+           hyp='Well, this is a story about how we know what we know.'
+           corpus AL so far: mean=2.30  n=1
+  [2/1460] src='إنها قصة حول هذه المرأة، ناتاليا ريبكزينسكي.'
+           hyp="It's a story about this woman, Natalia Rebekynski."
+           corpus AL so far: mean=2.58  n=2
+  [3/1460] src='فهي عالمة في الحفريات القديمة، ما يعني أنها مختصة في نبش الكائنات المي'
+           hyp="She's a paleontologist, which means she digs up very, very old dead things."
+           corpus AL so far: mean=2.93  n=3
+[extrinsic] generation wall: 806.1s (0.55s/sent)
+[extrinsic] BLEU = 32.87 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=2.76  median=2.64  n_defined=1460/1460
+[extrinsic] LAAL mean=2.50  median=2.38  n_defined=1460/1460
+[extrinsic] chunks/sent mean=3.36  median=3.0
+[extrinsic] source-exhausted-without-eor: 75/1460
+[extrinsic] write-cap hits: 2
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/iwslt17_stream_east_8b_from_2b_annot_check_argmax_low_ar-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 14:33:38
+
+Job Id: 9242873
+Queue: CSE
+Walltime: 00:15:07  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    0    |     1       0.85       85%    | 97887 MiB  15.84G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.85      85.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.92      11.0%   |  100.0gb   3.54gb     3.5%    |
+--------------------------------------------------------------------------------

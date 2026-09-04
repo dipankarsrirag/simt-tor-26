@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1984 sentences
+  [1/1984] src='Die Ware hat unter 20 Euro gekostet.'
+           hyp='The goods cost less than 20 euros.'
+           corpus AL so far: mean=5.33  n=1
+  [2/1984] src='Die Gebühr entspricht 40% des Warenwertest....'
+           hyp='The fee is 40% of the value of the goods ...'
+           corpus AL so far: mean=3.99  n=2
+  [3/1984] src='Ich bin #PRS_ORG# Großkunde und somit ist es kein Problem für mich.'
+           hyp='I am a major customer of the PRS organisation, and so it is no problem for me.'
+           corpus AL so far: mean=3.23  n=3
+[extrinsic] generation wall: 1758.2s (0.89s/sent)
+[extrinsic] BLEU = 27.61 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.57  median=3.42  n_defined=1984/1984
+[extrinsic] LAAL mean=3.15  median=3.00  n_defined=1984/1984
+[extrinsic] chunks/sent mean=3.45  median=3.0
+[extrinsic] source-exhausted-without-eor: 70/1984
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_curated/wmt22_stream_gemma_4b_curated_check_argmax_low_de-en.json
+
+================================================================================
+                     Resource Usage on 03/09/2026 21:59:52
+
+Job Id: 9252205
+Queue: CSE
+Walltime: 00:30:47  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    2    |     1       0.68       68%    | 97887 MiB  15.57G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.68      68.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.96      12.0%   |  100.0gb   8.48gb     8.5%    |
+--------------------------------------------------------------------------------

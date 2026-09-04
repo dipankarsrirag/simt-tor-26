@@ -1,0 +1,63 @@
+Loading tokenizer from results/train/gemma_4b_curated/tokenizer
+Loading source-lookup corpus from results/sft_dataset/gemma_2b_curated_pool.json
+  80,000 rows indexed
+Building cond-B dataset from 8 matrices file(s):
+  - results/annotate/_pull_gemma4b/ar-en/matrices.jsonl
+  - results/annotate/_pull_gemma4b/de-en/matrices.jsonl
+  - results/annotate/_pull_gemma4b/en-ar/matrices.jsonl
+  - results/annotate/_pull_gemma4b/en-de/matrices.jsonl
+  - results/annotate/_pull_gemma4b/en-ru/matrices.jsonl
+  - results/annotate/_pull_gemma4b/en-vi/matrices.jsonl
+  - results/annotate/_pull_gemma4b/ru-en/matrices.jsonl
+  - results/annotate/_pull_gemma4b/vi-en/matrices.jsonl
+  tau ladder: [0.3, 0.5, 0.7, 1.0] (primary=0.3, fallbacks tried in order)
+  reassign_latency: True (EAST-inherited thresholds: <=3 high, 4-5 medium, >=6 low)
+  kept=79223  skipped=108  missing=0
+  collapse-at-primary-tau: 1225  (1.5% of kept rows fell back)
+  still-collapse-after-fallback (dropped): 108
+  latency relabelled: 54379/79223 (68.6%)
+  latency flip table (old -> new: count):
+    medium ->   high: 41201
+    medium ->    low: 13178
+Wrote results/sft_dataset/gemma_4b_curated/sft_dataset.json (95285.3 KB)
+
+Chunk-count distribution (top 12):
+    1 chunks: 16439 rows
+    2 chunks: 20844 rows
+    3 chunks: 15500 rows
+    4 chunks: 10608 rows
+    5 chunks: 6911 rows
+    6 chunks: 4269 rows
+    7 chunks: 2275 rows
+    8 chunks: 1193 rows
+    9 chunks: 620 rows
+   10 chunks: 306 rows
+   11 chunks: 144 rows
+   12 chunks: 81 rows
+
+Assigned latency distribution:
+     low: 13178  (16.6%)
+  medium: 24844  (31.4%)
+    high: 41201  (52.0%)
+
+Tau-used distribution (base rows only):
+  tau=0.3: 78106 rows  (98.6%)
+  tau=0.5:   946 rows  (1.2%)
+  tau=0.7:   171 rows  (0.2%)
+
+Base rows: 79223  Augmented rows: 0
+
+================================================================================
+                     Resource Usage on 03/09/2026 01:06:24
+
+Job Id: 9246942
+Queue: CSE
+Walltime: 00:01:29  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k240         |     8       0.53      7.0%    |  64.0gb     1.6gb     2.5%    |
+--------------------------------------------------------------------------------

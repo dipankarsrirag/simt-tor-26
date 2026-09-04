@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='I see it all the time in my line of work.'
+           hyp='Я вижу это постоянно в своей работе.'
+           corpus AL so far: mean=11.00  n=1
+  [2/2037] src='And it doesn’t even have to be life or death to be frustrating.'
+           hyp='И это не обязательно должно быть что-то, что может привести к смерти.'
+           corpus AL so far: mean=12.00  n=2
+  [3/2037] src='Had a recent patient who needed a very specific knee procedure to walk'
+           hyp='У меня был недавно пациент, которому была необходима очень специфическая операция на колене, чтобы ходить нормально и улучшить качество жизн'
+           corpus AL so far: mean=14.33  n=3
+[extrinsic] generation wall: 2528.3s (1.24s/sent)
+[extrinsic] BLEU = 27.93 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=9.75  median=7.87  n_defined=2037/2037
+[extrinsic] LAAL mean=6.67  median=6.12  n_defined=2037/2037
+[extrinsic] chunks/sent mean=1.63  median=1.0
+[extrinsic] source-exhausted-without-eor: 109/2037
+[extrinsic] write-cap hits: 163
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/wmt22_stream_gemma_4b_from_2b_annot_check_argmax_high_en-ru.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 07:15:00
+
+Job Id: 9240124
+Queue: CSE
+Walltime: 00:42:37  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    1    |     1       0.79       79%    | 46068 MiB  15.38G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.79      79.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.99      12.0%   |  100.0gb   15.59gb    15.6%   |
+--------------------------------------------------------------------------------

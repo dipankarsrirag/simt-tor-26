@@ -1,0 +1,24 @@
+#!/bin/bash
+#PBS -N eval_gemma_4b_from_2b_annot
+#PBS -l select=1:ncpus=8:mem=100gb:ngpus=1
+#PBS -l walltime=02:00:00
+#PBS -j oe
+
+# Config 06 (Fig 5 middle). Gemma-4-E4B-it trained on Gemma-2B's OT chunks.
+# Runs on UNSW Katana (PBS), not Gadi. Put the walltime on the qsub command
+# line as well: Katana picks the queue tier from it.
+# One eval cell. Pass TS (wmt15|wmt22|iwslt17|iwslt15), PAIR (de-en) and
+# LAT (low|low-medium|medium|medium-high|high) with qsub -v. Skips cells that
+# already have output, so the sweep can be resubmitted.
+
+set -eo pipefail
+cd ${SIMT_REPO_ROOT:-$PBS_O_WORKDIR}
+OUT=results/eval/gemma_4b_from_2b_annot
+mkdir -p $OUT
+JSON=$OUT/${TS}_stream_gemma_4b_from_2b_annot_check_argmax_${LAT}_${PAIR}.json
+[ -s $JSON ] && exit 0
+SRC_L=${PAIR%-*}
+TGT_L=${PAIR#*-}
+
+source bin/_env.sh
+${PYTHON} -u src/eval/extrinsic.py   --model_dir      results/train/gemma_4b_from_2b_annot/final   --tokenizer_dir  results/train/gemma_4b_from_2b_annot/tokenizer   --dev_src        ${SIMT_TESTSETS_ROOT}/eval/${PAIR}/${TS}.${PAIR}.src   --dev_ref        ${SIMT_TESTSETS_ROOT}/eval/${PAIR}/${TS}.${PAIR}.ref   --n_sentences    -1   --src_lang $SRC_L --tgt_lang $TGT_L   --use_chat_template   --latency  $LAT   --mode     streaming   --policy   check_argmax   --output   $JSON

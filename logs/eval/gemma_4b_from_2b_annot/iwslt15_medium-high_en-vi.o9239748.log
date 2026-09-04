@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='When I was little , I thought my country was the best on the planet , '
+           hyp='Khi còn nhỏ, tôi nghĩ đất nước mình là tốt nhất trên thế giới, và tôi lớn lên hát một bài hát tên là "Không có gì để ghen tị".'
+           corpus AL so far: mean=6.89  n=1
+  [2/1268] src='And I was very proud .'
+           hyp='Và tôi rất tự hào.'
+           corpus AL so far: mean=6.44  n=2
+  [3/1268] src='In school , we spent a lot of time studying the history of Kim Il-Sung'
+           hyp='Ở trường, chúng tôi dành rất nhiều thời gian để nghiên cứu lịch sử của Kim Il-Sung, nhưng chúng tôi chưa bao giờ học về thế giới bên ngoài, '
+           corpus AL so far: mean=5.47  n=3
+[extrinsic] generation wall: 1901.9s (1.50s/sent)
+[extrinsic] BLEU = 35.93 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=5.77  median=4.93  n_defined=1268/1268
+[extrinsic] LAAL mean=5.04  median=4.61  n_defined=1268/1268
+[extrinsic] chunks/sent mean=2.89  median=2.0
+[extrinsic] source-exhausted-without-eor: 23/1268
+[extrinsic] write-cap hits: 8
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt15_stream_gemma_4b_from_2b_annot_check_argmax_medium-high_en-vi.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:41:28
+
+Job Id: 9239748
+Queue: CSE
+Walltime: 00:32:33  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k173    0    |     1       0.77       77%    | 46068 MiB  15.38G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.77      77.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k173         |     8       0.99      12.0%   |  32.0gb    9.34gb     29.2%   |
+--------------------------------------------------------------------------------

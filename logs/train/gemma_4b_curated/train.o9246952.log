@@ -1,0 +1,109 @@
+9247178.kman.restech.unsw.edu.au
+Output dir: results/train/gemma_4b_curated
+Model: /srv/scratch/z5531827/simt-models/gemma-4-E4B-it
+Tokenizer: results/train/gemma_4b_curated/tokenizer
+Loading tokenizer ...
+  vocab size: 262,146
+Loading model from /srv/scratch/z5531827/simt-models/gemma-4-E4B-it ...
+
+  loaded; original embed rows: 262,144
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 79223/79223 base rows.
+  79,223 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+  Row 0 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with high latency.<turn|>\n<|turn>model\nوهذا الشاب ، كان يفعل<|end-of-read|>And this guy, he<|end-of-write|> الكثير من الأشياء السيئة .<|end-of-read|> was up to a lot of no good.<|'
+    n_ids=67, labels_masked=32
+  Row 1 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with medium latency.<turn|>\n<|turn>model\nوأعتقد أن بعضا من هذه التقنيات<|end-of-read|>And I think some of these technologies<|end-of-write|> ستمكننا من التواصل أكثر مع<|end-of-rea'
+    n_ids=136, labels_masked=32
+
+Filter:   0%|          | 0/79223 [00:00<?, ? examples/s]
+Filter:   1%|▏         | 1000/79223 [00:00<01:02, 1255.03 examples/s]
+Filter:  28%|██▊       | 22000/79223 [00:00<00:01, 32879.02 examples/s]
+Filter:  54%|█████▍    | 43000/79223 [00:01<00:00, 63495.68 examples/s]
+Filter:  82%|████████▏ | 65000/79223 [00:01<00:00, 93523.11 examples/s]
+Filter: 100%|██████████| 79223/79223 [00:01<00:00, 67033.00 examples/s]
+
+Filter:   0%|          | 0/79223 [00:00<?, ? examples/s]
+Filter:  28%|██▊       | 22000/79223 [00:00<00:00, 207633.67 examples/s]
+Filter:  54%|█████▍    | 43000/79223 [00:00<00:00, 200639.38 examples/s]
+Filter:  82%|████████▏ | 65000/79223 [00:00<00:00, 204687.78 examples/s]
+Filter: 100%|██████████| 79223/79223 [00:00<00:00, 205847.20 examples/s]
+  Split: 79223 unique idx -> train 75262 idx (75262 rows), eval 3961 idx (3961 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+  resuming from results/train/gemma_4b_curated/checkpoint-4750
+[transformers] There were missing keys in the checkpoint model loaded: ['lm_head.weight'].
+
+{'loss': '1.847', 'grad_norm': '7.781', 'learning_rate': '4.9e-06', 'epoch': '1.02'}
+
+{'loss': '1.873', 'grad_norm': '9.25', 'learning_rate': '9.9e-06', 'epoch': '1.031'}
+
+{'loss': '1.873', 'grad_norm': '9.75', 'learning_rate': '1.49e-05', 'epoch': '1.042'}
+
+{'loss': '1.861', 'grad_norm': '8.312', 'learning_rate': '1.492e-05', 'epoch': '1.052'}
+
+{'loss': '1.883', 'grad_norm': '9.812', 'learning_rate': '1.484e-05', 'epoch': '1.063'}
+
+[A{'eval_loss': '2.007', 'eval_runtime': '48.54', 'eval_samples_per_second': '81.61', 'eval_steps_per_second': '40.81', 'epoch': '1.063'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+Writing model shards:   0%|          | 0/1 [00:02<?, ?it/s]
+Traceback (most recent call last):
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 488, in <module>
+    main()
+  File "/srv/scratch/z5531827/simt-tor-26/src/train/sft.py", line 436, in main
+    train_result = trainer.train(resume_from_checkpoint=resume)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1437, in train
+    return inner_training_loop(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1519, in _inner_training_loop
+    self._run_epoch(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 1788, in _run_epoch
+    self._maybe_log_save_evaluate(
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 2108, in _maybe_log_save_evaluate
+    self._save_checkpoint(model, trial)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3079, in _save_checkpoint
+    self.save_model(output_dir, _internal_call=True)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3832, in save_model
+    self._save(output_dir)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/trainer.py", line 3862, in _save
+    self.model.save_pretrained(output_dir, state_dict=state_dict)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/transformers/modeling_utils.py", line 3686, in save_pretrained
+    safe_save_file(shard_state_dict, filename, metadata=metadata)
+  File "/srv/scratch/z5531827/venvs/simt/lib/python3.10/site-packages/safetensors/torch.py", line 323, in save_file
+    serialize_file(
+safetensors._safetensors_rust.SafetensorError: Error while serializing: I/O error: Disk quota exceeded (os error 122)
+
+================================================================================
+                     Resource Usage on 03/09/2026 03:07:18
+
+Job Id: 9246952
+Queue: CSE
+Walltime: 00:09:33  (requested 02:00:00)
+Job unsuccessful. Exit Status 1 - Exit status refers to the exit value of the
+top process in the job, typically the shell.
+This may be the exit value of the last command executed in the shell.
+See job output error.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    4    |     1       0.45       45%    | 97887 MiB  73.72G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.45      45.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       1.65      21.0%   |  100.0gb   37.62gb    37.6%   |
+--------------------------------------------------------------------------------

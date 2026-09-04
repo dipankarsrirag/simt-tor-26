@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='I see it all the time in my line of work.'
+           hyp='Я вижу это постоянно в своей работе.'
+           corpus AL so far: mean=3.86  n=1
+  [2/2037] src='And it doesn’t even have to be life or death to be frustrating.'
+           hyp='И даже не обязательно, чтобы это была жизнь или смерть, чтобы это было неприятно.'
+           corpus AL so far: mean=4.56  n=2
+  [3/2037] src='Had a recent patient who needed a very specific knee procedure to walk'
+           hyp='У меня был пациент, которому потребовалась очень специфическая операция на колене, чтобы он мог нормально ходить и улучшить качество жизни.'
+           corpus AL so far: mean=4.19  n=3
+[extrinsic] generation wall: 3017.4s (1.48s/sent)
+[extrinsic] BLEU = 25.66 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.08  median=3.00  n_defined=2037/2037
+[extrinsic] LAAL mean=2.89  median=2.78  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.84  median=3.0
+[extrinsic] source-exhausted-without-eor: 83/2037
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/wmt22_stream_gemma_4b_from_2b_annot_check_argmax_low-medium_en-ru.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:52:45
+
+Job Id: 9239720
+Queue: CSE
+Walltime: 00:50:58  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k201    2    |     1        0.5       50%    |143771 MiB  15.66G             |
+--------------------------------------------------------------------------------
+|Total         |     1        0.5      50.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k201         |     8       0.99      12.0%   |  32.0gb    2.54gb     7.9%    |
+--------------------------------------------------------------------------------

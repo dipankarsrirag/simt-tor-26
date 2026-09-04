@@ -32,11 +32,18 @@ _archive/results/**/final/
 
 
 # Logs — PBS output, metrics jsonl, wandb offline dirs.
-logs/
+logs/**
 *.log
 *.o[0-9]*
 *.e[0-9]*
 wandb/
+
+# Kept in the repo: cleaned per-run logs, loss curves and run manifests.
+!logs/*/
+!logs/*/*/
+!logs/*/*/*.log
+!logs/*/*/*.csv
+!logs/*/*/*.json
 
 # Python / venv.
 __pycache__/
@@ -111,9 +118,6 @@ _archive/results/**/sft_dataset_*.json
 # Extended tokenizer — 31MB tokenizer.json regeneratable via scripts/phase2_build_tokenizer_v6.py.
 _archive/results/**/tokenizer-extended-v6/
 
-
-# Live per-tag log dirs — everything except placeholder .gitkeep.
-logs/*/**/*.log
 
 # Per-user site config (see .simtrc.example).
 .simtrc

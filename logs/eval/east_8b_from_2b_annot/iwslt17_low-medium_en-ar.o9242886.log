@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 1460 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/1460] src='So, this is a story about how we know what we know.'
+           hyp='لذلك، هذه قصة عن كيفية معرفتنا لما نعرفه.'
+           corpus AL so far: mean=3.21  n=1
+  [2/1460] src="It's a story about this woman, Natalia Rybczynski."
+           hyp='إنها قصة عن هذه المرأة، ناتاليا ريبشينسكي.'
+           corpus AL so far: mean=3.25  n=2
+  [3/1460] src="She's a paleobiologist, which means she specializes in digging up real"
+           hyp='انها عالمة علم الأحياء القديمة، وهذا يعني انها متخصصة في اكتشاف الاشياء القديمة الميتة.'
+           corpus AL so far: mean=6.83  n=3
+[extrinsic] generation wall: 1871.5s (1.28s/sent)
+[extrinsic] BLEU = 10.39 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.77  median=3.55  n_defined=1460/1460
+[extrinsic] LAAL mean=3.44  median=3.17  n_defined=1460/1460
+[extrinsic] chunks/sent mean=3.27  median=3.0
+[extrinsic] source-exhausted-without-eor: 49/1460
+[extrinsic] write-cap hits: 9
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/iwslt17_stream_east_8b_from_2b_annot_check_argmax_low-medium_en-ar.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 15:25:51
+
+Job Id: 9242886
+Queue: CSE
+Walltime: 00:31:38  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    0    |     1       0.96       96%    | 46068 MiB  15.66G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.96      96.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.99      12.0%   |  100.0gb   16.18gb    16.2%   |
+--------------------------------------------------------------------------------

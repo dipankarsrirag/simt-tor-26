@@ -1,0 +1,75 @@
+qsub: Resource invalid in "select" specification: mem_per_gpu_gte_93
+Output dir: results/train/gemma_4b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/gemma-4-E4B-it
+Tokenizer: results/train/gemma_4b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 262,146
+Loading model from /srv/scratch/z5531827/simt-models/gemma-4-E4B-it ...
+
+  loaded; original embed rows: 262,144
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+  Row 0 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with high latency.<turn|>\n<|turn>model\nوهذا الشاب ، كان<|end-of-read|>And this guy, he was<|end-of-write|> يفعل الكثير من الأشياء السيئة .<|end-of-read|> up to a lot of no good.<|'
+    n_ids=67, labels_masked=32
+  Row 1 preview (first 300 chars of decoded):
+    '<bos><|turn>system\nYou are a helpful assistant.<turn|>\n<|turn>user\nTranslate the following text from Arabic into English with medium latency.<turn|>\n<|turn>model\nوأعتقد أن بعضا من هذه التقنيات ستمكننا من التواصل أكثر مع مرضانا،<|end-of-read|>And I think some of these technologies will enable us to b'
+    n_ids=134, labels_masked=32
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  23%|██▎       | 18000/78349 [00:00<00:00, 171614.42 examples/s]
+Filter:  47%|████▋     | 37000/78349 [00:00<00:00, 174566.90 examples/s]
+Filter:  71%|███████▏  | 56000/78349 [00:00<00:00, 176210.31 examples/s]
+Filter:  96%|█████████▌| 75000/78349 [00:00<00:00, 178478.22 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 177254.67 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  26%|██▌       | 20000/78349 [00:00<00:00, 187372.44 examples/s]
+Filter:  50%|████▉     | 39000/78349 [00:00<00:00, 184024.32 examples/s]
+Filter:  75%|███████▌  | 59000/78349 [00:00<00:00, 186830.24 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 187884.76 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 186777.93 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+
+{'loss': '6.083', 'grad_norm': '25.12', 'learning_rate': '4.9e-06', 'epoch': '0.01075'}
+
+{'loss': '3.77', 'grad_norm': '18.25', 'learning_rate': '9.9e-06', 'epoch': '0.0215'}
+
+{'loss': '3.456', 'grad_norm': '15', 'learning_rate': '1.49e-05', 'epoch': '0.03224'}
+
+{'loss': '3.179', 'grad_norm': '15.62', 'learning_rate': '1.492e-05', 'epoch': '0.04299'}
+
+{'loss': '2.434', 'grad_norm': '13.5', 'learning_rate': '1.484e-05', 'epoch': '0.05374'}
+
+================================================================================
+                     Resource Usage on 02/09/2026 01:08:36
+
+Job Id: 9238783
+Queue: CSE
+Walltime: 00:08:27  (requested 02:00:00)
+Job exited with SIGTERM (15) signal.
+Exit Status 271 - Termination request. See job output error.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k099    2    |     1       0.35       35%    |143771 MiB  73.92G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.35      35.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k099         |     8       1.32      17.0%   |  100.0gb   37.63gb    37.6%   |
+--------------------------------------------------------------------------------

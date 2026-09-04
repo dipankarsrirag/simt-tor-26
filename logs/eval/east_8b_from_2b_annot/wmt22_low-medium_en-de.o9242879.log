@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/2037] src='You can come back any time as our chat service window is open 24/7'
+           hyp='Sie können jederzeit wieder zu uns kommen, denn unser Service ist 24 Stunden am Tag und 7 Tage die Woche geöffnet.'
+           corpus AL so far: mean=5.42  n=1
+  [2/2037] src='I sincerely hope you get to find a resolution'
+           hyp='Ich hoffe, dass Sie eine Lösung finden,'
+           corpus AL so far: mean=4.32  n=2
+  [3/2037] src='Thank you for contacting #PRS_ORG#, it was my pleasure to assist you t'
+           hyp='Vielen Dank für Ihre Anfrage. Es war mir eine Freude, Ihnen heute zu helfen.'
+           corpus AL so far: mean=3.94  n=3
+[extrinsic] generation wall: 1439.6s (0.71s/sent)
+[extrinsic] BLEU = 23.45 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.96  median=3.69  n_defined=2037/2037
+[extrinsic] LAAL mean=3.76  median=3.42  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.04  median=3.0
+[extrinsic] source-exhausted-without-eor: 95/2037
+[extrinsic] write-cap hits: 35
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/wmt22_stream_east_8b_from_2b_annot_check_argmax_low-medium_en-de.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 15:03:27
+
+Job Id: 9242879
+Queue: CSE
+Walltime: 00:25:13  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    5    |     1       0.91       91%    | 97887 MiB  15.82G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.91      91.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.95      12.0%   |  100.0gb   16.36gb    16.4%   |
+--------------------------------------------------------------------------------

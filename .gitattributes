@@ -25,3 +25,7 @@ matrices.jsonl                       filter=lfs diff=lfs merge=lfs -text
 
 # Large sacrebleu / eval caches
 sacrebleu-cache-*.json              filter=lfs diff=lfs merge=lfs -text
+
+# Cluster scripts must stay LF: a .pbs with CRLF fails on the scheduler.
+*.pbs                               text eol=lf
+*.sh                                text eol=lf

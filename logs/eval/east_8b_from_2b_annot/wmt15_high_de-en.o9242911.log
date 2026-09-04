@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 2169 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/2169] src='Die Premierminister Indiens und Japans trafen sich in Tokio.'
+           hyp='The prime ministers of India and Japan met in Tokyo.'
+           corpus AL so far: mean=9.00  n=1
+  [2/2169] src='Indiens neuer Premierminister Narendra Modi trifft bei seinem ersten w'
+           hyp="India's new Prime Minister Narendra Modi is making his first major foreign visit since his election win in May, to meet his Japanese counter"
+           corpus AL so far: mean=9.94  n=2
+  [3/2169] src='Herr Modi befindet sich auf einer fünftägigen Reise nach Japan, um die'
+           hyp="Mr Modi is on a five-day trip to Japan, to strengthen economic ties with the world's third-largest economy."
+           corpus AL so far: mean=8.53  n=3
+[extrinsic] generation wall: 1295.6s (0.60s/sent)
+[extrinsic] BLEU = 33.06 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=8.85  median=6.93  n_defined=2169/2169
+[extrinsic] LAAL mean=6.36  median=5.90  n_defined=2169/2169
+[extrinsic] chunks/sent mean=1.84  median=2.0
+[extrinsic] source-exhausted-without-eor: 72/2169
+[extrinsic] write-cap hits: 33
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/wmt15_stream_east_8b_from_2b_annot_check_argmax_high_de-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 16:12:56
+
+Job Id: 9242911
+Queue: CSE
+Walltime: 00:22:45  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    1    |     1       0.91       91%    | 97887 MiB  15.82G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.91      91.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.96      12.0%   |  100.0gb   8.66gb     8.7%    |
+--------------------------------------------------------------------------------

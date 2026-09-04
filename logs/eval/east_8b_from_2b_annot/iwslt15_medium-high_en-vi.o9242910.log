@@ -1,0 +1,48 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/east_8b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/east_8b_from_2b_annot/final
+
+[extrinsic] scoring 1268 sentences
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  [1/1268] src='When I was little , I thought my country was the best on the planet , '
+           hyp='Khi còn nhỏ, tôi nghĩ rằng nước tôi là nước tốt nhất trên hành tinh này, và tôi lớn lên hát một bài hát có tên "Không có gì để mong chờ."'
+           corpus AL so far: mean=8.24  n=1
+  [2/1268] src='And I was very proud .'
+           hyp='Và tôi rất tự hào.'
+           corpus AL so far: mean=7.12  n=2
+  [3/1268] src='In school , we spent a lot of time studying the history of Kim Il-Sung'
+           hyp='Trong trường, chúng tôi đã dành rất nhiều thời gian để nghiên cứu về lịch sử của Kim Il-Sung, nhưng chúng tôi không bao giờ được học về thế '
+           corpus AL so far: mean=6.34  n=3
+[extrinsic] generation wall: 1683.7s (1.33s/sent)
+[extrinsic] BLEU = 31.89 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=7.33  median=6.00  n_defined=1268/1268
+[extrinsic] LAAL mean=5.85  median=5.40  n_defined=1268/1268
+[extrinsic] chunks/sent mean=2.47  median=2.0
+[extrinsic] source-exhausted-without-eor: 0/1268
+[extrinsic] write-cap hits: 21
+[extrinsic] wrote results/eval/east_8b_from_2b_annot/iwslt15_stream_east_8b_from_2b_annot_check_argmax_medium-high_en-vi.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 16:18:38
+
+Job Id: 9242910
+Queue: CSE
+Walltime: 00:28:33  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    1    |     1       0.96       96%    | 46068 MiB  15.65G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.96      96.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.99      12.0%   |  100.0gb   16.2gb     16.2%   |
+--------------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='I see it all the time in my line of work.'
+           hyp='Я вижу это постоянно в своей работе.'
+           corpus AL so far: mean=3.86  n=1
+  [2/2037] src='And it doesn’t even have to be life or death to be frustrating.'
+           hyp='И даже не обязательно, чтобы это было вопросом жизни или смерти, чтобы это было неприятно.'
+           corpus AL so far: mean=4.55  n=2
+  [3/2037] src='Had a recent patient who needed a very specific knee procedure to walk'
+           hyp='У меня был пациент, которому была необходима очень специфическая операция на колене, чтобы ходить нормально и улучшить качество жизни.'
+           corpus AL so far: mean=3.89  n=3
+[extrinsic] generation wall: 2091.3s (1.03s/sent)
+[extrinsic] BLEU = 25.73 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.04  median=3.00  n_defined=2037/2037
+[extrinsic] LAAL mean=2.86  median=2.73  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.87  median=3.0
+[extrinsic] source-exhausted-without-eor: 83/2037
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/wmt22_stream_gemma_4b_from_2b_annot_check_argmax_low_en-ru.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:35:20
+
+Job Id: 9239709
+Queue: CSE
+Walltime: 00:36:22  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    4    |     1       0.73       73%    | 97887 MiB  15.55G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.73      73.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.96      12.0%   |  32.0gb    9.24gb     28.9%   |
+--------------------------------------------------------------------------------

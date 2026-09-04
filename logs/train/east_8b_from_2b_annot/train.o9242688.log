@@ -1,0 +1,146 @@
+9242701.kman.restech.unsw.edu.au
+Output dir: results/train/east_8b_from_2b_annot
+Model: /srv/scratch/z5531827/simt-models/Meta-Llama-3-8B-Instruct
+Tokenizer: results/train/east_8b_from_2b_annot/tokenizer
+Loading tokenizer ...
+  vocab size: 128,258
+Loading model from /srv/scratch/z5531827/simt-models/Meta-Llama-3-8B-Instruct ...
+
+  loaded; original embed rows: 128,256
+Resizing embeddings: +2 rows (mean-cov init)
+[transformers] The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+[transformers] The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+
+Loading + rendering training rows ...
+Filtered augmentation: kept 78349/78349 base rows.
+  78,349 rows to train on
+Building input_ids from chunk_ids (direct-splice; no string round-trip) ...
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+  Row 0 preview (first 300 chars of decoded):
+    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTranslate the following text from Arabic into English with high latency.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nوهذا الشاب ، كان<|end-of-read|'
+    n_ids=70, labels_masked=33
+  Row 1 preview (first 300 chars of decoded):
+    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTranslate the following text from Arabic into English with medium latency.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nوأعتقد أن بعضا من هذه التقني'
+    n_ids=140, labels_masked=33
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  24%|██▍       | 19000/78349 [00:00<00:00, 183338.99 examples/s]
+Filter:  50%|████▉     | 39000/78349 [00:00<00:00, 185108.72 examples/s]
+Filter:  77%|███████▋  | 60000/78349 [00:00<00:00, 191759.07 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 192412.24 examples/s]
+
+Filter:   0%|          | 0/78349 [00:00<?, ? examples/s]
+Filter:  27%|██▋       | 21000/78349 [00:00<00:00, 198095.48 examples/s]
+Filter:  52%|█████▏    | 41000/78349 [00:00<00:00, 193525.38 examples/s]
+Filter:  79%|███████▉  | 62000/78349 [00:00<00:00, 197553.03 examples/s]
+Filter: 100%|██████████| 78349/78349 [00:00<00:00, 198932.83 examples/s]
+  Split: 78349 unique idx -> train 74432 idx (74432 rows), eval 3917 idx (3917 rows)
+[RANK 0] Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+Starting training ...
+  resuming from results/train/east_8b_from_2b_annot/checkpoint-8500
+
+{'loss': '13.17', 'grad_norm': '96', 'learning_rate': '2.45e-06', 'epoch': '1.838'}
+
+{'loss': '13.04', 'grad_norm': '103.5', 'learning_rate': '4.95e-06', 'epoch': '1.849'}
+
+{'loss': '13.38', 'grad_norm': '113.5', 'learning_rate': '7.45e-06', 'epoch': '1.859'}
+
+{'loss': '13.43', 'grad_norm': '113', 'learning_rate': '9.95e-06', 'epoch': '1.87'}
+
+{'loss': '13.44', 'grad_norm': '110.5', 'learning_rate': '9.946e-06', 'epoch': '1.881'}
+
+[A{'eval_loss': '1.9', 'eval_runtime': '41.01', 'eval_samples_per_second': '95.51', 'eval_steps_per_second': '47.77', 'epoch': '1.881'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.28s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.28s/it]
+
+{'loss': '13.56', 'grad_norm': '112', 'learning_rate': '9.891e-06', 'epoch': '1.892'}
+
+{'loss': '13.61', 'grad_norm': '101', 'learning_rate': '9.836e-06', 'epoch': '1.902'}
+
+{'loss': '13.86', 'grad_norm': '114.5', 'learning_rate': '9.781e-06', 'epoch': '1.913'}
+
+{'loss': '13.48', 'grad_norm': '113', 'learning_rate': '9.726e-06', 'epoch': '1.924'}
+
+{'loss': '13.65', 'grad_norm': '140', 'learning_rate': '9.672e-06', 'epoch': '1.935'}
+
+[A{'eval_loss': '1.913', 'eval_runtime': '41.01', 'eval_samples_per_second': '95.51', 'eval_steps_per_second': '47.77', 'epoch': '1.935'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.46s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.46s/it]
+
+{'loss': '13.62', 'grad_norm': '125.5', 'learning_rate': '9.617e-06', 'epoch': '1.945'}
+
+{'loss': '13.64', 'grad_norm': '108.5', 'learning_rate': '9.562e-06', 'epoch': '1.956'}
+
+{'loss': '13.6', 'grad_norm': '101.5', 'learning_rate': '9.507e-06', 'epoch': '1.967'}
+
+{'loss': '13.6', 'grad_norm': '132', 'learning_rate': '9.452e-06', 'epoch': '1.978'}
+
+{'loss': '13.61', 'grad_norm': '108.5', 'learning_rate': '9.397e-06', 'epoch': '1.988'}
+
+[A{'eval_loss': '1.906', 'eval_runtime': '41.01', 'eval_samples_per_second': '95.52', 'eval_steps_per_second': '47.77', 'epoch': '1.988'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.44s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.44s/it]
+
+{'loss': '13.77', 'grad_norm': '105.5', 'learning_rate': '9.342e-06', 'epoch': '1.999'}
+
+[A{'eval_loss': '1.905', 'eval_runtime': '41.1', 'eval_samples_per_second': '95.3', 'eval_steps_per_second': '47.66', 'epoch': '2'}
+
+                                                   [A
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.35s/it][A
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.35s/it]
+
+{'train_runtime': '854.7', 'train_samples_per_second': '174.2', 'train_steps_per_second': '10.88', 'train_loss': '1.169', 'epoch': '2'}
+
+Training complete in 886.1s
+  final train loss: 1.1690
+  best checkpoint (eval_loss): results/train/east_8b_from_2b_annot/checkpoint-4500 @ eval_loss=1.8761435747146606
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.25s/it]
+Writing model shards: 100%|██████████| 1/1 [00:07<00:00,  7.25s/it]
+  cleanup: rm -rf results/train/east_8b_from_2b_annot/checkpoint-4500
+
+Wrote summary to results/train/east_8b_from_2b_annot/sft_v6_summary.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 13:52:52
+
+Job Id: 9242688
+Queue: CSE
+Walltime: 00:17:12  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    1    |     1       0.77       77%    | 97887 MiB  67.54G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.77      77.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.94      12.0%   |  100.0gb   17.48gb    17.5%   |
+--------------------------------------------------------------------------------

@@ -1,0 +1,17 @@
+{
+ "tag": "east_8b_from_2b_annot",
+ "config": "configs/07_east_8b_from_2b_annot.yaml",
+ "git_sha": "22c5889a5f88f1c8cd48728301457d04b01009d6",
+ "cluster": "UNSW Katana (PBS)",
+ "sft_rows": 78349,
+ "hf_repo": "unswnlporg/tor-simt-east-8b-from-2b-annot",
+ "eval_cells": 55,
+ "train_shards_with_steps": 2,
+ "train_shards_dropped": 7,
+ "dropped_shard_reasons": {
+  "cuda_out_of_memory": 6,
+  "no_training_steps": 1
+ },
+ "eval_jobs_with_output": 55,
+ "eval_jobs_dropped": 0
+}

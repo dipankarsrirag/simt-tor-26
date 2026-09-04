@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1138 sentences
+  [1/1138] src='Das ist James Risen.'
+           hyp='This is James Risen.'
+           corpus AL so far: mean=4.00  n=1
+  [2/1138] src='Sie kennen ihn vielleicht, weil er als New-York-Times-Reporter den Pul'
+           hyp='You may know him, because he was a New York Times reporter who won the Pulitzer Prize.'
+           corpus AL so far: mean=3.56  n=2
+  [3/1138] src='Lange bevor je jemand von Edward Snowden gehört hatte, schrieb Risen e'
+           hyp='Long before anyone had heard of Edward Snowden, Risen wrote a book in which he spectacularly published that the NSA was illegally tapping Am'
+           corpus AL so far: mean=3.28  n=3
+[extrinsic] generation wall: 1200.9s (1.06s/sent)
+[extrinsic] BLEU = 29.65 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.29  median=3.00  n_defined=1138/1138
+[extrinsic] LAAL mean=2.89  median=2.71  n_defined=1138/1138
+[extrinsic] chunks/sent mean=3.13  median=3.0
+[extrinsic] source-exhausted-without-eor: 55/1138
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt17_stream_gemma_4b_from_2b_annot_check_argmax_medium_de-en.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 06:45:27
+
+Job Id: 9240103
+Queue: CSE
+Walltime: 00:20:38  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k098    0    |     1       0.79       79%    | 46068 MiB  15.38G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.79      79.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k098         |     8       0.98      12.0%   |  100.0gb   15.77gb    15.8%   |
+--------------------------------------------------------------------------------

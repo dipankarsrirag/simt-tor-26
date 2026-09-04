@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1138 sentences
+  [1/1138] src='So this is James Risen.'
+           hyp='Das ist James Risen.'
+           corpus AL so far: mean=2.38  n=1
+  [2/1138] src='You may know him as the Pulitzer Prize-winning reporter for The New Yo'
+           hyp='Sie kennen ihn vielleicht als den mit dem Pulitzer-Preis ausgezeichneten Reporter des New York Times.'
+           corpus AL so far: mean=8.19  n=2
+  [3/1138] src="Long before anybody knew Edward Snowden's name, Risen wrote a book in "
+           hyp='Lange bevor jemand wusste, wer Edward Snowden heißt, schrieb Risen ein Buch, in dem er bekanntlich enthüllte, dass die NSA illegal die Telef'
+           corpus AL so far: mean=7.13  n=3
+[extrinsic] generation wall: 1331.6s (1.17s/sent)
+[extrinsic] BLEU = 26.22 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=8.94  median=7.00  n_defined=1138/1138
+[extrinsic] LAAL mean=6.01  median=5.41  n_defined=1138/1138
+[extrinsic] chunks/sent mean=1.72  median=1.0
+[extrinsic] source-exhausted-without-eor: 35/1138
+[extrinsic] write-cap hits: 39
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt17_stream_gemma_4b_from_2b_annot_check_argmax_high_en-de.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:33:24
+
+Job Id: 9239755
+Queue: CSE
+Walltime: 00:22:53  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k099    3    |     1       0.51       51%    |143771 MiB  15.65G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.51      51.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k099         |     8       0.98      12.0%   |  32.0gb    15.59gb    48.7%   |
+--------------------------------------------------------------------------------

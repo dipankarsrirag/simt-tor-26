@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='Khi tôi còn nhỏ , Tôi nghĩ rằng BắcTriều Tiên là đất nước tốt nhất trê'
+           hyp='When I was a kid, I thought North Korea was the best country in the world and I would sing the song "We have nothing to be jealous of."'
+           corpus AL so far: mean=4.59  n=1
+  [2/1268] src='Tôi đã rất tự hào về đất nước tôi .'
+           hyp='I was very proud of my country.'
+           corpus AL so far: mean=7.30  n=2
+  [3/1268] src='Ở trường , chúng tôi dành rất nhiều thời gian để học về cuộc đời của c'
+           hyp='In school, we spent a lot of time learning about the life of Kim Il-sung, but not much about the outside world. Except for the fact that the'
+           corpus AL so far: mean=7.56  n=3
+[extrinsic] generation wall: 3929.0s (3.10s/sent)
+[extrinsic] BLEU = 30.12 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=5.97  median=5.58  n_defined=1268/1268
+[extrinsic] LAAL mean=5.65  median=5.32  n_defined=1268/1268
+[extrinsic] chunks/sent mean=3.08  median=2.0
+[extrinsic] source-exhausted-without-eor: 8/1268
+[extrinsic] write-cap hits: 2
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt15_stream_gemma_4b_curated_check_argmax_high_vi-en.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 01:29:26
+
+Job Id: 9252258
+Queue: CSE
+Walltime: 01:06:35  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k110    0    |     1        0.0       0%     | 40960 MiB   0.0B              |
+--------------------------------------------------------------------------------
+|Total         |     1        0.0      0.0%    |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k110         |     8       0.98      12.0%   |  100.0gb   16.53gb    16.5%   |
+--------------------------------------------------------------------------------

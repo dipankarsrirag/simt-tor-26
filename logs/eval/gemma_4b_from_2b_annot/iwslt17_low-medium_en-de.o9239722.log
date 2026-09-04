@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low-medium
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_from_2b_annot/tokenizer
+[extrinsic] loading model results/train/gemma_4b_from_2b_annot/final
+
+[extrinsic] scoring 1138 sentences
+  [1/1138] src='So this is James Risen.'
+           hyp='Das ist James Risen.'
+           corpus AL so far: mean=2.38  n=1
+  [2/1138] src='You may know him as the Pulitzer Prize-winning reporter for The New Yo'
+           hyp='Sie kennen ihn vielleicht als den Pulitzer-preisträchtigen Reporter für die New York Times.'
+           corpus AL so far: mean=2.68  n=2
+  [3/1138] src="Long before anybody knew Edward Snowden's name, Risen wrote a book in "
+           hyp='Lange bevor jemand den Namen Edward Snowden kannte, schrieb Risen ein Buch, in dem er berühmt wurde, indem er enthüllte, dass die NSA die Te'
+           corpus AL so far: mean=2.32  n=3
+[extrinsic] generation wall: 1576.1s (1.38s/sent)
+[extrinsic] BLEU = 23.53 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.05  median=2.98  n_defined=1138/1138
+[extrinsic] LAAL mean=2.81  median=2.67  n_defined=1138/1138
+[extrinsic] chunks/sent mean=3.71  median=3.0
+[extrinsic] source-exhausted-without-eor: 60/1138
+[extrinsic] write-cap hits: 2
+[extrinsic] wrote results/eval/gemma_4b_from_2b_annot/iwslt17_stream_gemma_4b_from_2b_annot_check_argmax_low-medium_en-de.json
+
+================================================================================
+                     Resource Usage on 02/09/2026 05:29:29
+
+Job Id: 9239722
+Queue: CSE
+Walltime: 00:27:08  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k204    3    |     1       0.48       48%    |143771 MiB  15.66G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.48      48.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k204         |     8       0.97      12.0%   |  32.0gb    16.68gb    52.1%   |
+--------------------------------------------------------------------------------

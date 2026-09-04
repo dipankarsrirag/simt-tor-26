@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=medium-high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_4b_curated/tokenizer
+[extrinsic] loading model results/train/gemma_4b_curated/final
+
+[extrinsic] scoring 1268 sentences
+  [1/1268] src='When I was little , I thought my country was the best on the planet , '
+           hyp='Khi tôi còn nhỏ, tôi nghĩ đất nước mình là tốt nhất trên thế giới, và tôi lớn lên hát một bài hát tên là "Nothing to Envy"'
+           corpus AL so far: mean=4.18  n=1
+  [2/1268] src='And I was very proud .'
+           hyp='Và tôi rất tự hào.'
+           corpus AL so far: mean=3.44  n=2
+  [3/1268] src='In school , we spent a lot of time studying the history of Kim Il-Sung'
+           hyp='Ở trường, chúng tôi dành rất nhiều thời gian để nghiên cứu lịch sử của Kim Il-Sung, nhưng chúng tôi chưa bao giờ học về thế giới bên ngoài, '
+           corpus AL so far: mean=3.64  n=3
+[extrinsic] generation wall: 1864.6s (1.47s/sent)
+[extrinsic] BLEU = 35.81 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.99  median=3.73  n_defined=1268/1268
+[extrinsic] LAAL mean=3.99  median=3.70  n_defined=1268/1268
+[extrinsic] chunks/sent mean=3.49  median=3.0
+[extrinsic] source-exhausted-without-eor: 21/1268
+[extrinsic] write-cap hits: 1
+[extrinsic] wrote results/eval/gemma_4b_curated/iwslt15_stream_gemma_4b_curated_check_argmax_medium-high_en-vi.json
+
+================================================================================
+                     Resource Usage on 04/09/2026 00:33:38
+
+Job Id: 9252248
+Queue: CSE
+Walltime: 00:31:37  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k097    0    |     1       0.83       83%    | 46068 MiB  15.38G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.83      83.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k097         |     8       0.99      12.0%   |  100.0gb   16.29gb    16.3%   |
+--------------------------------------------------------------------------------
