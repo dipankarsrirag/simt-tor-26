@@ -30,6 +30,40 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-09-04 — Config 05 (gemma_4b_curated) done: self-annotation worth +0.73 BLEU over reusing the 2B's chunks (Quang)
+
+**Config.** Gemma-4-E4B-it SFT'd on its OWN OT chunks (Dipankar's 4B annotation matrices, pulled
+from unswnlporg/tor-simt-gemma-4b-curated), same 80K source pool as configs 00/06/07.
+Dataset: 79,223 rows kept / 108 skipped / 0 missing (`scripts/08_build_sft_dataset.py`,
+tau 0.30 ladder, merge_small_chunks min_src_words=4). Train: lr 1.5e-5, bs 2x8, 2 epochs
+(9,408 steps), eval/save 250, model-only checkpoints, 2h chained shards pinned to H200.
+Eval: 55 cells (11 direction-sets x 5 latencies), check_argmax streaming, full test sets.
+
+**Results (BLEU, mean over the 55 matched cells).**
+
+| Comparison | Mean delta | Reads |
+|---|---|---|
+| 4B self-annotated vs 2B self-annotated | **+1.96** | backbone scale helps (RQ2, Fig 4) |
+| 4B self-annotated vs 4B on the 2B's chunks | **+0.73** | annotator identity matters little (RQ3, Fig 5) |
+| 4B on the 2B's chunks vs 2B self-annotated | +1.24 | (config 06, logged 2026-09-02) |
+
+**Read.** Annotation is close to portable: swapping the annotator from the 4B itself to a 2B costs
+0.73 BLEU, while upgrading the backbone buys 1.96. So the annotator can be run once with the
+smallest model and reused for larger backbones at a sub-point cost. Per-panel, config 05 is above
+config 06 in most cells and also reaches lower AL; the exception pattern is the same vi-en
+high-latency dip seen in config 06.
+
+**Figure.** `scripts/collect_eval_curves.py` reads every cell from the eval JSONs (2B from the Hub,
+05/06/07 local) and emits the 4-system BLEU-vs-AL facets; all 5 latency points per system are
+plotted with no Pareto filtering. Cross-checked against the hand-entered values used earlier:
+0 mismatches out of 220 numbers.
+
+**Artifacts.** unswnlporg/tor-simt-gemma-4b-curated (final/ + sft_dataset.json + eval/).
+
+**Ops note.** Katana node k098 advertises `mem_per_gpu_gte_120=True` but carries a 44GB L40S;
+it silently killed 11 shards with CUDA OOM before the H200 pin. Worth reporting to Katana support.
+
+
 ### [RUN] 2026-09-02 — Config 07 (east_8b_from_2b_annot) trained + 55-cell eval: 8B UNDER-PERFORMS 4B by -2.28 BLEU (Quang)
 
 **Config.** Meta-Llama-3-8B-Instruct SFT'd on Gemma-2B's OT chunks via the new cross-tokenizer
