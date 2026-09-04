@@ -110,11 +110,15 @@ for pair in de-en ru-en; do
     echo "  [$pair] already present — skipping"
     continue
   fi
-  tsv="/tmp/nc-v16.${pair}.tsv.gz"
-  fetch_statmt "${NC_URL}/news-commentary-v16.${pair}.tsv.gz" "$tsv"
+  # statmt names the file with the two codes in alphabetical order, and the
+  # columns follow that order (ru-en ships as en-ru: column 1 en, column 2 ru).
+  url_pair="$(printf '%s\n%s\n' "$src" "$tgt" | sort | paste -sd- -)"
+  if [ "$url_pair" = "$pair" ]; then col_src=1; col_tgt=2; else col_src=2; col_tgt=1; fi
+  tsv="/tmp/nc-v16.${url_pair}.tsv.gz"
+  fetch_statmt "${NC_URL}/news-commentary-v16.${url_pair}.tsv.gz" "$tsv"
   gunzip -c "$tsv" | \
     awk -F'\t' -v s="${out_dir}/news-commentary.${src}" -v t="${out_dir}/news-commentary.${tgt}" \
-    '{print $1 > s; print $2 > t}'
+    -v cs="$col_src" -v ct="$col_tgt" '{print $cs > s; print $ct > t}'
   rm -f "$tsv"
   echo "    news-commentary.${src}: $(wc -l < "${out_dir}/news-commentary.${src}") lines"
 done
@@ -131,11 +135,13 @@ for pair in de-en ru-en ar-en; do
     echo "  [$pair] already present — skipping"
     continue
   fi
-  fetch_opus "${TED2020_URL}/${pair}.txt.zip" "/tmp/ted2020_${pair}" \
-             "TED2020.${pair}.${src}"
-  cp "/tmp/ted2020_${pair}/TED2020.${pair}.${src}" "${out_dir}/ted2020.${src}"
-  cp "/tmp/ted2020_${pair}/TED2020.${pair}.${tgt}" "${out_dir}/ted2020.${tgt}"
-  rm -rf "/tmp/ted2020_${pair}"
+  # OPUS also names the archive alphabetically, so ru-en lives under en-ru.
+  url_pair="$(printf '%s\n%s\n' "$src" "$tgt" | sort | paste -sd- -)"
+  fetch_opus "${TED2020_URL}/${url_pair}.txt.zip" "/tmp/ted2020_${url_pair}" \
+             "TED2020.${url_pair}.${src}"
+  cp "/tmp/ted2020_${url_pair}/TED2020.${url_pair}.${src}" "${out_dir}/ted2020.${src}"
+  cp "/tmp/ted2020_${url_pair}/TED2020.${url_pair}.${tgt}" "${out_dir}/ted2020.${tgt}"
+  rm -rf "/tmp/ted2020_${url_pair}"
   echo "    ted2020.${src}: $(wc -l < "${out_dir}/ted2020.${src}") lines"
 done
 
