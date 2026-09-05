@@ -19,10 +19,27 @@ OUT=results/train/east_8b_from_2b_annot
 SHARD=${SHARD:-1}
 MAX_SHARDS=${MAX_SHARDS:-12}
 
+source bin/_env.sh
+
+# A full fine-tune of this backbone needs about 70GB. Some nodes advertise a
+# large GPU but carry a 40GB card, so check the real size first. A shard that
+# lands on a small card requeues itself at the same shard number, which keeps
+# the chain intact; after too many bounces it asks for an H200 by name.
+GPU_GB=$(${PYTHON} -c "import torch; print(int(torch.cuda.get_device_properties(0).total_memory / 2**30))")
+BOUNCE=${BOUNCE:-0}
+if [ "$GPU_GB" -lt 80 ]; then
+  echo "GPU has ${GPU_GB}GB, need 80GB - requeueing (bounce $BOUNCE)"
+  if [ "$BOUNCE" -lt 25 ]; then
+    qsub -l walltime=02:00:00 -l select=1:ncpus=8:mem=100gb:ngpus=1       -v SHARD=$SHARD,MAX_SHARDS=$MAX_SHARDS,BOUNCE=$((BOUNCE+1)) jobs/train/sft_east_8b_from_2b_annot.pbs
+  else
+    qsub -l walltime=02:00:00 -l select=1:ncpus=8:mem=100gb:ngpus=1:gpu_model=H200       -v SHARD=$SHARD,MAX_SHARDS=$MAX_SHARDS jobs/train/sft_east_8b_from_2b_annot.pbs
+  fi
+  exit 0
+fi
+
 if [ ! -d $OUT/final ] && [ $SHARD -lt $MAX_SHARDS ]; then
   qsub -l walltime=02:00:00 -l select=1:ncpus=8:mem=100gb:ngpus=1     -v SHARD=$((SHARD+1)),MAX_SHARDS=$MAX_SHARDS     -W depend=afterany:$PBS_JOBID jobs/train/sft_east_8b_from_2b_annot.pbs
 fi
 [ -d $OUT/final ] && exit 0
 
-source bin/_env.sh
 SIMT_SAVE_ONLY_MODEL=1 ${PYTHON} -u src/train/sft.py   --corpus_file    results/sft_dataset/east_8b_from_2b_annot/sft_dataset.json   --model_path     ${SIMT_MODEL_BASE}/Meta-Llama-3-8B-Instruct   --tokenizer_dir  results/train/east_8b_from_2b_annot/tokenizer   --output_dir     $OUT   --num_epochs                  2   --per_device_batch_size       2   --grad_accum_steps            8   --learning_rate               1e-5   --warmup_steps                200   --eval_steps                  250   --early_stopping_patience     3

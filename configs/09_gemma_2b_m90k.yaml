@@ -1,0 +1,62 @@
+# gemma_2b_m90k — gemma-4-E2B-it on EAST's SiMT-Multi-90K, GPT-4 chunks as shipped.
+# Trains one model on both directions of both pairs (de-en, en-de, ru-en, en-ru).
+# Evaluated on WMT22 only: Multi-90K has 0% source overlap with WMT22 on all
+# four directions, while WMT17-21 and FLORES overlap 20-55% (LOG.md 2026-08-25).
+#
+# Stage 2 is skipped: the chunks come from Multi-90K, not from our annotator.
+# Stage 3 uses scripts/08_build_sft_from_east_chunks.py instead of the
+# matrices-based builder.
+#
+# Run: bin/run configs/09_gemma_2b_m90k.yaml --ngpus 1 --skip 2
+
+tag: gemma_2b_m90k
+
+backbone:
+  hf_id: google/gemma-4-E2B-it
+  local_path: ${SIMT_MODEL_BASE}/gemma-4-E2B-it
+  is_instruct: true
+  tokenizer_dir: ${SIMT_REPO_ROOT}/results/train/gemma_2b_m90k/tokenizer
+
+source_pool:
+  corpus: east                                 # SiMT-Multi-90K, as published
+  directions:
+    de-en: -1                                  # -1 = every row Multi-90K ships
+    en-de: -1
+    ru-en: -1
+    en-ru: -1
+  human_target_only: false                     # EAST's targets are machine-made
+
+annotate:
+  annotator: gpt4-multi90k                     # shipped with the corpus
+  criterion: gpt4-chunks
+  tau: null
+  latency_bins: [low, medium, high]            # the three labels Multi-90K ships
+
+sft_dataset:
+  merge_small_chunks: false                    # GPT-4 chunks are used unchanged
+  keep_collapsed_rows: false
+
+train:
+  num_epochs: 2
+  per_device_batch_size: 2
+  grad_accum_steps: 8
+  learning_rate: 2e-5
+  warmup_steps: 150
+  eval_steps: 250
+  save_steps: 250
+  early_stopping_patience: 3
+  bf16: true
+  completion_only_loss: false
+
+eval:
+  test_sets:
+    wmt22: [de-en, en-de, ru-en, en-ru]
+  latencies: [low, low-medium, medium, medium-high, high]
+  n_sentences: -1
+  policy: check_argmax
+  mode: streaming
+
+plot:
+  color: "#eb6834"
+  marker: o
+  label: Gemma-2B GPT-4 chunks

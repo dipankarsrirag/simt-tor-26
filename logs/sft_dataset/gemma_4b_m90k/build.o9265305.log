@@ -1,0 +1,42 @@
+Loading tokenizer results/train/gemma_2b_m90k/tokenizer
+Multi-90K rows: 90,714
+
+Wrote results/sft_dataset/gemma_2b_m90k/sft_dataset.json (60594.0 KB)
+
+Per direction:
+  de-en: sources=6,283  kept=11,032  snap_failed=26  bad_chunk_count=0
+  en-de: sources=6,187  kept=12,179  snap_failed=6  bad_chunk_count=0
+  ru-en: sources=5,627  kept=11,608  snap_failed=7  bad_chunk_count=0
+  en-ru: sources=8,153  kept=17,093  snap_failed=4  bad_chunk_count=0
+
+Total rows: 51,912
+
+Latency distribution:
+     low: 15,154 (29.2%)
+  medium: 17,171 (33.1%)
+    high: 19,587 (37.7%)
+
+Chunks per sentence (top 8):
+    1: 11,403 rows
+    2: 18,336 rows
+    3: 11,111 rows
+    4: 5,298 rows
+    5: 2,868 rows
+    6: 1,440 rows
+    7: 688 rows
+    8: 327 rows
+
+================================================================================
+                     Resource Usage on 05/09/2026 20:32:49
+
+Job Id: 9265305
+Queue: CSE
+Walltime: 00:00:43  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k189         |     8       0.42      5.0%    |  64.0gb    1.33gb     2.1%    |
+--------------------------------------------------------------------------------

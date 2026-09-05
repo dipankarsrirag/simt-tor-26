@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_2b_m90k/tokenizer
+[extrinsic] loading model results/train/gemma_2b_m90k/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='You can come back any time as our chat service window is open 24/7'
+           hyp='Sie können kommen jederzeit zurück als unser Chat-Service geöffnet ist 24/7'
+           corpus AL so far: mean=2.13  n=1
+  [2/2037] src='I sincerely hope you get to find a resolution'
+           hyp='Ich hoffe aufrichtig dass Sie eine Lösung finden werden'
+           corpus AL so far: mean=2.48  n=2
+  [3/2037] src='Thank you for contacting #PRS_ORG#, it was my pleasure to assist you t'
+           hyp='Danke für die Kontaktaufnahme mit #PRS_ORG#, es war mir eine Freude, Ihnen heute zu helfen.'
+           corpus AL so far: mean=2.84  n=3
+[extrinsic] generation wall: 4631.4s (2.27s/sent)
+[extrinsic] BLEU = 24.48 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=3.06  median=2.94  n_defined=2037/2037
+[extrinsic] LAAL mean=2.84  median=2.75  n_defined=2037/2037
+[extrinsic] chunks/sent mean=3.99  median=4.0
+[extrinsic] source-exhausted-without-eor: 13/2037
+[extrinsic] write-cap hits: 4
+[extrinsic] wrote results/eval/gemma_2b_m90k/wmt22_stream_gemma_2b_m90k_check_argmax_low_en-de.json
+
+================================================================================
+                     Resource Usage on 06/09/2026 02:10:38
+
+Job Id: 9268577
+Queue: CSE
+Walltime: 01:18:59  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k095    3    |     1       0.33       33%    | 40960 MiB  38.15G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.33      33.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k095         |     8       0.98      12.0%   |  100.0gb   11.23gb    11.2%   |
+--------------------------------------------------------------------------------

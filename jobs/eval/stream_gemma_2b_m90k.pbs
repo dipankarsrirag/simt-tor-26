@@ -1,0 +1,21 @@
+#!/bin/bash
+#PBS -N eval_gemma_2b_m90k
+#PBS -l select=1:ncpus=8:mem=100gb:ngpus=1
+#PBS -l walltime=02:00:00
+#PBS -j oe
+
+# One WMT22 eval cell for config 09. Pass PAIR (de-en) and LAT
+# (low|low-medium|medium|medium-high|high) with qsub -v. Skips a cell that
+# already has output, so the sweep can be resubmitted.
+
+set -eo pipefail
+cd ${SIMT_REPO_ROOT:-$PBS_O_WORKDIR}
+OUT=results/eval/gemma_2b_m90k
+mkdir -p $OUT
+JSON=$OUT/wmt22_stream_gemma_2b_m90k_check_argmax_${LAT}_${PAIR}.json
+[ -s $JSON ] && exit 0
+SRC_L=${PAIR%-*}
+TGT_L=${PAIR#*-}
+
+source bin/_env.sh
+${PYTHON} -u src/eval/extrinsic.py   --model_dir      results/train/gemma_2b_m90k/final   --tokenizer_dir  results/train/gemma_2b_m90k/tokenizer   --dev_src        ${SIMT_TESTSETS_ROOT}/eval/${PAIR}/wmt22.${PAIR}.src   --dev_ref        ${SIMT_TESTSETS_ROOT}/eval/${PAIR}/wmt22.${PAIR}.ref   --n_sentences    -1   --src_lang $SRC_L --tgt_lang $TGT_L   --use_chat_template   --latency  $LAT   --mode     streaming   --policy   check_argmax   --output   $JSON

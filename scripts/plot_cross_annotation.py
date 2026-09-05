@@ -19,11 +19,10 @@ import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parents[1]
 LATS = ["low", "low-medium", "medium", "medium-high", "high"]
-PANELS = [("wmt15", "de-en"), ("wmt22", "de-en"), ("wmt22", "en-de"),
-          ("wmt22", "ru-en"), ("wmt22", "en-ru"), ("iwslt17", "de-en"),
-          ("iwslt17", "en-de"), ("iwslt17", "ar-en"), ("iwslt17", "en-ar"),
-          ("iwslt15", "vi-en"), ("iwslt15", "en-vi")]
+PANEL_ORDER = ["wmt15", "wmt22", "iwslt17", "iwslt15"]
 STYLE = {
+    "gemma_2b_m90k": ("#eb6834", "Gemma-2B, GPT-4 chunks", "2B"),
+    "gemma_4b_m90k": ("#8e44ad", "Gemma-4B, GPT-4 chunks", "4B"),
     "gemma_2b_curated": ("#eb6834", "Gemma-2B, self-annotated", "2B self"),
     "gemma_4b_curated": ("#8e44ad", "Gemma-4B, self-annotated", "4B self"),
     "gemma_4b_from_2b_annot": ("#2a78d6", "Gemma-4B on the 2B's chunks", "4B<-2B"),
@@ -51,10 +50,17 @@ def main():
 
     data = load(REPO / args.summary)
     systems = [s for s in STYLE if s in data]
-    fig, axes = plt.subplots(3, 4, figsize=(14, 9), facecolor="white")
+    panels = sorted({k for sys in data.values() for k in sys},
+                    key=lambda k: (PANEL_ORDER.index(k[0]) if k[0] in PANEL_ORDER else 9, k[1]))
+    # One extra cell holds the legend.
+    cells = len(panels) + 1
+    cols = min(4, cells)
+    rows = max(1, -(-cells // cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(3.5 * cols, 3 * rows),
+                             facecolor="white", squeeze=False)
     axes = axes.ravel()
 
-    for ax, key in zip(axes, PANELS):
+    for ax, key in zip(axes, panels):
         deltas = []
         for system in systems:
             pts = [data[system][key][l] for l in LATS if l in data[system].get(key, {})]
@@ -78,9 +84,10 @@ def main():
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
 
-    # Last cell carries the legend instead of a panel.
-    axes[-1].axis("off")
-    axes[-1].legend(handles=[plt.Line2D([], [], color=STYLE[s][0], marker="o",
+    # The cell after the last panel carries the legend; hide any spare cells.
+    for ax in axes[len(panels):]:
+        ax.axis("off")
+    axes[len(panels)].legend(handles=[plt.Line2D([], [], color=STYLE[s][0], marker="o",
                                         lw=2, label=STYLE[s][1]) for s in systems],
                     loc="center", fontsize=9.5, frameon=False)
     fig.suptitle("BLEU vs Average Lagging, all five latency prompts per system",

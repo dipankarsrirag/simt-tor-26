@@ -63,11 +63,20 @@ def loss_curve(text):
     return points
 
 
+def find_logs(pbs_dir, patterns):
+    # Job names differ between runs, so try each known pattern.
+    for pat in patterns:
+        hits = sorted(glob.glob(f"{pbs_dir}/{pat}"))
+        if hits:
+            return hits
+    return []
+
+
 def collect_train(pbs_dir, tag, num, out_dir):
     # Keep shards that logged training steps; count why the others stopped.
     out_dir.mkdir(parents=True, exist_ok=True)
     points, kept, dropped, reasons = [], 0, 0, {}
-    for p in sorted(glob.glob(f"{pbs_dir}/simt-train{num}.o*")):
+    for p in find_logs(pbs_dir, [f"simt-train{num}.o*", f"sft_{tag}.o*"]):
         text = clean(p)
         pts = loss_curve(text)
         if not pts:
@@ -97,7 +106,7 @@ def collect_eval_logs(pbs_dir, tag, num, out_dir):
     # Name each log after the cell it evaluated; skip attempts with no output.
     out_dir.mkdir(parents=True, exist_ok=True)
     kept, dropped = 0, 0
-    for p in sorted(glob.glob(f"{pbs_dir}/simt-eval{num}.o*")):
+    for p in find_logs(pbs_dir, [f"simt-eval{num}.o*", f"eval_{tag}.o*"]):
         text = clean(p)
         m = WROTE.search(text)
         if not m:
@@ -170,7 +179,7 @@ def main():
                                        REPO / "logs" / "eval" / tag))
         build_dir = REPO / "logs" / "sft_dataset" / tag
         build_dir.mkdir(parents=True, exist_ok=True)
-        for p in glob.glob(f"{args.pbs_dir}/simt-sft{num}-build.o*"):
+        for p in find_logs(args.pbs_dir, [f"simt-sft{num}-build.o*", f"build_{tag}.o*", "build_m90k.o*"]):
             (build_dir / f"build.o{p.rsplit('.o', 1)[-1]}.log").write_text(clean(p))
 
         rows = eval_rows(tag)

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_2b_m90k/tokenizer
+[extrinsic] loading model results/train/gemma_2b_m90k/final
+
+[extrinsic] scoring 2016 sentences
+  [1/2016] src='С моей точки зрения, программа по литературе формировалась дамами баль'
+           hyp="From my point of view, the literature program was formed for women of Balzac's age based on their interests."
+           corpus AL so far: mean=15.00  n=1
+  [2/2016] src='Из русской литературы 19 века мы предпочитали Данилевского и Волконско'
+           hyp='From Russian literature of the 19th century we preferred Danilevsky and Volkonsky.'
+           corpus AL so far: mean=12.50  n=2
+  [3/2016] src='Они писали беллетристику, конечно, с точки зрения тех самых дам бальза'
+           hyp='They wrote belles-lettres, of course, from the perspective of those ladies of the Balzacian age.'
+           corpus AL so far: mean=9.44  n=3
+[extrinsic] generation wall: 1314.0s (0.65s/sent)
+[extrinsic] BLEU = 38.67 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=7.21  median=5.90  n_defined=2016/2016
+[extrinsic] LAAL mean=4.87  median=4.40  n_defined=2016/2016
+[extrinsic] chunks/sent mean=1.68  median=1.0
+[extrinsic] source-exhausted-without-eor: 85/2016
+[extrinsic] write-cap hits: 25
+[extrinsic] wrote results/eval/gemma_2b_m90k/wmt22_stream_gemma_2b_m90k_check_argmax_high_ru-en.json
+
+================================================================================
+                     Resource Usage on 06/09/2026 01:50:15
+
+Job Id: 9268594
+Queue: CSE
+Walltime: 00:22:49  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    4    |     1       0.61       61%    | 97887 MiB  10.29G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.61      61.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.97      12.0%   |  100.0gb   6.46gb     6.5%    |
+--------------------------------------------------------------------------------

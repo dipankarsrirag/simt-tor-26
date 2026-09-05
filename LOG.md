@@ -30,6 +30,48 @@ Log the run *before* starting the next one. A run without an entry did not happe
 
 <!-- entries below -->
 
+### [RUN] 2026-09-06 — Configs 09/10 (Multi-90K GPT-4 chunks): Gemma-4B beats Gemma-2B by +1.14 BLEU on WMT22 (Quang)
+
+**Config.** Gemma-4-E2B-it and Gemma-4-E4B-it trained on EAST's SiMT-Multi-90K with the GPT-4
+chunks it ships, all four directions in one training set (de-en, en-de, ru-en, en-ru).
+Dataset built by the new `scripts/08_build_sft_from_east_chunks.py`: 51,912 rows
+(de-en 11,032 / en-de 12,179 / ru-en 11,608 / en-ru 17,093), 43 rows dropped because a chunk
+boundary fell inside a token. Chunk strings are snapped to token ids by character offset, so
+training tokenisation matches what streaming inference produces. E2B-it and E4B-it ship the
+same tokenizer (checked: identical sha256 after adding the two EAST tokens), so one dataset
+trains both. Train: 2 epochs, batch 2 x accum 8, lr 2e-5 (2B) and 1.5e-5 (4B), 2h shards.
+
+**Eval.** WMT22 only, 4 directions x 5 latencies x 2 models = 40 cells, check_argmax streaming,
+full test sets. WMT22 is the right choice for this corpus: Multi-90K sources overlap it 0% on
+all four directions, against 20-55% for WMT17-21 and 41-55% for FLORES (LOG.md 2026-08-25).
+
+**Result (BLEU).** The 4B is ahead in 19 of 20 cells, mean **+1.14**.
+
+| Direction | 2B low -> high | 4B low -> high | mean delta |
+|---|---|---|---|
+| de-en | 27.53 -> 31.18 | 28.76 -> 32.48 | +1.17 |
+| en-de | 24.48 -> 30.96 | 24.67 -> 32.44 | +0.86 |
+| ru-en | 35.79 -> 38.67 | 37.32 -> 40.48 | +1.66 |
+| en-ru | 25.41 -> 28.46 | 25.99 -> 29.20 | +0.87 |
+
+The only cell the 2B wins is en-de at low-medium latency (27.65 vs 27.44, -0.20). Both models
+follow the latency prompt over a wide range, and into-English directions gain most from scale.
+
+**Read.** With chunk quality held fixed at GPT-4's, backbone scale is worth about 1 BLEU. The
+matching self-annotation number is +1.96 for 2B -> 4B (config 05 vs the shipped 2B baseline),
+so scale helps in both regimes and is not an artefact of our annotator.
+
+**Artifacts.** unswnlporg/tor-simt-gemma-2b-m90k and unswnlporg/tor-simt-gemma-4b-m90k
+(final/ + sft_dataset.json). Per-cell numbers in `results/eval/summary_m90k_wmt22.csv`,
+curves in `figures/m90k_wmt22/bleu_vs_al.png`, logs under `logs/*/gemma_{2b,4b}_m90k/`.
+
+**Ops note.** `mem=100gb` does not guarantee a large GPU on Katana: k095 (40GB A100) and k098
+(44GB L40S) both advertise `mem_per_gpu_gte_120 = True`, and a full fine-tune of these backbones
+needs about 70GB. The training jobs now read the real GPU size at startup and requeue the shard
+at the same shard number if it is too small, which keeps the chain intact without pinning
+`gpu_model` and paying the multi-hour queue wait.
+
+
 ### [RUN] 2026-09-04 — Config 05 (gemma_4b_curated) done: self-annotation worth +0.73 BLEU over reusing the 2B's chunks (Quang)
 
 **Config.** Gemma-4-E4B-it SFT'd on its OWN OT chunks (Dipankar's 4B annotation matrices, pulled

@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=high
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_2b_m90k/tokenizer
+[extrinsic] loading model results/train/gemma_2b_m90k/final
+
+[extrinsic] scoring 2037 sentences
+  [1/2037] src='You can come back any time as our chat service window is open 24/7'
+           hyp='Sie können jederzeit zurückkommen, da unser Chat-Service-Fenster 24/7 geöffnet ist'
+           corpus AL so far: mean=14.00  n=1
+  [2/2037] src='I sincerely hope you get to find a resolution'
+           hyp='Ich hoffe aufrichtig, dass Sie eine Lösung finden werden'
+           corpus AL so far: mean=11.50  n=2
+  [3/2037] src='Thank you for contacting #PRS_ORG#, it was my pleasure to assist you t'
+           hyp='Vielen Dank für die Kontaktaufnahme mit #PRS_ORG#, es war mir eine Freude, Ihnen heute zu helfen.'
+           corpus AL so far: mean=12.00  n=3
+[extrinsic] generation wall: 1475.0s (0.72s/sent)
+[extrinsic] BLEU = 30.96 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=12.25  median=10.00  n_defined=2037/2037
+[extrinsic] LAAL mean=7.36  median=6.60  n_defined=2037/2037
+[extrinsic] chunks/sent mean=1.28  median=1.0
+[extrinsic] source-exhausted-without-eor: 132/2037
+[extrinsic] write-cap hits: 196
+[extrinsic] wrote results/eval/gemma_2b_m90k/wmt22_stream_gemma_2b_m90k_check_argmax_high_en-de.json
+
+================================================================================
+                     Resource Usage on 06/09/2026 01:50:56
+
+Job Id: 9268593
+Queue: CSE
+Walltime: 00:25:11  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k207    7    |     1       0.62       62%    | 97887 MiB  10.29G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.62      62.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k207         |     8       0.98      12.0%   |  100.0gb   11.21gb    11.2%   |
+--------------------------------------------------------------------------------

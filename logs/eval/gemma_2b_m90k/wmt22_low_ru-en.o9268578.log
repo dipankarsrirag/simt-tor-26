@@ -1,0 +1,47 @@
+[extrinsic] mode=streaming latency=low
+[extrinsic] policy=check_argmax (k=3) max_write_per_chunk=40
+[extrinsic] loading tokenizer results/train/gemma_2b_m90k/tokenizer
+[extrinsic] loading model results/train/gemma_2b_m90k/final
+
+[extrinsic] scoring 2016 sentences
+  [1/2016] src='С моей точки зрения, программа по литературе формировалась дамами баль'
+           hyp="From my point of view, the literature program was formed by women of Balzac's age based on their interests."
+           corpus AL so far: mean=2.90  n=1
+  [2/2016] src='Из русской литературы 19 века мы предпочитали Данилевского и Волконско'
+           hyp='From Russian literature of the 19th century we preferred Danilevsky and Volkonsky.'
+           corpus AL so far: mean=2.63  n=2
+  [3/2016] src='Они писали беллетристику, конечно, с точки зрения тех самых дам бальза'
+           hyp='They wrote belliterary fiction, of course, from the perspective of those ladies of the Balzacian age.'
+           corpus AL so far: mean=2.59  n=3
+[extrinsic] generation wall: 3914.1s (1.94s/sent)
+[extrinsic] BLEU = 35.79 (nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.6.0)
+[extrinsic] AL   mean=2.70  median=2.50  n_defined=2016/2016
+[extrinsic] LAAL mean=2.50  median=2.39  n_defined=2016/2016
+[extrinsic] chunks/sent mean=3.44  median=3.0
+[extrinsic] source-exhausted-without-eor: 4/2016
+[extrinsic] write-cap hits: 3
+[extrinsic] wrote results/eval/gemma_2b_m90k/wmt22_stream_gemma_2b_m90k_check_argmax_low_ru-en.json
+
+================================================================================
+                     Resource Usage on 06/09/2026 01:59:42
+
+Job Id: 9268578
+Queue: CSE
+Walltime: 01:05:59  (requested 02:00:00)
+Job execution was successful. Exit Status 0.
+
+--------------------------------------------------------------------------------
+|              |             GPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node  GPU ID | Requested   Used   Efficiency | Available   Used              |
+| k095    1    |     1       0.25       25%    | 40960 MiB  38.15G             |
+--------------------------------------------------------------------------------
+|Total         |     1       0.25      25.0%   |                               |
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+|              |             CPUs              |            Memory             |
+--------------------------------------------------------------------------------
+| Node         | Requested   Used   Efficiency | Requested   Used   Efficiency |
+| k095         |     8       0.99      12.0%   |  100.0gb   11.04gb    11.0%   |
+--------------------------------------------------------------------------------
